@@ -1,0 +1,549 @@
+rpm(8)                                            Red Hat Linux                                           rpm(8)
+
+
+
+NAME
+       rpm - Red Hat 包管理器
+
+总
+       rpm [选项]
+
+描
+       rpm是一个很有用的包管理器,      可以用于生成,      安装,      查询,     核实,     更新以及卸载单个软件包.
+       一个包通常包括一个文件档以及关于包 的信息, 比如名字, 版本, 描述等.
+
+       必须选取下列基本模式中一个: 初始化数据库, 重新生成数据库,  生成包,  重新编译包,  从Tar包生成RPM包,  查询,
+       显示查询标签, 安装, 更新, 卸载, 核实, 签名检查, 再签名, 添加签名, 设置所有者和组 以及 显示配置.
+
+
+       数据库维护:
+           rpm -i [--initdb]
+           rpm -i [--rebuilddb]
+
+       生成:
+           rpm [-b|t] [package_spec]+
+           rpm [--rebuild] [sourcerpm]+
+           rpm [--tarbuild] [tarredsource]+
+
+       查询:
+           rpm [--query] [queryoptions]
+           rpm [--querytags]
+
+       维护已安装的包:
+           rpm [--install] [installoptions] [package_file]+
+           rpm [--freshen|-F] [installoptions] [package_file]+
+           rpm [--uninstall|-e] [uninstalloptions] [package]+
+           rpm [--verify|-V] [verifyoptions] [package]+
+
+       签名:
+           rpm [--verify|-V] [verifyoptions] [package]+
+           rpm [--resign] [package_file]+
+           rpm [--addsign] [package_file]+
+
+       Miscellaneous:
+           rpm [--showrc]
+           rpm [--setperms] [package]+
+           rpm [--setgids] [package]+
+
+
+
+普
+       这些选项可以各种不同的方式使用.
+
+       -vv    将打印出许多难以阅读的调试信息.
+
+       --quiet
+              打印尽可能少的信息 - 普通只展示错误信息.
+
+       --help 给出比常规更多的用法信息.
+
+       --version
+              在单独一个行里给出所用 rpm 的版本号
+
+       --rcfile <filelist>
+              在<filelist>里列出了一些文件,     各文件之间以冒号分隔,     rpm    顺序读取这些文件以获得配置信息.
+              <filelist>缺省                                           是/usr/lib/rpm/rpmrc:/etc/rpmrc:~/.rpmrc.
+              列表中的第一个文件(/usr/lib/rpm/rpmrc)且只有这个文件 必须存在, 代字符~指向$HOME的值.
+
+       --root <dir>
+              对所有操作均将<dir>视为系统根目录.   注意这意味着对数   据库的读或修改操作都将是在<dir>目录下进行,
+              并且脚本 的pre或post操作都是在做了以<dir>为根目录的chroot() 之后进行.
+
+       --dbpath <path>
+              依照<path>使用RPM的数据库.
+
+       --justdb
+              更新只针对数据库,而不是整个文件系统.
+
+       --ftpproxy <host>, --httpproxy <host>
+              设<host>为FTP或HTTP的代理服务器. 参阅FTP/HTTP 选
+
+       --ftpport <port>, --httpport <port>
+              设<port>为FTP或HTTP的代理服务器的端口. 参阅FTP/HTTP 选
+
+       --pipe <cmd>
+              通过管道将rpm的输出输入到命令<cmd>.
+
+
+安
+       通常的rpm安装命令如下:
+
+            rpm -i [install-options] <package_file>+
+
+       这样将安装一个新的包. 通常的rpm升级命令如下:
+
+            rpm -U [install-options] <package_file>+
+
+       这样将当前已安装的包升级或新安装到一个新的RPM版本.                  升级和                  安装是一样的,
+       区别在于升级要将所有别的版本的包从系统移去.
+
+            rpm [-F|--freshen] [install-options] <package_file>+
+
+       这样也升级包, 但只有在系统存在一个更早版本的包时候才使用这 种方式.
+
+
+       如果包在安装之前要先进行下载,           <package_file>应该指明为一个           ftp或者http           URL.
+       要得到关于RPM包生成的ftp和http支持的信息, 可以参阅FTP/HTTP 选
+
+       --force
+              与使用--replacepkgs, --replacefiles, 以及--oldpackage效果相同
+
+       -h, --hash
+              包档如果没有被解包, 打印50个破折号. 配合-v使用可以 使得有更好的展示.
+
+       --oldpackage
+              允许用旧版本的包取代较新的版本.
+
+       --percent
+              给出文件从包档解包的百分比. 该项的作用是为了使rpm相 比于别的工具更容易使用.
+
+       --replacefiles
+              即使要安装的包会取代别的已安装包的文件, 也安装该包.
+
+       --replacepkgs
+              即使包的部分内容已安装在系统里,也安装该包.
+
+       --allfiles
+              安装或升级包里所有的缺失文件,不管其是否存在.
+
+       --nodeps
+              在安装或升级包之前不做依赖检查.
+
+       --noscripts
+              不执行安装前或安装后脚本
+
+       --notriggers
+              不执行由该包的安装所激发的脚本
+
+       --ignoresize
+              安装该包前不检查mount文件系统是否有足够的磁盘空间.
+
+       --excludepath <path>
+              不安装文件名以路径<path>开头的文件.
+
+       --excludedocs
+              不安装任何标记为文档的文件(包括手册页及文本信息档案).
+
+       --includedocs
+              安装文档文件, 这是缺省的操作.
+
+       --test 不安装包, 只是简单地检查并报告可能的冲突.
+
+       --ignorearch
+              允许安装或升级其体系与主机不匹配的二进制RPM包.
+
+       --ignoreos
+              允许安装或升级其操作系统与主机不匹配的二进制RPM包.
+
+       --prefix <path>
+              对于可浮动包, 这将把安装前缀设置到<path>.
+
+       --relocate <oldpath>=<newpath>
+              将文件从<oldpath>改置到<newpath>, 这使得可以浮动包.
+
+       --badreloc
+              与--relocate配合使用, 强制改置不可浮动的包.
+
+       --noorder
+              安装时对包不重新排序, 正常在安装时应该重新排序包列 表, 以满足依赖性.
+
+
+查
+       rpm的查询命令通常的格式如下:
+
+            rpm -q [query-options]
+
+       可以制定包信息的打印格式, 这时要用[--queryformat|-qf]选项, 格式串跟在选项后面.
+
+       查询格式由标准printf(3)格式的版本决定.          格式由静态字符串          (包括除了换行符,           tab,
+       以及其它的特殊字符之外的标准C字符),           以及printf(3)类型格式符.           如果rpm已经知道打印类型,
+       则类型说明就必须被忽略,      并且以要打印的头部tag的名字取代,      该名字被括在{}之间.      而且tag的RPM‐
+       TAG_部分也被忽略.
+
+       可以用:typetag来改变输出格式.当前支持的有如下类型:octal, date, shescape, perms, fflags, 以及 depflags.
+
+       例如,要只打印被查询包的名字,可以用%{名
+       要在两个栏里打印包名及分布信息,可以用%-30{名
+
+       当被--querytags参数激发时,rpm将列出所有tags.
+
+       查询选项有两种子设置: 包选择和信息选择.
+
+       包选择选项:
+
+       <package_name>
+              查询名为<package_name>的安装包.
+
+       -a, --all
+              查询所有安装的包.
+
+       --whatrequires <capability>
+              查询所有需要<capability>才能提供适当功能的包.
+
+       --whatprovides <virtual>
+              查询所有提供<virtual>功能的包.
+
+       -f <file>, --file <file>
+              查询拥有文件<file>的包.
+
+       -g <group>, --group <group>
+              查询属于???组<group>的包
+
+       -p <package_file>
+              查询一个没有安装的包<package_file>.                            <package_file>可以被说明为ftp或http
+              URL,这时包头会被下载并被查询.  要得到关于RPM生成的ftp和http客户端支持的信息,请参阅FTP/HTTP OPTIONS
+
+       --specfile <specfile>
+              像对待一个包一样Parse并查询<specfile>.           虽然不是所有的信息(例如文件列表)可用,这种查询类型
+              允许rpm在不用写一个specfile parser的情况下从spec files提取信息.
+
+       --querybynumber <num>
+              直接查询<num>数据库入口,该选项在调试时很有用处.
+
+       --triggeredby <pkg>
+              查询由包<pkg>所激发的包.
+
+
+       信息选择选项:
+
+       -i     展示包信息,包括名字,版本,以及描述.???
+
+       -R, --requires
+              列出该包所依赖的别的包.
+
+       --provides
+              列出该包所提供的功能.
+
+       --changelog
+              展示该包的变更信息.
+
+       -l, --list
+              列出该包的文件.
+
+       -s, --state
+              展示该包各文件的状态信息,因此该选项实际隐含了-l选项.     文件状态可以是如下之一:    normal,    not
+              installed, 或者 replaced.
+
+       -d, --docfiles
+              只列出文档文件(隐含-l选项).
+
+       -c, --configfiles
+              只列出配置文件(隐含-l选项).
+
+       --scripts
+              如果有的话,就列出该包里作为安装或卸载过程一部分的特殊shell脚本.
+
+       --triggers, --triggerscripts
+              如果有的话,展示该包包含的激发子脚本.
+
+       --dump 如下的哑文件信息:   path  size  mtime  md5sum  mode  owner  group  isconfig  isdoc  rdev  symlink.
+              该选项必须至少配合如下选项之一:-l, -c, -d使用.
+
+       --last 按包的安装时间进行排序,这使得最新的包在序列顶部.
+
+       --querybypkg
+              列出每个包里的所有文件.
+
+       --triggerscripts
+              显示所选包的所有激发子脚本.
+
+
+核
+            rpm -V|-y|--verify [verify-options]
+
+       将所安装包的文件信息和源发包的文件信息以及在rpm数据库的文件信息做比较, 以此来核实包.   对于别的东西,则???
+       任何的差异都会展示.包的说明选项与查询选项相同.
+
+       对于不是从包安装的文件,例如在安装的时候用"--excludedocs"
+       选项排除了的文档文件,将在没有提示的情况下被忽略掉.
+
+       核实选项可以使用如下模式:
+
+
+       --nofiles
+              核实时忽略缺失文件
+
+       --nomd5
+              核实时忽略MD5校验错误
+
+       --nopgp
+              核实时忽略PGP校验错误
+
+       --nofiles
+              核实时忽略缺失文件
+
+
+              输出的格式是一个八个字符的字符串,和一个可能有的"c",       指明后面是一个配置文件,以及后面的文件名.
+              八个字符中的每一个都代表着一个文件属性与保存在RPM的数据库中的属性纪录值的比较结果.
+              单个的"."(句号)表明检查通过.下列字符代表特定检查的失败:
+
+
+
+       5      MD5校验和
+
+       S      文件大小
+
+       L      符号连接
+
+       T      修改时间
+
+       D      设备
+
+       U      用户
+
+       G      组
+
+       M      模式(包括许可和文件类型)
+
+
+签
+       通常的rpm签名检查命令如下:
+
+            rpm --checksig <package_file>+
+
+       这将检查包<package_file>的PGP签名以确保其完整性和源发性.   可以从配置文件读取PGP配置信息.细节请查阅   PGP
+       签名 部分.
+
+
+卸
+       rpm卸载命令的通常格式如下:
+
+                rpm -e <package_name>+
+
+       --allmatches
+              将移去与<package_name>相匹配的所有版本的包.正常的话,如果<pack‐
+              age_name>与多个包相匹配,就会给出错误信息.
+
+       --noscripts
+              不执行安装前或安装后脚本.
+
+       --notriggers
+              不执行由移去该包所激发的脚本
+
+       --nodeps
+              卸载前不检查依赖性
+
+       --test 不真正卸载任何东西,只是遍历该动作.配合-vv选项会很有用处.
+
+
+生
+       The general form of an rpm build command is
+
+           rpm -[b|t]O [build-options] <package_spec>+
+
+       The argument used is -b if a spec file is being used to build the package  and  -t  if  RPM  should  look
+       inside of a gzipped (or compressed) tar file for the spec file to use. After the first argument, the next
+       argument  (O)  specifies  the  stages  of  building  and  packaging  to  be   done   and   is   one   of:
+       rpm通常的生成选项如下:
+
+           rpm -[b|t]O [build-options] <package_spec>+
+
+       -bp    Executes  the  "%prep" stage from the spec file.  Normally this involves unpacking the sources and
+              applying any patches.
+
+
+       -bl    Do a "list check".  The "%files" section from the spec file is macro expanded, and checks are made
+              to verify that each file exists.
+
+       -bc    Do  the  "%build"  stage from the spec file (after doing the prep stage).  This generally involves
+              the equivalent of a "make".
+
+       -bi    Do the "%install" stage from the spec file (after doing the prep and build stages).   This  gener‐
+              ally involves the equivalent of a "make install".
+
+       -bb    生成一个二进制包(在完成prep, build, 以及 install阶段之后)
+
+       -bs    只生成源包(在完成prep, build, 以及 install阶段之后)
+
+       -ba    生成二进制包和源包(在完成prep, build, 以及 install阶段之后)
+
+       还可以使用的选项如下:
+
+       --short-circuit
+              忽略导致specified阶段(比如,忽略所有导致specified阶段的阶段).  只有与-bc 以及 -bi合用才有效.
+
+       --timecheck
+              设置"timecheck"的值(0-?).该值也可以通过定义宏"_timecheck"来配置.
+              timecheck值以秒为单位,表示一个包生成的最大年龄.如果时间超过了该值, 则对所有文件皆给出警告信息.
+
+       --clean
+              在包完成之后,移去生成树.
+
+       --rmsource
+              在完成包的生成之后移去源和spec文件 (也可以单独使用,比如:"rpm --rmsource foo.spec").
+
+       --test 不执行任何生成阶段.在测试spec文件时很有用处.
+
+       --sign 在包中嵌入一个PGP签名.该签名可以用来核实该包的完整性和源发性.  配置细节可以察看 PGP 签名 一节.
+
+       --buildroot <dir>
+              在生成包的时候,用目录<dir>覆盖包的生成根目录tag.
+
+       --target <platform>
+              在生成包的时候,将<platform>解释为arch-vendor-os,并且相应地设置 宏_target, _target_arch 以及  _tar‐
+              get_os.
+
+       --buildarch <arch>
+              在生成包的时候,将architecture设置到<arch>.  该选项在RPM 3.0中由于--target的出现而被抛弃.
+
+       --buildos <os>
+              在生成包的时候,将architecture设置到<os>.  该选项在RPM 3.0中由于--target的出现而被抛弃.
+
+
+重
+       There are two other ways to invoke building with rpm: 有两种不同的方法用rpm重新生成包:
+
+       rpm --recompile <source_package_file>+
+
+       rpm --rebuild <source_package_file>+
+
+       当以这种方式激发的时候,rpm安装指明的源包,并且完成prep,compile,install工作.
+       另外,--rebuild生成一个新的二进制包.         当包的生成完成的时候,生成所用目录被移去(就如同使用了--clean),
+       而且该包的源和spec文件也要移走.
+
+
+签
+       rpm --resign <binary_package_file>+
+
+       该选项生成并将新签名插入所列出的包里.已存在的签名会被移走.
+
+       rpm --addsign <binary_package_file>+
+
+       该选项生成并将新签名附加到所列出的包的签名之后.
+
+
+PGP 签
+       要使用签名特性,RPM必须要能够运行PGP(要安装了PGP并且你可以访问它),
+       而且还需PGP能找到一个带有RPM公钥的公钥环.       缺省情况下,RPM使用PGP的缺省设置(著名的PGPPATH)来查找钥环.
+       如果你的钥环并不在PGP所期望它们处在的地方,则你需要配置宏
+
+       _pgp_path
+              将其设为要使用的PGP钥环所在的位置.
+
+       如果你想要签名一个你自己生成的包,你还必须创建自己的公钥和密钥对(请参阅PGP手册).  还需要配置签名类型宏:
+
+       _signature
+              目前只支持pgp.还有用户名宏:
+
+       _pgp_name
+              指明想要使用其键去签名你的包的用户.
+
+              在生成包的时候,可以将--sign加到命令行里.这样只需给出你的口令短语, 就可以在生成包的同时对其签名.
+
+              比如,要想以用户"John Doe <jdoe@foo.com>"的身份,用在 /etc/rpm/.pgp的钥环,去签名一个包,就应该将
+
+
+       %_signature
+              pgp
+
+       %_pgp_name
+              /etc/rpm/.pgp
+
+       %_pgp_name
+              John Doe <jdoe@foo.com>"
+
+       包括在一个宏配置文件里.  对于系统的配置可以使用/etc/rpm/macros, 而对于个人配置可以使用~/.rpmmacros.
+
+
+重
+       rpm重建数据库的命令是
+
+            rpm --rebuilddb
+
+       要重建一个新的数据库,可以:
+
+            rpm --initdb
+
+       对这些模式唯一的选项是--dbpath 和 --root.
+
+
+SHOWRC
+       运行
+
+            rpm --showrc
+
+
+       展示一些设置在rpmrc文件里的值,RPM所有选项都会利用这些值.
+
+
+FTP/HTTP选
+       RPM包括简单的FTP和HTTP客户端程序,这样可以简化那些从internet取得的包的安装和查询.
+       用于安装,升级,以及查询操作的包文件可以说明为ftp或者http格式的URL:
+
+
+            ftp://<user>:<password>@hostname:<port>/path/to/package.rpm
+
+       如果忽略掉:password部分,会提示要求给出口令(每个用户/主机名对一次) 如果用户名和口令都忽略了,就使用匿名ftp.
+       总是使用消极(PASV) ftp传送.
+
+       RPM允许使用下列操作辅助ftp URLs
+
+
+       --ftpproxy <hostname>
+              主机<hostname>将被作为所有ftp传输的代理服务器使用,
+              这样允许用户通过使用了代理系统的防火墙机器来做ftp传输.  该选项也可以通过配置宏_ftpproxy来指明.
+
+
+       --ftpport <port>
+              用该TCP<端口>号取代缺省的端口去连接代理ftp服务器.  该选项也可以通过配置宏_ftpport来指明.
+
+       RPM允许使用下列操作辅助http URLs
+
+
+       --httpproxy <hostname>
+              将主机<主机名>作为所有http传输的代理服务器使用.  该选项可以通过配置宏_httpproxy来指明.
+
+
+       --httpport <port>
+              用该TCP<端口>号取代缺省的端口去连接代理http服务器.  该选项也可以通过配置宏_httpport来指明.
+
+文
+       /usr/lib/rpm/rpmrc
+       /etc/rpmrc
+       ~/.rpmrc
+       /var/lib/rpm/packages
+       /var/lib/rpm/pathidx
+       /var/lib/rpm/nameidx
+       /tmp/rpm*
+
+另
+       glint(8)， rpm2cpio(8) http://www.rpm.org/
+
+作
+       Marc Ewing <marc@redhat.com>
+       Jeff Johnson <jbj@redhat.com>
+       Erik Troan <ewt@redhat.com>
+
+
+[中
+       mapping <email>
+
+[中
+       2001/7/21
+
+《
+       http://cmpp.linuxforum.net
+
+
+
+Red Hat Software                                 1998年12月22日                                           rpm(8)

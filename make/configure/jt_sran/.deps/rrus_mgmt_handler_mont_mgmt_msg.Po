@@ -1,5 +1,0 @@
-rrus_mgmt_handler_mont_mgmt_msg.o: \
- product_om/rrus_mgmt/src/rrus_mgmt_handler_mont_mgmt_msg.c \
- /usr/include/stdc-predef.h
-
-/usr/include/stdc-predef.h:

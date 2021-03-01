@@ -1,1 +1,0 @@
-cmd_/work/workspace/test/ipc/shared-memory/shmqueue/shmqueue.o := ld -m elf_x86_64   -r -o /work/workspace/test/ipc/shared-memory/shmqueue/shmqueue.o /work/workspace/test/ipc/shared-memory/shmqueue/shmq.o ; scripts/mod/modpost /work/workspace/test/ipc/shared-memory/shmqueue/shmqueue.o

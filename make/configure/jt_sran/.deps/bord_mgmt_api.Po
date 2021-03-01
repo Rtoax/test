@@ -1,4 +1,0 @@
-bord_mgmt_api.o: product_om/cfig_mgmt/src/bord_mgmt_api.c \
- /usr/include/stdc-predef.h
-
-/usr/include/stdc-predef.h:

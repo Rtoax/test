@@ -1,1 +1,0 @@
-cmd_/work/workspace/test/linux/process/procsview/procsview.ko := ld -r -m elf_x86_64 -T ./scripts/module-common.lds --build-id  -o /work/workspace/test/linux/process/procsview/procsview.ko /work/workspace/test/linux/process/procsview/procsview.o /work/workspace/test/linux/process/procsview/procsview.mod.o

@@ -1,1 +1,0 @@
-cmd_/work/workspace/test/ipc/shared-memory/shmqueue/shmqueue.ko := ld -r -m elf_x86_64 -T ./scripts/module-common.lds --build-id  -o /work/workspace/test/ipc/shared-memory/shmqueue/shmqueue.ko /work/workspace/test/ipc/shared-memory/shmqueue/shmqueue.o /work/workspace/test/ipc/shared-memory/shmqueue/shmqueue.mod.o

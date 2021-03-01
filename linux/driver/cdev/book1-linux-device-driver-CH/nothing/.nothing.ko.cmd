@@ -1,1 +1,0 @@
-cmd_/work/workspace/test/linux/driver/cdev/hello/nothing.ko := ld -r -m elf_x86_64 -T ./scripts/module-common.lds --build-id  -o /work/workspace/test/linux/driver/cdev/hello/nothing.ko /work/workspace/test/linux/driver/cdev/hello/nothing.o /work/workspace/test/linux/driver/cdev/hello/nothing.mod.o

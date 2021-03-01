@@ -48,6 +48,44 @@ void epoll_add_fd(struct epoll_context *ctx, int evt_fd)
     
 }
 
+int select_context_init(struct select_context *ctx) 
+{
+    int i;
+    memset(ctx, 0, sizeof(struct select_context));
+    
+    FD_ZERO(&ctx->allset);
+    ctx->maxfd    = 0;
+
+    for(i=0; i<MAX_EVENTS; ++i)
+    {
+        ctx->producer[i] = -1;
+    }
+    pthread_rwlock_init(&ctx->rwlock, NULL);
+    return 0;
+}
+void select_add_fd(struct select_context *ctx, int evt_fd) 
+{
+    int i;
+    
+    pthread_rwlock_wrlock(&ctx->rwlock);
+    FD_SET(evt_fd, &ctx->allset);
+    if(evt_fd > ctx->maxfd)
+	{
+		ctx->maxfd = evt_fd;
+	}
+    
+    for(i=0; i<MAX_EVENTS; ++i)
+    {
+        if(ctx->producer[i] < 0)
+        {
+            ctx->producer[i] = evt_fd;
+            break;
+        }
+    }
+    pthread_rwlock_unlock(&ctx->rwlock);
+    printf("Select add: fd = %d, maxfd = %d.\n", evt_fd, ctx->maxfd);
+}
+
 int eventfd_create() 
 {
     int efd = eventfd(0, EFD_CLOEXEC);

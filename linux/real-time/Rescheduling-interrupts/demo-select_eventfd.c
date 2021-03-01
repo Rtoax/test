@@ -6,6 +6,8 @@
 #include <pthread.h>
 #include <sys/eventfd.h>
 #include <sys/epoll.h>
+/* According to POSIX.1-2001 */
+#include <sys/select.h>
 
 #include "utils.h"
 #include "common.h"
@@ -24,33 +26,41 @@
     CentOS Linux release 7.4.1708 (Core)
 */
 
-
 atomic64_t read_total;
 
 void *read_task(void*arg){
     struct task_arg *ARG = (struct task_arg *)arg;
-    struct epoll_context *ectx = ARG->ectx;
+    struct select_context *sctx = ARG->sctx;
     
     int i =0, nmsg = 0, imsg = 0, ret, nfds;
     eventfd_t count = 1;
     
     reset_self_sched(ARG->sched_policy, ARG->sched_priority);
     reset_self_cpuset(ARG->cpu_list);
+
+    log_dequeue("\n");
+    sleep(1);
     
     for (;;) {
-        nfds = epoll_wait(ectx->epollfd, ectx->events, MAX_EVENTS, -1);
+        sctx->readset = sctx->allset;
+        nfds = select(sctx->maxfd+1, &sctx->readset, NULL, NULL, NULL);
         if (nfds == -1) {
-            perror("epoll_pwait");
+            perror("select");
             exit(EXIT_FAILURE);
         }
-        
-        for (i = 0; i < nfds; ++i) {
-            ret = eventfd_read(ectx->events[i].data.fd, &count);
+//        log_dequeue("select return\n");
+        for (i = 0; i < MAX_EVENTS; ++i) {
+            if(!FD_ISSET(sctx->producer[i], &sctx->readset)) {
+                continue;
+            }
+            ret = eventfd_read(sctx->producer[i], &count);
             if(ret < 0) {
                 break;
             }
+            
             atomic64_add(&read_total, count);
-//            log_dequeue("read ret = %d, count = %ld\n", ret, count);
+//            sleep(1);
+//            log_dequeue("read fd = %d, count = %ld\n", sctx->producer[i], count);
             for(imsg = 0; imsg < count; ++imsg) {
                 
             }
@@ -62,20 +72,23 @@ void *read_task(void*arg){
 void *write_task(void*arg) {
     
     struct task_arg *ARG = (struct task_arg *)arg;
-    struct epoll_context *ectx = ARG->ectx;
+    struct select_context *sctx = ARG->sctx;
 
     reset_self_sched(ARG->sched_policy, ARG->sched_priority);
     reset_self_cpuset(ARG->cpu_list);
     
     int evt_fd = eventfd_create();
-    epoll_add_fd(ectx, evt_fd);
+    select_add_fd(sctx, evt_fd);
     
     int i =0;
     int ret;
     eventfd_t count = 1;
+
+//    log_enqueue("\n");
     
     while(1) {
 //        sleep(1);
+//        log_enqueue("write ret = %d, count = %ld\n", ret, count);
         ret = eventfd_write(evt_fd, count);
         if(ret < 0) {
             continue;
@@ -90,6 +103,8 @@ void sig_handler(int signum)
 	exit(0);
 }
 
+
+
 int main(int argc, char *argv[])
 {
     int i;
@@ -102,7 +117,7 @@ int main(int argc, char *argv[])
     struct task_arg dequeue_arg;
     struct task_arg enqueue_arg[10];
 
-    struct epoll_context ectx;
+    struct select_context sctx;
     char *cpu_lists[10] = {
         "0",    //dequeue
         "1",    //enqueue1
@@ -124,16 +139,18 @@ int main(int argc, char *argv[])
             }
         }
     }
-    epoll_context_init(&ectx);
+    select_context_init(&sctx);
     
-    dequeue_arg.ectx = &ectx;
+    atomic64_init(&read_total);
+    
+    dequeue_arg.sctx = &sctx;
     dequeue_arg.sched_policy = SCHED_OTHER;
     dequeue_arg.sched_priority = 0;
     dequeue_arg.cpu_list = strdup(cpu_lists[0]);
     pthread_create(&dequeue, NULL, read_task, &dequeue_arg);
 
     for(i=0;i<nwrite;i++) {
-        enqueue_arg[i].ectx = &ectx;
+        enqueue_arg[i].sctx = &sctx;
         enqueue_arg[i].sched_policy = SCHED_OTHER;
         enqueue_arg[i].sched_priority = 0;
         enqueue_arg[i].cpu_list = strdup(cpu_lists[i+1]);
@@ -147,4 +164,5 @@ int main(int argc, char *argv[])
 
     return EXIT_SUCCESS;
 }
+
 

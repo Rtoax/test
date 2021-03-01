@@ -4,6 +4,7 @@
 #include <linux/sched.h> 
 #include <linux/version.h>
 #include <linux/string.h>
+#include <linux/slab.h>
 #include <linux/uaccess.h>
 
 static struct proc_dir_entry *Proc_Parent_Process;

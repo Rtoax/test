@@ -7,4 +7,5 @@ int main() {
 	printf("~i = %x\n", ~i);
 	printf("!~i= %x\n", !~i);
 	printf("~!i= %x\n", ~!i);
+	printf("i^1 = %x\n", i^1);
 }

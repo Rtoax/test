@@ -1,0 +1,19 @@
+NR_FREE_PAGECACHE_PA(9)                    Memory Management in Linux                    NR_FREE_PAGECACHE_PA(9)
+
+
+
+NAME
+       nr_free_pagecache_pages - count number of pages beyond high watermark
+
+SYNOPSIS
+       unsigned long nr_free_pagecache_pages(void);
+
+ARGUMENTS
+       void
+           no arguments
+
+DESCRIPTION
+       nr_free_pagecache_pages counts the number of pages which are beyond the high watermark within all zones.
+
+COPYRIGHT
+Kernel Hackers Manual 3.10                          June 2019                            NR_FREE_PAGECACHE_PA(9)

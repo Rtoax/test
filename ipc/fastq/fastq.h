@@ -9,12 +9,14 @@
 *       2021年2月1日 添加多入单出队列功能
 *       2021年2月2日 消息队列句柄改成 unsigned long 索引
 *       2021年2月3日 统计类接口 和 低时延接口并存
+*       2021年2月4日 VOS_FastQMsgStatInfo 接口
 *
 * API接口概述
 *   
 *   VOS_FastQCreateModule   注册消息队列
 *   VOS_FastQDump           显示信息
 *   VOS_FastQDumpAllModule  显示信息（所有模块）
+*   VOS_FastQMsgStatInfo    查询队列内存入队出队信息
 *   VOS_FastQSend           发送消息（轮询直至成功发送）
 *   VOS_FastQTrySend        发送消息（尝试向队列中插入，当队列满是直接返回false）
 *   VOS_FastQRecv           接收消息

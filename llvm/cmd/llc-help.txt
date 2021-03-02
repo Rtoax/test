@@ -1,0 +1,116 @@
+OVERVIEW: llvm system compiler
+
+USAGE: llc [options] <input bitcode>
+
+OPTIONS:
+  -O=<char>                               - Optimization level. [-O0, -O1, -O2, or -O3] (default = '-O2')
+  -asm-verbose                            - Add comments to directives.
+  -bounds-checking-single-trap            - Use one trap block per function
+  -code-model                             - Choose code model
+    =default                              -   Target default code model
+    =small                                -   Small code model
+    =kernel                               -   Kernel code model
+    =medium                               -   Medium code model
+    =large                                -   Large code model
+  -cppfname=<function name>               - Specify the name of the generated function
+  -cppfor=<string>                        - Specify the name of the thing to generate
+  -cppgen                                 - Choose what kind of output to generate
+    =program                              -   Generate a complete program
+    =module                               -   Generate a module definition
+    =contents                             -   Generate contents of a module
+    =function                             -   Generate a function definition
+    =functions                            -   Generate all function definitions
+    =inline                               -   Generate an inline function
+    =variable                             -   Generate a variable definition
+    =type                                 -   Generate a type definition
+  -disable-debug-info-verifier            - 
+  -disable-fp-elim                        - Disable frame pointer elimination optimization
+  -disable-red-zone                       - Do not emit code that uses the red zone.
+  -disable-simplify-libcalls              - Disable simplify-libcalls
+  -disable-spill-fusing                   - Disable fusing of spill code into instructions
+  -disable-tail-calls                     - Never emit tail calls
+  -enable-correct-eh-support              - Make the -lowerinvoke pass insert expensive, but correct, EH code
+  -enable-fp-mad                          - Enable less precise MAD instructions to be generated
+  -enable-load-pre                        - 
+  -enable-no-infs-fp-math                 - Enable FP math optimizations that assume no +-Infs
+  -enable-no-nans-fp-math                 - Enable FP math optimizations that assume no NaNs
+  -enable-objc-arc-opts                   - enable/disable all ARC Optimizations
+  -enable-pie                             - Assume the creation of a position independent executable.
+  -enable-tbaa                            - 
+  -enable-unsafe-fp-math                  - Enable optimizations that may decrease FP precision
+  -fatal-assembler-warnings               - Consider warnings as error
+  -fdata-sections                         - Emit data into separate sections
+  -ffunction-sections                     - Emit functions into separate sections
+  -filetype                               - Choose a file type (not all types are supported by all targets):
+    =asm                                  -   Emit an assembly ('.s') file
+    =obj                                  -   Emit a native object ('.o') file
+    =null                                 -   Emit nothing, for performance testing
+  -float-abi                              - Choose float ABI type
+    =default                              -   Target default float ABI type
+    =soft                                 -   Soft float ABI (implied by -soft-float)
+    =hard                                 -   Hard float ABI (uses FP registers)
+  -fp-contract                            - Enable aggressive formation of fused FP ops
+    =fast                                 -   Fuse FP ops whenever profitable
+    =on                                   -   Only fuse 'blessed' FP ops.
+    =off                                  -   Only fuse FP ops when the result won't be effected.
+  -help                                   - Display available options (-help-hidden for more)
+  -internalize-public-api-file=<filename> - A file containing list of symbol names to preserve
+  -internalize-public-api-list=<list>     - A list of symbol names to preserve
+  -join-liveintervals                     - Coalesce copies (default=true)
+  -limit-float-precision=<uint>           - Generate low-precision inline sequences for some float libcalls
+  -load=<pluginfilename>                  - Load the specified plugin
+  -march=<string>                         - Architecture to generate code for (see --version)
+  -mattr=<a1,+a2,-a3,...>                 - Target specific attributes (-mattr=help for details)
+  -mc-relax-all                           - When used with filetype=obj, relax all fixups in the emitted object file
+  -mc-x86-disable-arith-relaxation        - Disable relaxation of arithmetic instruction for X86
+  -mcpu=<cpu-name>                        - Target a specific cpu type (-mcpu=help for details)
+  -mips16-hard-float                      - MIPS: mips16 hard float enable.
+  -mno-ldc1-sdc1                          - Expand double precision loads and stores to their single precision counterparts
+  -mtriple=<string>                       - Override target triple for module
+  -nozero-initialized-in-bss              - Don't place zero-initialized symbols into bss section
+  -nvptx-sched4reg                        - NVPTX Specific: schedule for register pressue
+  -o=<filename>                           - Output filename
+  -pre-RA-sched                           - Instruction schedulers available (before register allocation):
+    =vliw-td                              -   VLIW scheduler
+    =list-ilp                             -   Bottom-up register pressure aware list scheduling which tries to balance ILP and register pressure
+    =list-hybrid                          -   Bottom-up register pressure aware list scheduling which tries to balance latency and register pressure
+    =source                               -   Similar to list-burr but schedules in source order when possible
+    =list-burr                            -   Bottom-up register reduction list scheduling
+    =linearize                            -   Linearize DAG, no scheduling
+    =fast                                 -   Fast suboptimal list scheduling
+    =default                              -   Best scheduler for the target
+  -print-after-all                        - Print IR after each pass
+  -print-before-all                       - Print IR before each pass
+  -print-machineinstrs=<pass-name>        - Print machine instrs
+  -regalloc                               - Register allocator to use
+    =default                              -   pick register allocator based on -O option
+    =basic                                -   basic register allocator
+    =fast                                 -   fast register allocator
+    =greedy                               -   greedy register allocator
+    =pbqp                                 -   PBQP register allocator
+  -relocation-model                       - Choose relocation model
+    =default                              -   Target default relocation model
+    =static                               -   Non-relocatable code
+    =pic                                  -   Fully relocatable, position independent code
+    =dynamic-no-pic                       -   Relocatable external references, non-relocatable code
+  -segmented-stacks                       - Use segmented stacks if possible.
+  -soft-float                             - Generate software floating point library calls
+  -spiller                                - Spiller to use: (default: standard)
+    =trivial                              -   trivial spiller
+    =inline                               -   inline spiller
+  -stack-alignment=<uint>                 - Override default stack alignment
+  -start-after=<pass-name>                - Resume compilation after a specific pass
+  -stats                                  - Enable statistics output from program (available with Asserts)
+  -stop-after=<pass-name>                 - Stop compilation after a specific pass
+  -tailcallopt                            - Turn fastcc calls into tail calls by (potentially) changing ABI.
+  -time-passes                            - Time each pass, printing elapsed time for each on exit
+  -use-init-array                         - Use .init_array instead of .ctors.
+  -verify-dom-info                        - Verify dominator info (time consuming)
+  -verify-loop-info                       - Verify loop info (time consuming)
+  -verify-regalloc                        - Verify during register allocation
+  -verify-region-info                     - Verify region info (time consuming)
+  -verify-scev                            - Verify ScalarEvolution's backedge taken counts (slow)
+  -version                                - Display the version of this program
+  -x86-asm-syntax                         - Choose style of code to emit from X86 backend:
+    =att                                  -   Emit AT&T-style assembly
+    =intel                                -   Emit Intel-style assembly

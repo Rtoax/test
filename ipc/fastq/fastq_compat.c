@@ -423,9 +423,8 @@ _FQ_NAME(FastQRecv)(unsigned int from, fq_msg_handler_t handler) {
 #if defined(_FASTQ_EPOLL)
     struct epoll_event events[8];
 #elif defined(_FASTQ_SELECT)
-
-#endif 
     int i, max_fd;
+#endif 
     int curr_event_fd;
     char addr[1024] = {0};
     size_t size = sizeof(addr);

@@ -5,7 +5,7 @@
 *  日期：
 *       2021年2月2日    
 \**********************************************************************************************************************/
-
+#include "utils.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
@@ -14,12 +14,7 @@
 
 #include <fastq.h>
 
-enum {
-    NODE_1 = 1, 
-    NODE_2,
-    NODE_3,
-    NODE_4,
-};
+#include "common.h"
 
 
 int sig_handler(int signum) {

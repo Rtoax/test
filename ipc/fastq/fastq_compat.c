@@ -39,7 +39,16 @@ static  struct {
 //从 源module ID 和 目的module ID 到 _ring 最快的方法
 struct _FQ_NAME(FastQModule) {
     bool already_register;
+#if defined(_FASTQ_EPOLL)
     int epfd; //epoll fd
+#elif defined(_FASTQ_SELECT)
+    struct {
+        int maxfd;
+        pthread_rwlock_t rwlock;    //保护 fd_set
+        fd_set readset, allset;
+        int producer[FD_SETSIZE];
+    } selector;
+#endif
     unsigned long module_id; //是 1- FASTQ_ID_MAX 的任意值
     unsigned int ring_size; //队列大小，ring 节点数
     unsigned int msg_size; //消息大小， ring 节点大小
@@ -65,7 +74,23 @@ static void __attribute__((constructor(101))) _FQ_NAME(__FastQInitCtor) () {
     for(i=0; i<=FASTQ_ID_MAX; i++) {
         _FQ_NAME(_AllModulesRings)[i].already_register = false;
         _FQ_NAME(_AllModulesRings)[i].module_id = i;
+    
+#if defined(_FASTQ_EPOLL)
         _FQ_NAME(_AllModulesRings)[i].epfd = -1;
+
+#elif defined(_FASTQ_SELECT)
+
+        FD_ZERO(&_FQ_NAME(_AllModulesRings)[i].selector.allset);
+        FD_ZERO(&_FQ_NAME(_AllModulesRings)[i].selector.readset);
+        _FQ_NAME(_AllModulesRings)[i].selector.maxfd    = 0;
+
+        for(j=0; j<FD_SETSIZE; ++j)
+        {
+            _FQ_NAME(_AllModulesRings)[i].selector.producer[j] = -1;
+        }
+        pthread_rwlock_init(&_FQ_NAME(_AllModulesRings)[i].selector.rwlock, NULL);
+    
+#endif
         _FQ_NAME(_AllModulesRings)[i].ring_size = 0;
         _FQ_NAME(_AllModulesRings)[i].msg_size = 0;
         
@@ -77,8 +102,14 @@ static void __attribute__((constructor(101))) _FQ_NAME(__FastQInitCtor) () {
 }
 
 always_inline  static inline struct _FQ_NAME(FastQRing) *
-_FQ_NAME(__fastq_create_ring)(const int epfd, const unsigned long src, const unsigned long dst, 
-                      const unsigned int ring_size, const unsigned int msg_size) {
+_FQ_NAME(__fastq_create_ring)(
+#if defined(_FASTQ_EPOLL)
+                        const int epfd, 
+#elif defined(_FASTQ_SELECT)
+                        struct _FQ_NAME(FastQModule) *pmodule,
+#endif
+                        const unsigned long src, const unsigned long dst, 
+                        const unsigned int ring_size, const unsigned int msg_size) {
 
     unsigned long ring_real_size = sizeof(struct _FQ_NAME(FastQRing)) + ring_size*(msg_size+sizeof(size_t));
                       
@@ -99,12 +130,22 @@ _FQ_NAME(__fastq_create_ring)(const int epfd, const unsigned long src, const uns
     LOG_DEBUG("Create module %ld event fd = %d.\n", dst, new_ring->_evt_fd);
     
     _FQ_NAME(_evtfd_to_ring)[new_ring->_evt_fd]._ring = new_ring;
-
+    
+#if defined(_FASTQ_EPOLL)
     struct epoll_event event;
     event.data.fd = new_ring->_evt_fd;
     event.events = EPOLLIN; //必须采用水平触发
     epoll_ctl(epfd, EPOLL_CTL_ADD, event.data.fd, &event);
     LOG_DEBUG("Add eventfd %d to epollfd %d.\n", new_ring->_evt_fd, epfd);
+#elif defined(_FASTQ_SELECT)
+    pthread_rwlock_wrlock(&pmodule->selector.rwlock);
+    FD_SET(new_ring->_evt_fd, &pmodule->selector.allset);    
+    if(new_ring->_evt_fd > pmodule->selector.maxfd)
+	{
+		pmodule->selector.maxfd = new_ring->_evt_fd;
+	}
+    pthread_rwlock_unlock(&pmodule->selector.rwlock);
+#endif
 
 #ifdef FASTQ_STATISTICS //统计功能
     atomic64_init(&new_ring->nr_dequeue);
@@ -149,20 +190,31 @@ _FQ_NAME(FastQCreateModule)(const unsigned long module_id, const unsigned int ri
     }
     
     _FQ_NAME(_AllModulesRings)[module_id].already_register = true;
+    
+#if defined(_FASTQ_EPOLL)
     _FQ_NAME(_AllModulesRings)[module_id].epfd = epoll_create(1);
     assert(_FQ_NAME(_AllModulesRings)[module_id].epfd && "Epoll create error");
+    LOG_DEBUG("Create module %ld epoll fd = %d.\n", module_id, _FQ_NAME(_AllModulesRings)[module_id].epfd);
+#elif defined(_FASTQ_SELECT)
+    LOG_DEBUG("Create module %ld.\n", module_id);
+#endif
 
     _FQ_NAME(_AllModulesRings)[module_id]._file = FastQStrdup(_file);
     _FQ_NAME(_AllModulesRings)[module_id]._func = FastQStrdup(_func);
     _FQ_NAME(_AllModulesRings)[module_id]._line = _line;
     
-    LOG_DEBUG("Create module %ld epoll fd = %d.\n", module_id, _FQ_NAME(_AllModulesRings)[module_id].epfd);
     
     _FQ_NAME(_AllModulesRings)[module_id].ring_size = __power_of_2(ring_size);
     _FQ_NAME(_AllModulesRings)[module_id].msg_size = msg_size;
 
     /* 当源模块未初始化时又想向目的模块发送消息 */
-    _FQ_NAME(_AllModulesRings)[module_id]._ring[0] = _FQ_NAME(__fastq_create_ring)(_FQ_NAME(_AllModulesRings)[module_id].epfd, 0, module_id,\
+    _FQ_NAME(_AllModulesRings)[module_id]._ring[0] = _FQ_NAME(__fastq_create_ring)(
+#if defined(_FASTQ_EPOLL)
+                                                                _FQ_NAME(_AllModulesRings)[module_id].epfd, 
+#elif defined(_FASTQ_SELECT)
+                                                                &_FQ_NAME(_AllModulesRings)[module_id],
+#endif  
+                                                                0, module_id,\
                                                                 __power_of_2(ring_size), msg_size);
 
     /*建立住的模块和其他模块的连接关系
@@ -208,11 +260,23 @@ _FQ_NAME(FastQCreateModule)(const unsigned long module_id, const unsigned int ri
             continue;
         }
         _FQ_NAME(_AllModulesRings)[module_id]._ring[i] = \
-                            _FQ_NAME(__fastq_create_ring)(_FQ_NAME(_AllModulesRings)[module_id].epfd, i, module_id,\
-                                                                    __power_of_2(ring_size), msg_size);
+                            _FQ_NAME(__fastq_create_ring)(
+#if defined(_FASTQ_EPOLL)
+                                                        _FQ_NAME(_AllModulesRings)[module_id].epfd, 
+#elif defined(_FASTQ_SELECT)
+                                                        &_FQ_NAME(_AllModulesRings)[module_id],
+#endif                             
+                                                        i, module_id,\
+                                                        __power_of_2(ring_size), msg_size);
         if(!_FQ_NAME(_AllModulesRings)[i]._ring[module_id]) {
             _FQ_NAME(_AllModulesRings)[i]._ring[module_id] = \
-                    _FQ_NAME(__fastq_create_ring)(_FQ_NAME(_AllModulesRings)[i].epfd, module_id, i, \
+                    _FQ_NAME(__fastq_create_ring)(
+#if defined(_FASTQ_EPOLL)
+                                                    _FQ_NAME(_AllModulesRings)[i].epfd, 
+#elif defined(_FASTQ_SELECT)
+                                                    &_FQ_NAME(_AllModulesRings)[i],
+#endif                             
+                                                    module_id, i, \
                                                     _FQ_NAME(_AllModulesRings)[module_id].ring_size, _FQ_NAME(_AllModulesRings)[i].msg_size);
         }
     }
@@ -356,24 +420,48 @@ _FQ_NAME(FastQRecv)(unsigned int from, fq_msg_handler_t handler) {
 
     eventfd_t cnt;
     int nfds;
+#if defined(_FASTQ_EPOLL)
     struct epoll_event events[8];
-    
+#elif defined(_FASTQ_SELECT)
+
+#endif 
+    int i, max_fd;
+    int curr_event_fd;
     char addr[1024] = {0};
     size_t size = sizeof(addr);
     struct _FQ_NAME(FastQRing) *ring = NULL;
 
     while(1) {
+#if defined(_FASTQ_EPOLL)
         LOG_DEBUG("Recv start >>>>  epoll fd = %d.\n", _FQ_NAME(_AllModulesRings)[from].epfd);
         nfds = epoll_wait(_FQ_NAME(_AllModulesRings)[from].epfd, events, 8, -1);
         LOG_DEBUG("Recv epoll return epfd = %d.\n", _FQ_NAME(_AllModulesRings)[from].epfd);
+#elif defined(_FASTQ_SELECT)
+        _FQ_NAME(_AllModulesRings)[from].selector.readset = _FQ_NAME(_AllModulesRings)[from].selector.allset;
+        max_fd = _FQ_NAME(_AllModulesRings)[from].selector.maxfd;
+
+        nfds = select(max_fd+1, &_FQ_NAME(_AllModulesRings)[from].selector.readset, NULL, NULL, NULL);
         
+#endif 
+        
+#if defined(_FASTQ_EPOLL)
         for(;nfds--;) {
-            ring = _FQ_NAME(_evtfd_to_ring)[events[nfds].data.fd]._ring;
-            eventfd_read(events[nfds].data.fd, &cnt);
+            curr_event_fd = events[nfds].data.fd;
+#elif defined(_FASTQ_SELECT)
+            
+        for (i = 3; i <= max_fd; ++i) {
+            if(!FD_ISSET(i, &_FQ_NAME(_AllModulesRings)[from].selector.readset)) {
+                continue;
+            }
+            nfds--;
+            curr_event_fd = i;
+#endif 
+            ring = _FQ_NAME(_evtfd_to_ring)[curr_event_fd]._ring;
+            eventfd_read(curr_event_fd, &cnt);
 //            if(cnt>1) {
 //                printf("cnt = =%ld\n", cnt);
 //            }
-            LOG_DEBUG("Event fd %d read return cnt = %ld.\n", events[nfds].data.fd, cnt);
+            LOG_DEBUG("Event fd %d read return cnt = %ld.\n", curr_event_fd, cnt);
             for(; cnt--;) {
                 LOG_DEBUG("<<< _FQ_NAME(__FastQRecv).\n");
                 while (!_FQ_NAME(__FastQRecv)(ring, addr, &size)) {

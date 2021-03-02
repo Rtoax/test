@@ -40,6 +40,31 @@
 #define FASTQ_ID_MAX    256
 #endif
 
+/* 多路复用器 的选择， 默认采用 select()
+ *  epoll 实时内核对epoll影响非常严重，详情请见 Sys_epoll_wait->spin_lock_local
+ *  select 实时内核对 epoll 影响不严重
+ */
+#if defined(_FASTQ_EPOLL) && defined(_FASTQ_SELECT)
+# error "You must choose one of selector from _FASTQ_EPOLL or _FASTQ_SELECT"
+#endif
+
+#if !defined(_FASTQ_EPOLL) && !defined(_FASTQ_SELECT)
+# define _FASTQ_SELECT 1 //使用 select()
+#endif
+
+#if !defined(_FASTQ_SELECT)
+# if !defined(_FASTQ_EPOLL)
+#  define _FASTQ_EPOLL 1
+# endif
+#endif
+
+//#ifdef _FASTQ_EPOLL
+//# error _FASTQ_EPOLL
+//#endif
+//#ifdef _FASTQ_SELECT
+//# error _FASTQ_SELECT
+//#endif
+
 /**
  *  内存分配器接口
  */

@@ -5,7 +5,7 @@
 *  日期：
 *       2021年2月2日    
 \**********************************************************************************************************************/
-
+#include "utils.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
@@ -15,66 +15,33 @@
 //#define _FASTQ_STATS //开启统计功能
 #include <fastq.h>
 
-
-
-/* 测试的消息总数 */
-#ifndef TEST_NUM
-#define TEST_NUM   (1UL<<20)
-#endif
-
-enum {
-    NODE_1 = 1, 
-    NODE_2,
-    NODE_3,
-    NODE_4,
-
-};
-
-#ifndef RDTSC
-#define RDTSC() ({\
-    register uint32_t a,d; \
-    __asm__ __volatile__( "rdtsc" : "=a"(a), "=d"(d)); \
-    (((uint64_t)a)+(((uint64_t)d)<<32)); \
-    })
-#endif
-
-typedef struct  {
-#define TEST_MSG_MAGIC 0x123123ff    
-    unsigned long value;
-    int magic;
-    uint64_t latency;
-}__attribute__((aligned(64))) test_msgs_t;
-
-
+#include "common.h"
 
 uint64_t latency_total = 0;
 uint64_t total_msgs = 0;
 uint64_t error_msgs = 0;
 
-struct enqueue_arg {
-    int srcModuleId;
-    test_msgs_t *msgs;
-};
 
 void *enqueue_task(void*arg){
     int i =0;
     struct enqueue_arg *parg = (struct enqueue_arg *)arg;
+    reset_self_cpuset(parg->cpu_list);
     test_msgs_t *ptest_msg = parg->msgs;
     test_msgs_t *pmsg;
     
     unsigned long send_cnt = 0;
     
     while(1) {
-        usleep(1000000);
+//        usleep(1000000);
         pmsg = &ptest_msg[i++%TEST_NUM];
         pmsg->latency = RDTSC();
-        printf("send %lx(%lx)\n", pmsg->value, *(unsigned long*)pmsg);
+//        printf("send %lx(%lx)\n", pmsg->value, *(unsigned long*)pmsg);
         VOS_FastQTrySend(parg->srcModuleId, NODE_1, pmsg, sizeof(test_msgs_t));
 
         send_cnt++;
         
-        if(send_cnt % 10000000 == 0) {
-            sleep(10);
+        if(send_cnt % 2000000 == 0) {
+//            sleep(10);
         }
     }
     pthread_exit(NULL);
@@ -84,7 +51,7 @@ void handler_test_msg(void* msg, size_t size)
 {
     test_msgs_t *pmsg = (test_msgs_t *)msg;
     
-    printf("recv %lx\n", pmsg->value);
+//    printf("recv %lx\n", pmsg->value);
     
     latency_total += RDTSC() - pmsg->latency;
     pmsg->latency = 0;
@@ -94,7 +61,7 @@ void handler_test_msg(void* msg, size_t size)
     
     total_msgs++;
 
-    if(total_msgs % 1000 == 0) {
+    if(total_msgs % 2000000 == 0) {
         printf("dequeue. per msgs \033[1;31m%lf ns\033[m, msgs (total %ld, err %ld).\n", 
                 latency_total*1.0/total_msgs/3000000000*1000000000,
                 total_msgs, error_msgs);
@@ -103,6 +70,8 @@ void handler_test_msg(void* msg, size_t size)
 }
 
 void *dequeue_task(void*arg) {
+    struct dequeue_arg *parg = (struct dequeue_arg*)arg;
+    reset_self_cpuset(parg->cpu_list);
     
     VOS_FastQRecv( NODE_1, handler_test_msg);
     pthread_exit(NULL);
@@ -152,22 +121,28 @@ int main()
 //        test_msgs21[i].magic = TEST_MSG_MAGIC;
         test_msgs41[i].value = 0xffffff0000000000 + i+1;
     }
+    struct dequeue_arg dequeueArg;
     struct enqueue_arg enqueueArg1;
     struct enqueue_arg enqueueArg2;
     struct enqueue_arg enqueueArg3;
 
+    dequeueArg.cpu_list = global_cpu_lists[NODE_1-1];
+
     enqueueArg1.srcModuleId = NODE_2;
+    enqueueArg1.cpu_list = global_cpu_lists[NODE_2-1];
     enqueueArg1.msgs = test_msgs21;
     enqueueArg2.srcModuleId = NODE_3;
+    enqueueArg2.cpu_list = global_cpu_lists[NODE_3-1];
     enqueueArg2.msgs = test_msgs31;
     enqueueArg3.srcModuleId = NODE_4;
+    enqueueArg3.cpu_list = global_cpu_lists[NODE_4-1];
     enqueueArg3.msgs = test_msgs41;
     
 
     pthread_create(&enqueueTask1, NULL, enqueue_task, &enqueueArg1);
     pthread_create(&enqueueTask2, NULL, enqueue_task, &enqueueArg2);
     pthread_create(&enqueueTask3, NULL, enqueue_task, &enqueueArg3);
-    pthread_create(&dequeueTask, NULL, dequeue_task, NULL);
+    pthread_create(&dequeueTask, NULL, dequeue_task, &dequeueArg);
 
 	pthread_setname_np(enqueueTask1, "enqueue1");
 	pthread_setname_np(enqueueTask2, "enqueue2");

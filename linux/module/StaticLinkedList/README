@@ -1,0 +1,5 @@
+1. make
+2. sudo insmod staticlinkedlist.ko
+3. dmesg # see list items printed out
+4. sudo rmmod staticlinkedlist.ko
+6. modinfo staticlinkedlist.ko # read module metadata

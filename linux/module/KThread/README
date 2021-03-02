@@ -1,0 +1,5 @@
+1. make
+2. sudo insmod kthread.ko 
+3. dmesg # see "Hello from MyThread!" in kernel message log
+4. ps -auxf # see MyThread on the list of kernel threads
+5. sudo rmmod kthread.ko

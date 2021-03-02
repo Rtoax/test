@@ -1,0 +1,6 @@
+1. make
+2. sudo insmod hello.ko name=Witkacy
+3. dmesg # see "Hello Witkacy!" in kernel message log
+4. sudo rmmod hello.ko
+5. dmesg # see "Cleaning up hello module." in kernel message log
+6. modinfo hello.ko # read module metadata

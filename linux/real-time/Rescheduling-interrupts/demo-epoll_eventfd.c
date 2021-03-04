@@ -131,15 +131,22 @@ int main(int argc, char *argv[])
     dequeue_arg.sched_priority = 0;
     dequeue_arg.cpu_list = strdup(cpu_lists[0]);
     pthread_create(&dequeue, NULL, read_task, &dequeue_arg);
+    pthread_setname_np(dequeue, "Dequeue");
 
     for(i=0;i<nwrite;i++) {
+        char threadname[64] = {0};
+        
         enqueue_arg[i].ectx = &ectx;
         enqueue_arg[i].sched_policy = SCHED_OTHER;
         enqueue_arg[i].sched_priority = 0;
         enqueue_arg[i].cpu_list = strdup(cpu_lists[i+1]);
         pthread_create(&enqueue[i], NULL, write_task, &enqueue_arg[i]);
-    }
 
+        snprintf(threadname, 64, "Enqueue%d", i+1);
+        pthread_setname_np(enqueue[i], threadname);
+    }
+    
+    pthread_setname_np(pthread_self(), "Main");
     pthread_join(dequeue, NULL);
     for(i=0;i<nwrite;i++) {
         pthread_join(enqueue[i], NULL);

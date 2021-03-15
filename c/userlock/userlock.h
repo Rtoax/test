@@ -137,6 +137,9 @@ user_spinlock_lock(user_spinlock_t *sl) {
 	}
 }
 
+/**
+ *  成功，返回 1 ，失败，返回 0
+ */
 static inline int
 user_spinlock_trylock (user_spinlock_t *sl) {
 	int exp = 0;

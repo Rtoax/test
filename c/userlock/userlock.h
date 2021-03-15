@@ -13,6 +13,9 @@
  *  user_mcslock_t      MCS锁**
  *  user_ticketlock_t   ticket锁*
  *  user_ticketlock_recursive_t 递归ticket锁*
+ *
+ *  荣涛  
+ *  rongtao@sylincom.com
  */
 
 #ifndef __USer_DpDK_LoCk_h

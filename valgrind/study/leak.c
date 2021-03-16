@@ -2,8 +2,9 @@
 #include <stdio.h>
 #include <pthread.h>
 
+#ifndef NOLEAK
 #define LEAK 1
-
+#endif
 
 void* test_task_fn(void* unused)
 {

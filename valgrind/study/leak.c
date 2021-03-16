@@ -14,9 +14,8 @@ void* test_task_fn(void* unused)
 
     int i;
 #ifdef LEAK    
-    for (i=0; i<10; i++) {
+    for (i=0; i<2; i++) {
         str = malloc(64);
-        sleep(1);
     }
 #endif //LEAK    
     free(str);

@@ -1,11 +1,26 @@
 #!/bin/bash
-# 如果我们的程序集成了第三方模块，但又不希望检查他们的内存泄漏问题，可以通过参数指定valgrind忽略他们。
-# suppressions 参数
-# suppressions 参数告诉valgrind忽略指定的错误，用法如下
 
-valgrind --leak-check=full \
-		 --error-exitcode=1 \
-		 --suppressions=../test/valgrd_ignore.txt  \
-		 $*
-#TODO 2021年3月17日
+# --leak-check=full 完全检查内存泄漏
+# --show-reachable=yes 显示内存泄漏地点
+# --trace-children=yes 跟入子进程
+# --quiet 只打印错误信息
+# --gen-suppressions=yes 生成抑制文件
+# --suppressions=file.txt 指定抑制文件
+function suppressions() {
+	if [ $# -lt 2 ]; then
+		echo "usage: $0 [program] [suppressions file]"
+		if [ ! -f $2 ]; then
+			echo "File <$2> not exist"
+		fi
+		exit
+	fi
 
+	valgrind --leak-check=full \
+			 --show-reachable=yes \
+			 --trace-children=yes \
+			 --suppressions=$2 \
+			 --quiet \
+			 $1
+}
+
+suppressions $*

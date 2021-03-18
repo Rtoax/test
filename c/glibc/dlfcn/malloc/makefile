@@ -16,7 +16,7 @@ mymalloc:
 
 test:
 	@echo MM=${MM}
-	gcc vos-test.c ${MM} libvos.a -I. 
+	gcc vos-test.c ${MM} libvos.a -I. -pthread
 
 clean:
-	rm -f *.o *.a *.so
+	rm -f *.o *.a *.so *.out

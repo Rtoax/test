@@ -6,8 +6,8 @@
 void demo_test1() {
     char *str1 = vos_malloc(64);
 
-    str1[-1] = 'A';
-    str1[64] = 'A';
+//    str1[-1] = 'A';
+//    str1[64] = 'A';
     
     str1 = vos_realloc(str1, 128);
 
@@ -27,7 +27,6 @@ void* test_task_fn(void* unused)
 {
 	printf("test_task_fn.\n");
     
-
     int i, j=0;
     while(1) {
         printf("while loop -> %d.\n", ++j);

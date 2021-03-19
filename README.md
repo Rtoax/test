@@ -84,6 +84,7 @@
 * `java`: Java语言
 * `javascript`: JavaScript语言
 * `jemalloc`: JEMalloc内存分配器
+* `JIT`: Just-in Time 及时编译器
 * `json`: Json语言与开元框架
 * `jvm`: Java虚拟机
 * `kvm`: Linux KVM虚拟机技术

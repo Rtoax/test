@@ -10,6 +10,7 @@ Low Level Virtual Machine - LLVM
 --------------------------------------------------------------------------
 1. test/llvm
 2. test/compile/llvm
+3. test/jit/llvm
 
 
 我的系统中关于 LLVM 的头文件如下：

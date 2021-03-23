@@ -1,0 +1,25 @@
+/*
+ * Linker script for the factorial
+ */
+OUTPUT(hello.out) 
+OUTPUT_FORMAT("elf64-x86-64")
+INPUT(hello.o)
+
+START_ADDRESS = 0x200000;
+DATA_OFFSET   = 0x400000;
+
+SECTIONS
+{
+	. = START_ADDRESS;
+	. = ALIGN((1 << 12));
+	.text : {
+	      *(.text)
+	}
+	ASSERT(SIZEOF(.text) < 0x1000000, ".text < 0x1000000")
+	
+	. = DATA_OFFSET;
+	.data : {
+	      *(.data)
+	}
+	ASSERT(SIZEOF(.data) < 0x1000000, ".data < 0x1000000")
+}

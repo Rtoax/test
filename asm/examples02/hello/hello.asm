@@ -20,5 +20,7 @@ _start:
         mov     eax, 60                 ; 60 号系统调用是退出 
         xor     rdi, rdi                ; 0 号系统调用作为退出 
         syscall                         ; 调用系统执行退出 
+		section .data
 message:
         db      "Hello, World", 10      ; 注意到最后的换行 
+

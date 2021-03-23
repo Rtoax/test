@@ -9,6 +9,6 @@
 #    gcc helloworld.o
 #    ./a.out
 
-nasm -felf helloworld.asm
+nasm -felf64 helloworld.asm
 gcc helloworld.o
 ./a.out

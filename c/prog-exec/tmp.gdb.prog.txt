@@ -1,0 +1,3 @@
+info files
+b *0x400400
+run

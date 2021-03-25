@@ -25,7 +25,9 @@
 #include <netinet/tcp.h>
 #include <sys/mman.h>
 
+#ifndef UNIX_DOMAIN
 #define UNIX_DOMAIN "./rtoax_unsocket_pcap"
+#endif
 
 #define MSG_LENGTH          1024
 

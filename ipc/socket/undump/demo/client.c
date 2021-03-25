@@ -16,12 +16,14 @@ void main()
 	setsockopt(connect_fd, SOL_TCP, TCP_NODELAY, &val, sizeof(val));
     printf("fd: %d\n", connect_fd);
 	while(1) {
-	    printf("INPUT>>");
-		scanf("%s", buf);
+	    //printf("INPUT>>");
+		//scanf("%s", buf);
+		sprintf(buf, "abcdefghijklmnopqrstuvwxyz.123456789");
         
 		ret = write(connect_fd, buf, strlen(buf)); 
 		printf("TX bytes %d: %s\n", ret, buf);
         memshow("-- ", buf, ret);
+		sleep(1);
 	}
 
     len = read(connect_fd, buf, MSG_LENGTH);

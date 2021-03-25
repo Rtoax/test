@@ -14,6 +14,7 @@
 *** test/ptmalloc/	效率比较低(glibc标配)
 *** test/mimalloc/	MicroSoft开源
 *** test/glibc/malloc	GNU library(ptmalloc)
+*** test/c/glibc/dlfcn/malloc 内存接口动态注入
 
 ## 不同策略提供的内存管理接口
 

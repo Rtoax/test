@@ -4,23 +4,30 @@
 #include <pthread.h>
 
 void demo_test1() {
+    
     char *str1 = vos_malloc(64);
+    char *str2 = vos_malloc(64);
 
-//    str1[-1] = 'A';
-//    str1[64] = 'A';
+    static int N = 0;
+
+    if((++N)%3==0) {
+        str2[-1] = 'A';
+        str2[64] = 'A';
+    }
     
     str1 = vos_realloc(str1, 128);
 
     sprintf(str1, "Hello World.");
     printf("str1 = %s\n", str1);
-    char *str2 = vos_strdup(str1);
-    printf("str2 = %s\n", str2);
-    vos_free(str2);
+    char *str3 = vos_strdup(str1);
+    printf("str3 = %s\n", str3);
+    vos_free(str3);
     
     vos_free(str1);
     str1 = vos_malloc(128);
 
     vos_free(str1);
+    vos_free(str2);
 }
 
 void* test_task_fn(void* unused)

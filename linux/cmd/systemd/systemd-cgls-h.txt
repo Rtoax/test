@@ -1,0 +1,11 @@
+systemd-cgls [OPTIONS...] [CGROUP...]
+
+Recursively show control group contents.
+
+  -h --help           Show this help
+     --version        Show package version
+     --no-pager       Do not pipe output into a pager
+  -a --all            Show all groups, including empty
+  -l --full           Do not ellipsize output
+  -k                  Include kernel threads in output
+  -M --machine        Show container

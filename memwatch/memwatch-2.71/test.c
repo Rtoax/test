@@ -30,14 +30,6 @@
 #include <signal.h>
 #include "memwatch.h"
 
-#ifndef SIGSEGV
-#error "SIGNAL.H does not define SIGSEGV; running this program WILL cause a core dump/crash!"
-#endif
-
-#ifndef MEMWATCH
-#error "You really, really don't want to run this without memwatch. Trust me."
-#endif
-
 #if !defined(MW_STDIO) && !defined(MEMWATCH_STDIO)
 #error "Define MW_STDIO and try again, please."
 #endif
@@ -45,56 +37,69 @@
 int main()
 {
     char *p;
-
+    
+    printf(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
+    mwInit();
     /* Collect stats on a line number basis */
-    mwStatistics( 2 );
+    mwStatistics( MW_STAT_LINE );
+
+    printf(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
 
     /* Slows things down, but OK for this test prg */
     /* mwAutoCheck( 1 ); */
 
-    TRACE("Hello world!\n");
+    mwTrace("Hello world!\n");
 
-    p = malloc(210);
-    free(p);
-    p = malloc(20);
-    p = malloc(200);    /* causes unfreed error */
+    printf(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
+
+    p = vos_malloc(210);
+    vos_free(p);
+    p = vos_malloc(20);
+    p = vos_malloc(200);    /* causes unfreed error */
     p[-1] = 0;          /* causes underflow error */
-    free(p);
+    vos_free(p);
 
-    p = malloc(100);
+    p = vos_malloc(100);
     p[ -(int)(sizeof(long)*8) ] = -1; /* try to damage MW's heap chain */
-    free( p ); /* should cause relink */
+    vos_free( p ); /* should cause relink */
+
+//    mwDumpCheck();
+    CHECK();
+    mwAbort();
+
+    printf(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
 
     mwSetAriFunc( mwAriHandler );
-    ASSERT(1==2);
+//    mwASSERT(1==2);
 
     mwLimit(1000000);
     mwNoMansLand( MW_NML_ALL );
-
+    mwDumpCheck();
+    
     /* These may cause a general protection fault (segmentation fault) */
     /* They're here to help test the no-mans-land protection */
     if( mwIsSafeAddr(p+50000,1) ) {
-        TRACE("Killing byte at %p\n", p+50000);
+        mwTrace("Killing byte at %p\n", p+50000);
         *(p+50000) = 0;
         }
     if( mwIsSafeAddr(p+30000,1) ) {
-        TRACE("Killing byte at %p\n", p+30000);
+        mwTrace("Killing byte at %p\n", p+30000);
         *(p+30000) = 0;
         }
     if( mwIsSafeAddr(p+1000,1) ) {
-        TRACE("Killing byte at %p\n", p+1000);
+        mwTrace("Killing byte at %p\n", p+1000);
         *(p+1000) = 0;
         }
     if( mwIsSafeAddr(p-100,1) ) {
-        TRACE("Killing byte at %p\n", p-100);
+        mwTrace("Killing byte at %p\n", p-100);
         *(p-100) = 0;
         }
 
     /* This may cause a GP fault as well, since MW data buffers  */
     /* have been damaged in the above killing spree */
-    CHECK();
+//    CHECK();
 
-    p = malloc(12000);
+    p = vos_malloc(12000);
     p[-5] = 1;
     p[-10] = 2;
     p[-15] = 3;
@@ -102,13 +107,13 @@ int main()
 
     /* This may cause a GP fault since MW's buffer list may have */
     /* been damaged by above killing, and it will try to repair it. */
-    free(p);
+    vos_free(p);
 
-	p = realloc(p,10);	/* causes realloc: free'd from error */
+	p = vos_realloc(p,10);	/* causes realloc: free'd from error */
 
     /* May cause GP since MW will inspect the memory to see if it owns it. */
-    free( (void*)main );
-    
+//    free( (void*)main );
+//    CHECK();
     return 0;
 }
 

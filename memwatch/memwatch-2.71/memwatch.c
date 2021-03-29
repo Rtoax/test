@@ -20,85 +20,8 @@
     You should have received a copy of the GNU General Public License
     along with MEMWATCH; if not, write to the Free Software
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
-**
-** 920810 JLI   [1.00]
-** 920830 JLI   [1.10 double-free detection]
-** 920912 JLI   [1.15 mwPuts, mwGrab/Drop, mwLimit]
-** 921022 JLI   [1.20 ASSERT and VERIFY]
-** 921105 JLI   [1.30 C++ support and TRACE]
-** 921116 JLI   [1.40 mwSetOutFunc]
-** 930215 JLI   [1.50 modified ASSERT/VERIFY]
-** 930327 JLI   [1.51 better auto-init & PC-lint support]
-** 930506 JLI   [1.55 MemWatch class, improved C++ support]
-** 930507 JLI   [1.60 mwTest & CHECK()]
-** 930809 JLI   [1.65 Abort/Retry/Ignore]
-** 930820 JLI   [1.70 data dump when unfreed]
-** 931016 JLI   [1.72 modified C++ new/delete handling]
-** 931108 JLI   [1.77 mwSetAssertAction() & some small changes]
-** 940110 JLI   [1.80 no-mans-land alloc/checking]
-** 940328 JLI   [2.00 version 2.0 rewrite]
-**              Improved NML (no-mans-land) support.
-**              Improved performance (especially for free()ing!).
-**              Support for 'read-only' buffers (checksums)
-**              ^^ NOTE: I never did this... maybe I should?
-**              FBI (free'd block info) tagged before freed blocks
-**              Exporting of the mwCounter variable
-**              mwBreakOut() localizes debugger support
-**              Allocation statistics (global, per-module, per-line)
-**              Self-repair ability with relinking
-** 950913 JLI   [2.10 improved garbage handling]
-** 951201 JLI   [2.11 improved auto-free in emergencies]
-** 960125 JLI   [X.01 implemented auto-checking using mwAutoCheck()]
-** 960514 JLI   [2.12 undefining of existing macros]
-** 960515 JLI   [2.13 possibility to use default new() & delete()]
-** 960516 JLI   [2.20 suppression of file flushing on unfreed msgs]
-** 960516 JLI   [2.21 better support for using MEMWATCH with DLL's]
-** 960710 JLI   [X.02 multiple logs and mwFlushNow()]
-** 960801 JLI   [2.22 merged X.01 version with current]
-** 960805 JLI   [2.30 mwIsXXXXAddr() to avoid unneeded GP's]
-** 960805 JLI   [2.31 merged X.02 version with current]
-** 961002 JLI   [2.32 support for realloc() + fixed STDERR bug]
-** 961222 JLI   [2.40 added mwMark() & mwUnmark()]
-** 970101 JLI   [2.41 added over/underflow checking after failed ASSERT/VERIFY]
-** 970113 JLI   [2.42 added support for PC-Lint 7.00g]
-** 970207 JLI   [2.43 added support for strdup()]
-** 970209 JLI   [2.44 changed default filename to lowercase]
-** 970405 JLI   [2.45 fixed bug related with atexit() and some C++ compilers]
-** 970723 JLI   [2.46 added MW_ARI_NULLREAD flag]
-** 970813 JLI   [2.47 stabilized marker handling]
-** 980317 JLI   [2.48 ripped out C++ support; wasn't working good anyway]
-** 980318 JLI   [2.50 improved self-repair facilities & SIGSEGV support]
-** 980417 JLI	[2.51 more checks for invalid addresses]
-** 980512 JLI	[2.52 moved MW_ARI_NULLREAD to occur before aborting]
-** 990112 JLI	[2.53 added check for empty heap to mwIsOwned]
-** 990217 JLI	[2.55 improved the emergency repairs diagnostics and NML]
-** 990224 JLI	[2.56 changed ordering of members in structures]
-** 990303 JLI	[2.57 first maybe-fixit-for-hpux test]
-** 990516 JLI	[2.58 added 'static' to the definition of mwAutoInit]
-** 990517 JLI	[2.59 fixed some high-sensitivity warnings]
-** 990610 JLI	[2.60 fixed some more high-sensitivity warnings]
-** 990715 JLI	[2.61 changed TRACE/ASSERT/VERIFY macro names]
-** 991001 JLI	[2.62 added CHECK_BUFFER() and mwTestBuffer()]
-** 991007 JLI	[2.63 first shot at a 64-bit compatible version]
-** 991009 JLI	[2.64 undef's strdup() if defined, mwStrdup made const]
-** 000704 JLI	[2.65 added some more detection for 64-bits]
-** 010502 JLI   [2.66 incorporated some user fixes]
-**              [mwRelink() could print out garbage pointer (thanks mac@phobos.ca)]
-**				[added array destructor for C++ (thanks rdasilva@connecttel.com)]
-**				[added mutex support (thanks rdasilva@connecttel.com)]
-** 010531 JLI	[2.67 fix: mwMutexXXX() was declared even if MW_HAVE_MUTEX was not defined]
-** 010619 JLI	[2.68 fix: mwRealloc() could leave the mutex locked]
-** 020918 JLI	[2.69 changed to GPL, added C++ array allocation by Howard Cohen]
-** 030212 JLI	[2.70 mwMalloc() bug for very large allocations (4GB on 32bits)]
-** 030520 JLI	[2.71 added ULONG_LONG_MAX as a 64-bit detector (thanks Sami Salonen)]
 */
 
-#define __MEMWATCH_C 1
-
-#ifdef MW_NOCPP
-#define MEMWATCH_NOCPP
-#endif
 #ifdef MW_STDIO
 #define MEMWATCH_STDIO
 #endif
@@ -113,23 +36,13 @@
 #include <string.h>
 #include <signal.h>
 #include <setjmp.h>
+#include <ctype.h>
 #include <time.h>
 #include <limits.h>
+#include <pthread.h>
 #include "memwatch.h"
 
-#ifndef toupper
-#include <ctype.h>
-#endif
-
-#if defined(WIN32) || defined(__WIN32__)
 #define MW_HAVE_MUTEX 1
-#include <windows.h>
-#endif
-
-#if defined(MW_PTHREADS) || defined(HAVE_PTHREAD_H)
-#define MW_HAVE_MUTEX 1
-#include <pthread.h>
-#endif
 
 /***********************************************************************
 ** Defines & other weird stuff
@@ -146,18 +59,6 @@
 /*lint -restore */
 
 #define MW_NML      0x0001
-
-#ifdef _MSC_VER
-#define COMMIT "c"  /* Microsoft C requires the 'c' to perform as desired */
-#else
-#define COMMIT ""   /* Normal ANSI */
-#endif /* _MSC_VER */
-
-#ifdef __cplusplus
-#define CPPTEXT "++"
-#else
-#define CPPTEXT ""
-#endif /* __cplusplus */
 
 #ifdef MEMWATCH_STDIO
 #define mwSTDERR stderr
@@ -294,13 +195,8 @@ struct mwMarker_ {
     int level;
     };
 
-#if defined(WIN32) || defined(__WIN32__)
-typedef HANDLE          mwMutex;
-#endif
 
-#if defined(MW_PTHREADS) || defined(HAVE_PTHREAD_H)
 typedef pthread_mutex_t mwMutex;
-#endif
 
 /***********************************************************************
 ** Static variables
@@ -392,7 +288,7 @@ static const char *mwGrabType( int type );
 static unsigned mwGrab_( unsigned kb, int type, int silent );
 static unsigned mwDrop_( unsigned kb, int type, int silent );
 static int      mwARI( const char* text );
-static void     mwStatReport( void );
+ void     mwStatReport( void );
 static mwStat*  mwStatGet( const char*, int, int );
 static void     mwStatAlloc( size_t, const char*, int );
 static void     mwStatFree( size_t, const char*, int );
@@ -476,13 +372,6 @@ void mwInit( void ) {
 		mwWrite( "mwROUNDALLOC==%d sizeof(mwData)==%d mwDataSize==%d\n",
 			mwROUNDALLOC, sizeof(mwData), mwDataSize );
 /**************************************************************** Generic */
-
-/************************************************************ Microsoft C */
-#ifdef _MSC_VER
-        mwWrite( "Compiled using Microsoft C" CPPTEXT
-            " %d.%02d\n", _MSC_VER / 100, _MSC_VER % 100 );
-#endif /* _MSC_VER */
-/************************************************************ Microsoft C */
 
 /************************************************************** Borland C */
 #ifdef __BORLANDC__
@@ -2068,7 +1957,7 @@ static void mwLogFile( const char *name ) {
         mwLogW( NULL );
         }
     if( name == NULL ) return;
-    mwLogW( fopen( name, "a" COMMIT ) );
+    mwLogW( fopen( name, "a"  ) );
     if( mwLogR() == NULL )
         mwWrite( "logfile: failed to open/create file '%s'\n", name );
     }
@@ -2237,7 +2126,7 @@ static int mwTestNow( const char *file, int line, int always_invoked ) {
 ** Statistics
 **********************************************************************/
 
-static void mwStatReport()
+void mwStatReport()
 {
     mwStat* ms, *ms2;
     const char *modname;
@@ -2374,29 +2263,6 @@ static char mwDummy( char c )
 {
 	return c;
 }
-
-#ifndef MW_SAFEADDR
-#ifdef WIN32
-#define MW_SAFEADDR
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-int mwIsReadAddr( const void *p, unsigned len )
-{
-    if( p == NULL ) return 0;
-    if( IsBadReadPtr(p,len) ) return 0;
-    return 1;
-}
-int mwIsSafeAddr( void *p, unsigned len )
-{
-    /* NOTE: For some reason, under Win95 the IsBad... */
-    /* can return false for invalid pointers. */
-    if( p == NULL ) return 0;
-    if( IsBadReadPtr(p,len) || IsBadWritePtr(p,len) ) return 0;
-    return 1;
-}
-#endif /* WIN32 */
-#endif /* MW_SAFEADDR */
-
 #ifndef MW_SAFEADDR
 #ifdef SIGSEGV
 #define MW_SAFEADDR
@@ -2506,38 +2372,6 @@ int mwIsSafeAddr( void *p, unsigned len )
 ** Mutex handling
 **********************************************************************/
 
-#if defined(WIN32) || defined(__WIN32__)
-
-static void	mwMutexInit( void )
-{
-	mwGlobalMutex = CreateMutex( NULL, FALSE, NULL);
-	return;
-}
-
-static void	mwMutexTerm( void )
-{
-	CloseHandle( mwGlobalMutex );
-	return;
-}
-
-static void	mwMutexLock( void )
-{
-	if( WaitForSingleObject(mwGlobalMutex, 1000 ) == WAIT_TIMEOUT )
-	{
-		mwWrite( "mwMutexLock: timed out, possible deadlock\n" );
-	}
-	return;
-}
-
-static void	mwMutexUnlock( void )
-{
-	ReleaseMutex( mwGlobalMutex );
-	return;
-}
-
-#endif
-
-#if defined(MW_PTHREADS) || defined(HAVE_PTHREAD_H)
 
 static void	mwMutexInit( void )
 {
@@ -2563,102 +2397,5 @@ static void	mwMutexUnlock( void )
 	return;
 }
 
-#endif
-
-/**********************************************************************
-** C++ new & delete
-**********************************************************************/
-
-#if 0 /* 980317: disabled C++ */
-
-#ifdef __cplusplus
-#ifndef MEMWATCH_NOCPP
-
-int mwNCur = 0;
-const char *mwNFile = NULL;
-int mwNLine = 0;
-
-class MemWatch {
-public:
-    MemWatch();
-    ~MemWatch();
-    };
-
-MemWatch::MemWatch() {
-    if( mwInited ) return;
-    mwUseAtexit = 0;
-    mwInit();
-    }
-
-MemWatch::~MemWatch() {
-    if( mwUseAtexit ) return;
-    mwTerm();
-    }
-
-/*
-** This global new will catch all 'new' calls where MEMWATCH is
-** not active.
-*/
-void* operator new( unsigned size ) {
-    mwNCur = 0;
-    return mwMalloc( size, "<unknown>", 0 );
-    }
-
-/*
-** This is the new operator that's called when a module uses mwNew.
-*/
-void* operator new( unsigned size, const char *file, int line ) {
-    mwNCur = 0;
-    return mwMalloc( size, file, line );
-    }
-
-/*
-** This is the new operator that's called when a module uses mwNew[].
-** -- hjc 07/16/02
-*/
-void* operator new[] ( unsigned size, const char *file, int line ) {
-    mwNCur = 0;
-    return mwMalloc( size, file, line );
-    }
-
-/*
-** Since this delete operator will recieve ALL delete's
-** even those from within libraries, we must accept
-** delete's before we've been initialized. Nor can we
-** reliably check for wild free's if the mwNCur variable
-** is not set.
-*/
-void operator delete( void *p ) {
-    if( p == NULL ) return;
-    if( !mwInited ) {
-        free( p );
-        return;
-        }
-    if( mwNCur ) {
-        mwFree( p, mwNFile, mwNLine );
-        mwNCur = 0;
-        return;
-        }
-    mwFree_( p );
-    }
-
-void operator delete[]( void *p ) {
-    if( p == NULL ) return;
-    if( !mwInited ) {
-        free( p );
-        return;
-        }
-    if( mwNCur ) {
-        mwFree( p, mwNFile, mwNLine );
-        mwNCur = 0;
-        return;
-        }
-    mwFree_( p );
-    }
-
-#endif /* MEMWATCH_NOCPP */
-#endif /* __cplusplus */
-
-#endif /* 980317: disabled C++ */
 
 /* MEMWATCH.C */

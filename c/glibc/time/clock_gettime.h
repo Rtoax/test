@@ -3,6 +3,18 @@
 
 #include <time.h>
 
+/*
+ * * `CLOCK_REALTIME` - system wide clock which measures real or wall-clock time;
+ * * `CLOCK_REALTIME_COARSE` - faster version of the `CLOCK_REALTIME`;
+ * * `CLOCK_MONOTONIC` - represents monotonic time since some unspecified starting point; 
+ * * `CLOCK_MONOTONIC_COARSE` - faster version of the `CLOCK_MONOTONIC`;
+ * * `CLOCK_MONOTONIC_RAW` - the same as the `CLOCK_MONOTONIC` but provides 
+ * *					non [NTP](https://en.wikipedia.org/wiki/Network_Time_Protocol) adjusted time. 
+ * * `CLOCK_BOOTTIME` - the same as the `CLOCK_MONOTONIC` but plus time that the system was suspended;
+ * * `CLOCK_PROCESS_CPUTIME_ID` - per-process time consumed by all threads in the process;
+ * * `CLOCK_THREAD_CPUTIME_ID` - thread-specific clock.
+ */
+
 struct timespec {
    time_t   tv_sec;        /* seconds */
    long     tv_nsec;       /* nanoseconds */

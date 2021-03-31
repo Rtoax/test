@@ -8,7 +8,7 @@ void* test_task_fn(void* unused)
 {
 	printf("test_task_fn.\n");
 
-    sleep(1);
+    //sleep(1);
 
     static int status = 12121;
     
@@ -27,11 +27,13 @@ int main ()
     
 	pthread_create(&thread_id, NULL, test_task_fn, NULL);
 
-	pthread_timedjoin_np(thread_id, (void**)&pstatus, &abstime);
-//	pthread_join(thread_id, (void**)&pstatus);
-
-    pthread_cancel(thread_id);
-	pthread_cancel(0);
+	//pthread_timedjoin_np(thread_id, (void**)&pstatus, &abstime);
+	pthread_join(thread_id, (void**)&pstatus);
+	
+	
+	sleep(1);
+    pthread_cancel(thread_id+100000);
+	//pthread_cancel(0);
 
 //    printf("pstatus = %d\n", *pstatus);
 	return 0;

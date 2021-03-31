@@ -19,7 +19,7 @@ const char* state_to_string(long state)
 		case TASK_WAKEKILL: return "TASK_WAKEKILL";
 		case TASK_WAKING: return "TASK_WAKING";
 		case TASK_PARKED: return "TASK_PARKED";
-		case TASK_NOLOAD: return "TASK_NOLOAD";
+		//case TASK_NOLOAD: return "TASK_NOLOAD";
 		default: return "UNKNOWN";
 	}
 }
@@ -37,7 +37,7 @@ void list_from_task(struct task_struct *task)
 			struct list_head*  next;
 			long               state = p->state; // the value is volatile and will be accessed twice, make a copy for consistency
 
-			printk(KERN_INFO "task: %s, pid: [%d], state: %li(%s)\n", p->comm, p->pid, state, state_to_string(state));
+			printk(KERN_INFO "[RToax]task: %s, pid: [%d], state: %li(%s)\n", p->comm, p->pid, state, state_to_string(state));
 
 			next = rcu_dereference(p->tasks.next);
 			p = list_entry(next, struct task_struct, tasks);

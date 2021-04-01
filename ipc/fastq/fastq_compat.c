@@ -63,12 +63,12 @@ struct _FQ_NAME(FastQModule) {
 static struct _FQ_NAME(FastQModule) *_FQ_NAME(_AllModulesRings) = NULL;
 static pthread_rwlock_t _FQ_NAME(_AllModulesRingsLock) = PTHREAD_RWLOCK_INITIALIZER; //只在注册时保护使用
 
+
 /**
  *  FastQ 初始化 函数，初始化 _AllModulesRings 全局变量
  */
-static void __attribute__((constructor(101))) _FQ_NAME(__FastQInitCtor) () {
+static void __attribute__((constructor(105))) _FQ_NAME(__FastQInitCtor) () {
     int i, j;
-    
     LOG_DEBUG("Init _module_src_dst_to_ring.\n");
     _FQ_NAME(_AllModulesRings) = FastQMalloc(sizeof(struct _FQ_NAME(FastQModule))*(FASTQ_ID_MAX+1));
     for(i=0; i<=FASTQ_ID_MAX; i++) {
@@ -111,6 +111,8 @@ _FQ_NAME(__fastq_create_ring)(
                         const unsigned long src, const unsigned long dst, 
                         const unsigned int ring_size, const unsigned int msg_size) {
 
+    fastq_log("Create ring : src(%lu)->dst(%lu) ringsize(%d) msgsize(%d).\n", src, dst, ring_size, msg_size);
+
     unsigned long ring_real_size = sizeof(struct _FQ_NAME(FastQRing)) + ring_size*(msg_size+sizeof(size_t));
                       
     struct _FQ_NAME(FastQRing) *new_ring = FastQMalloc(ring_real_size);
@@ -125,7 +127,7 @@ _FQ_NAME(__fastq_create_ring)(
     
     new_ring->_msg_size = msg_size + sizeof(size_t);
     new_ring->_evt_fd = eventfd(0, EFD_CLOEXEC);
-    assert(new_ring->_evt_fd); //都TMD没有fd了，你也是厉害
+    assert(new_ring->_evt_fd && "Too much eventfd called, no fd to use."); //都TMD没有fd了，你也是厉害
     
     LOG_DEBUG("Create module %ld event fd = %d.\n", dst, new_ring->_evt_fd);
     
@@ -178,12 +180,12 @@ _FQ_NAME(FastQCreateModule)(const unsigned long module_id, const unsigned int ri
     
     if(_FQ_NAME(_AllModulesRings)[module_id].already_register) {
         LOG_DEBUG("Module %ld already register.\n", module_id);
-        fprintf(stderr, "\033[1;5;31mModule ID %ld already register in file <%s>'s function <%s> at line %d\033[m\n", \
+        _fastq_fprintf(stderr, "\033[1;5;31mModule ID %ld already register in file <%s>'s function <%s> at line %d\033[m\n", \
                         module_id,
                         _FQ_NAME(_AllModulesRings)[module_id]._file,
                         _FQ_NAME(_AllModulesRings)[module_id]._func,
                         _FQ_NAME(_AllModulesRings)[module_id]._line);
-    
+        
         pthread_rwlock_unlock(&_FQ_NAME(_AllModulesRingsLock));
         assert(0);
         return ;
@@ -195,8 +197,10 @@ _FQ_NAME(FastQCreateModule)(const unsigned long module_id, const unsigned int ri
     _FQ_NAME(_AllModulesRings)[module_id].epfd = epoll_create(1);
     assert(_FQ_NAME(_AllModulesRings)[module_id].epfd && "Epoll create error");
     LOG_DEBUG("Create module %ld epoll fd = %d.\n", module_id, _FQ_NAME(_AllModulesRings)[module_id].epfd);
+    _fastq_fprintf(stderr, "Create FastQ module with epoll, moduleID = %ld.\n", module_id);
 #elif defined(_FASTQ_SELECT)
     LOG_DEBUG("Create module %ld.\n", module_id);
+    _fastq_fprintf(stderr, "Create FastQ module with select, moduleID = %ld.\n", module_id);
 #endif
 
     _FQ_NAME(_AllModulesRings)[module_id]._file = FastQStrdup(_file);
@@ -426,7 +430,7 @@ _FQ_NAME(FastQRecv)(unsigned int from, fq_msg_handler_t handler) {
     int i, max_fd;
 #endif 
     int curr_event_fd;
-    char addr[1024] = {0};
+    char __attribute__((aligned(64))) addr[4096] = {0}; //page size
     size_t size = sizeof(addr);
     struct _FQ_NAME(FastQRing) *ring = NULL;
 
@@ -536,7 +540,6 @@ _FQ_NAME(FastQMsgStatInfo)(struct FastQModuleMsgStatInfo *buf, unsigned int buf_
 #endif
 }
 
-
 /**
  *  FastQDump - 显示信息
  *  
@@ -549,7 +552,7 @@ _FQ_NAME(FastQDump)(FILE*fp, unsigned long module_id) {
     if(unlikely(!fp)) {
         fp = stderr;
     }
-    fprintf(fp, "\n FastQ Dump Information.\n");
+    _fastq_fprintf(fp, "\n FastQ Dump Information.\n");
 
     unsigned long i, j, max_module = FASTQ_ID_MAX;
 
@@ -566,7 +569,7 @@ _FQ_NAME(FastQDump)(FILE*fp, unsigned long module_id) {
         if(!_FQ_NAME(_AllModulesRings)[i].already_register) {
             continue;
         }
-        fprintf(fp, "\033[1;31mModule ID %ld register in file <%s>'s function <%s> at line %d\033[m\n", \
+        _fastq_fprintf(fp, "\033[1;31mModule ID %ld register in file <%s>'s function <%s> at line %d\033[m\n", \
                         i,
                         _FQ_NAME(_AllModulesRings)[i]._file,
                         _FQ_NAME(_AllModulesRings)[i]._func,
@@ -576,8 +579,7 @@ _FQ_NAME(FastQDump)(FILE*fp, unsigned long module_id) {
         atomic64_init(&module_total_msgs[0]); //总入队数量
         atomic64_init(&module_total_msgs[1]); //总出队数量
 #endif        
-        
-        fprintf(fp, "------------------------------------------\n"\
+        _fastq_fprintf(fp, "------------------------------------------\n"\
                     "ID: %3ld, msgMax %4u, msgSize %4u\n"\
                     "\t from-> to   %10s %10s"
 #ifdef FASTQ_STATISTICS //统计功能
@@ -596,7 +598,7 @@ _FQ_NAME(FastQDump)(FILE*fp, unsigned long module_id) {
         
         for(j=0; j<=FASTQ_ID_MAX; j++) { 
             if(_FQ_NAME(_AllModulesRings)[i]._ring[j]) {
-                fprintf(fp, "\t %4ld->%-4ld  %10u %10u"
+                _fastq_fprintf(fp, "\t %4ld->%-4ld  %10u %10u"
 #ifdef FASTQ_STATISTICS //统计功能
                             " %16ld %16ld %16ld"
 #endif                            
@@ -619,7 +621,7 @@ _FQ_NAME(FastQDump)(FILE*fp, unsigned long module_id) {
         }
         
 #ifdef FASTQ_STATISTICS //统计功能
-        fprintf(fp, "\t Total enqueue %16ld, dequeue %16ld\n", atomic64_read(&module_total_msgs[0]), atomic64_read(&module_total_msgs[1]));
+        _fastq_fprintf(fp, "\t Total enqueue %16ld, dequeue %16ld\n", atomic64_read(&module_total_msgs[0]), atomic64_read(&module_total_msgs[1]));
 #endif
     }
     fflush(fp);

@@ -42,29 +42,29 @@ MODULE_PARM_DESC(mystring, "A character string");
  * The fourth argument is the permission bits
  */
 module_param_array(myintArray, int, &arr_argc, 0000);
-MODULE_PARM_DESC(myintArray, "An array of integers");
+MODULE_PARM_DESC(myintArray, "[RToax]An array of integers");
 
 static int 
 __init hello_5_init(void)
 {
     int i;
-    printk(KERN_INFO "Hello, world 5\n=============\n");
-    printk(KERN_INFO "myshort is a short integer: %hd\n", myshort);
-    printk(KERN_INFO "myint is an integer: %d\n", myint);
-    printk(KERN_INFO "mylong is a long integer: %ld\n", mylong);
-    printk(KERN_INFO "mystring is a string: %s\n", mystring);
+    printk(KERN_INFO "[RToax]Hello, world 5\n=============\n");
+    printk(KERN_INFO "[RToax]myshort is a short integer: %hd\n", myshort);
+    printk(KERN_INFO "[RToax]myint is an integer: %d\n", myint);
+    printk(KERN_INFO "[RToax]mylong is a long integer: %ld\n", mylong);
+    printk(KERN_INFO "[RToax]mystring is a string: %s\n", mystring);
     
     for (i = 0; i < (sizeof myintArray / sizeof (int)); i++) {
-        printk(KERN_INFO "myintArray[%d] = %d\n", i, myintArray[i]);
+        printk(KERN_INFO "[RToax]myintArray[%d] = %d\n", i, myintArray[i]);
     }
-    printk(KERN_INFO "got %d arguments for myintArray.\n", arr_argc);
+    printk(KERN_INFO "[RToax]got %d arguments for myintArray.\n", arr_argc);
     return 0;
 }
 
 static void 
 __exit hello_5_exit(void)
 {
-    printk(KERN_INFO "Goodbye, world 5\n");
+    printk(KERN_INFO "[RToax]Goodbye, world 5\n");
 }
 
 module_init(hello_5_init);

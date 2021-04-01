@@ -1,8 +1,10 @@
-#obj-m += hello-module1.o
-#obj-m += hello-module2.o
-#obj-m += hello-module3.o
-#obj-m += hello-module5.o
+obj-m += hello-module.o
+obj-m += hello-module1.o
+obj-m += hello-module2.o
+obj-m += hello-module3.o
+obj-m += hello-module5.o
 obj-m += moduleTimer.o
+obj-m += drivers_usb_usb-skeleton.o
 
 objs = $(wildcard *.o)
 kobjs = $(wildcard *.ko)
@@ -17,6 +19,6 @@ clean:
 	#make -C /lib/modules/2.6.32-35-generic/build M=$(PWD) modules
 	#echo $(kobjs)
 	#echo $(objs)
-	-rm $(kobjs) 
-	-rm $(modc) 
-	-rm $(objs) 
+	-rm -f $(kobjs) 
+	-rm -f $(modc) 
+	-rm -f $(objs) 

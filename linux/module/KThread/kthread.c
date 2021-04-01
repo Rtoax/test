@@ -16,20 +16,20 @@ char *THREAD_MESSAGE = "Hello from MyThread!";
 
 
 int thread_function(void *data) {
-    printk(KERN_INFO "%s\n", (char*) data);
+    printk(KERN_INFO "[RToax]%s\n", (char*) data);
 
     while (!kthread_should_stop()) {
         schedule();
     }
 
-    printk(KERN_INFO "MyThread says goodbye\n");
+    printk(KERN_INFO "[RToax]MyThread says goodbye\n");
     return 0;
 }
 
 static int kernel_init(void) {
-    printk(KERN_INFO "--------------------------------------------");
+    printk(KERN_INFO "[RToax]--------------------------------------------");
     task = kthread_run(&thread_function, (void *)THREAD_MESSAGE, "MyThread");
-    printk(KERN_INFO "Kernel Thread : %s\n", task->comm);
+    printk(KERN_INFO "[RToax]Kernel Thread : %s\n", task->comm);
     return 0;
 }
 
@@ -39,5 +39,5 @@ static void kernel_exit(void) {
 
 module_init(kernel_init);
 module_exit(kernel_exit);
-MODULE_AUTHOR("MM");
+MODULE_AUTHOR("MM ReCode by [RToax]");
 MODULE_LICENSE("GPL");

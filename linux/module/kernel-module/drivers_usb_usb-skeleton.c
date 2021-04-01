@@ -119,7 +119,7 @@ static int skel_open(struct inode *inode, struct file *file)
 	/* save our object in the file's private structure */
 	file->private_data = dev;
 	mutex_unlock(&dev->io_mutex);
-
+out_err:
 exit:
 	return retval;
 }

@@ -23,8 +23,8 @@ struct country_capital {
 
 // 3. alloc and add elments to the list
 static void fill_list(void) {
-	const char* COUNTRIES[] = {"hiszpania", "wietnam", "peru"};
-	const char* CAPITALS[] = {"madryt", "hanoi", "lima"};
+	const char* COUNTRIES[] = {"hiszpania", "wietnam", "peru", "China"};
+	const char* CAPITALS[] = {"madryt", "hanoi", "lima", "Beijing"};
 
 	int i;
 	struct country_capital *item;
@@ -42,8 +42,8 @@ static void fill_list(void) {
 static void print_list(void) {
     struct country_capital *entry;
 
-    list_for_each_entry(entry, &country_capital_list, list)
-        printk(KERN_INFO "%s - %s\n", entry->country, entry->capital);
+    list_for_each_entry(entry, &country_capital_list, list) {
+        printk(KERN_INFO "[RToax]%s - %s\n", entry->country, entry->capital);}
 }
 
 // 5. cleanup the list and free it's elements
@@ -52,7 +52,7 @@ static void clean_list(void) {
 
     while (!list_empty(&country_capital_list)) {
     	entry = list_first_entry(&country_capital_list, struct country_capital, list);
-    	printk(KERN_INFO "freeing %s\n", entry->country);
+    	printk(KERN_INFO "[RToax]freeing %s\n", entry->country);
     	list_del(&entry->list);
     	kfree(entry);
     }

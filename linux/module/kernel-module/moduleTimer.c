@@ -11,12 +11,12 @@ static void
 time_handler(unsigned long data)
 {
 	mod_timer(&stimer, jiffies + HZ);
-	printk("current jiffies is %ld\n", jiffies);
+	printk("[RToax]current jiffies is %ld\n", jiffies);
 }
 
 static int __init timer_init(void)
 {
-	printk("My module worked!\n");
+	printk("[RToax]My module worked!\n");
 	init_timer(&stimer);
 	stimer.data = 0;
 	stimer.expires = jiffies + HZ;
@@ -28,7 +28,7 @@ static int __init timer_init(void)
 static void
 __exit timer_exit(void)
 {
-	printk("Unloading my module.\n");
+	printk("[RToax]Unloading my module.\n");
 	del_timer(&stimer);
 	return;
 }
@@ -36,6 +36,6 @@ __exit timer_exit(void)
 module_init(timer_init);
 module_exit(timer_exit);
 
-MODULE_AUTHOR("fyf");
+MODULE_AUTHOR("fyf ReCode by [RToax]");
 MODULE_LICENSE("GPL");
 

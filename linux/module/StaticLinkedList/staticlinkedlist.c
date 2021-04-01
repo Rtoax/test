@@ -49,8 +49,8 @@ static void fill_list(void) {
 static void print_list(void) {
     struct country_capital *entry;
 
-    list_for_each_entry(entry, &country_capital_list, list)
-        printk(KERN_INFO "%s - %s\n", entry->country, entry->capital);
+    list_for_each_entry(entry, &country_capital_list, list) {
+        printk(KERN_INFO "[RToax]%s - %s\n", entry->country, entry->capital);}
 }
 
 // #######################################################################
@@ -58,19 +58,19 @@ static void print_list(void) {
 // #######################################################################
 
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Mateusz Midor");
+MODULE_AUTHOR("Mateusz Midor ReCode by [RToax]");
 MODULE_DESCRIPTION("A linux statically allocated linked list example");
 MODULE_VERSION("0.1");
 
 static int __init hello_init(void) {
-    printk(KERN_INFO "Preparing linkedlist module.\n");
+    printk(KERN_INFO "[RToax]Preparing linkedlist module.\n");
     fill_list();
     print_list();
 	return 0;    // Non-zero return means that the module couldn't be loaded.
 }
 
 static void __exit hello_cleanup(void) {
-	printk(KERN_INFO "Cleaning up linkedlist module.\n\n");
+	printk(KERN_INFO "[RToax]Cleaning up linkedlist module.\n\n");
 }
 
 

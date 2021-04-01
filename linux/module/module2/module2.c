@@ -11,9 +11,9 @@
 //许可证声明
 MODULE_LICENSE("GPL");
 //作者声明
-MODULE_AUTHOR("zwj");
+MODULE_AUTHOR("zwj ReCode by [RToax]");
 //模块功能描述
-MODULE_DESCRIPTION("This module provide a function to module1");
+MODULE_DESCRIPTION("[RToax]This module provide a function to module1");
 
 //计算字符串长度
 int str_len(char *str)
@@ -31,14 +31,14 @@ int str_len(char *str)
 //加载模块时调用此函数
 static int init_mod(void)
 {
-    printk(KERN_INFO "Hello,this module was install successfully!\n");
+    printk(KERN_INFO "[RToax]Hello,this module was install successfully!\n");
     return 0;
 }
 
 //卸载模块时，调用此函数
 static void exit_mod(void)
 {
-    printk(KERN_INFO "Goodbye,the module was uninstalled!\n");
+    printk(KERN_INFO "[RToax]Goodbye,the module was uninstalled!\n");
 }
 
 //导出str_len函数，其他模块便可调用

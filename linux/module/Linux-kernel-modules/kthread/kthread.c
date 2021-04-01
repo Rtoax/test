@@ -5,7 +5,7 @@
 #include <linux/delay.h>    // for msleep
 
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Slava Imameev");
+MODULE_AUTHOR("Slava Imameev ReCode by [RToax]");
 
 DECLARE_WAIT_QUEUE_HEAD(g_wqh);
 unsigned int         g_stop = 0;
@@ -31,7 +31,7 @@ int kthreadf(void *data)
 	// enter in a loop waiting on the queue untill termination event
 	while (!g_stop)
 	{
-		printk(KERN_INFO "kthread state is TASK_INTERRUPTIBLE\n");
+		printk(KERN_INFO "[RToax]kthread state is TASK_INTERRUPTIBLE\n");
 		set_current_state(TASK_INTERRUPTIBLE);
 		// call the scheduler to release a CPU
 		schedule();
@@ -42,7 +42,7 @@ int kthreadf(void *data)
 	set_current_state(TASK_RUNNING);
 	remove_wait_queue(&g_wqh, &wq);
 
-	printk(KERN_INFO "kthread state is TASK_RUNNING\n");
+	printk(KERN_INFO "[RToax]kthread state is TASK_RUNNING\n");
 
 	// do_exit() calls put_task_struct() by setting the task state to TASK_DEAD
 	do_exit(0);
@@ -52,7 +52,7 @@ int kthreadf(void *data)
 static int __init _init(void)
 {
 
-	printk(KERN_INFO "I am here!\n");
+	printk(KERN_INFO "[RToax]I am here!\n");
 
 	// start a kernel thread, kthread_run creates and starts the thread, kthread_create creates a thread but doesn't start it
 	g_task = kthread_run(kthreadf, NULL, "kthread_module");
@@ -63,20 +63,23 @@ static int __init _init(void)
 		// might be invalid as the thread already called do_exit() in that case you should use kthread_create and wake_up_process
 		get_task_struct(g_task);
 
-		printk(KERN_INFO "kthread_create call was successful!\n");
+		printk(KERN_INFO "[RToax]kthread_create call was successful!\n");
 
 		// wait for a thread entering into a waiting state( depends on CPU speed but 1 sec is more than enough )
 		// do not do this in a production module, we do this here just to show a waiting thread wakeup after it
 		// sets its state to TASK_INTERRUPTIBLE
 		msleep(1000);
 
-                // perform a spurious wakeup
-		printk(KERN_INFO "wake up the thread from the init routine\n");
+        // perform a spurious wakeup
+		printk(KERN_INFO "[RToax]wake up the thread from the init routine\n");
 		wake_up(&g_wqh);
+
+        msleep(1000);
+        wake_up(&g_wqh);
 	}
 	else
 	{
-		printk(KERN_INFO "kthread_create call failed!\n");
+		printk(KERN_INFO "[RToax]kthread_create call failed!\n");
 	}
 
 	return 0;
@@ -93,14 +96,14 @@ static void __exit _exit(void)
 		wake_up(&g_wqh);
 
 		// wait for the thread termination
-        	kthread_stop(g_task);
+        kthread_stop(g_task);
 
-		printk(KERN_INFO "the terminated thread state is %s\n", state_to_string(g_task->state));
+		printk(KERN_INFO "[RToax]the terminated thread state is %s\n", state_to_string(g_task->state));
 
 		// release the task structure
 		put_task_struct(g_task);
 	}
-	printk(KERN_INFO "Bye!\n");
+	printk(KERN_INFO "[RToax]Bye!\n");
 }
 
 module_init(_init);

@@ -4,21 +4,21 @@
 #include <linux/rcupdate.h>
 
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Slava Imameev");
+MODULE_AUTHOR("Slava Imameev ReCode by [RToax]");
 
 const char* state_to_string(long state)
 {
 	switch (state)
 	{
-		case TASK_RUNNING: return "TASK_RUNNING";
-		case TASK_INTERRUPTIBLE: return "TASK_INTERRUPTIBLE";
-		case TASK_UNINTERRUPTIBLE: return "TASK_UNINTERRUPTIBLE";
-		case __TASK_STOPPED: return "__TASK_STOPPED";
-		case __TASK_TRACED: return "__TASK_TRACED";
-		case TASK_DEAD: return "TASK_DEAD";
-		case TASK_WAKEKILL: return "TASK_WAKEKILL";
-		case TASK_WAKING: return "TASK_WAKING";
-		case TASK_PARKED: return "TASK_PARKED";
+		case TASK_RUNNING: return "rinning";
+		case TASK_INTERRUPTIBLE: return "irqable";
+		case TASK_UNINTERRUPTIBLE: return "unirqable";
+		case __TASK_STOPPED: return "stoped";
+		case __TASK_TRACED: return "traced";
+		case TASK_DEAD: return "dead";
+		case TASK_WAKEKILL: return "wakekill";
+		case TASK_WAKING: return "waking";
+		case TASK_PARKED: return "parked";
 		//case TASK_NOLOAD: return "TASK_NOLOAD";
 		default: return "UNKNOWN";
 	}
@@ -32,12 +32,18 @@ void list_from_task(struct task_struct *task)
 	{
 		struct task_struct* p = task;
 
+        
+        printk(KERN_INFO "[RToax]%17s %6s %6s %3s %4s %4s %-20s\n", 
+                                "Name", "PID", "TGID", "Pri","PriS","PriN", "State");
 		do
 		{
 			struct list_head*  next;
 			long               state = p->state; // the value is volatile and will be accessed twice, make a copy for consistency
 
-			printk(KERN_INFO "[RToax]task: %s, pid: [%d], state: %li(%s)\n", p->comm, p->pid, state, state_to_string(state));
+			printk(KERN_INFO "[RToax]%17s %6d %6d %3d %4d %4d %2ld(%9s)\n", 
+                                p->comm, p->pid, p->tgid,
+                                p->prio, p->static_prio, p->normal_prio, 
+                                state, state_to_string(state));
 
 			next = rcu_dereference(p->tasks.next);
 			p = list_entry(next, struct task_struct, tasks);
@@ -54,7 +60,7 @@ void list_tasks(void)
 
 static int __init _init(void)
 {
-	printk(KERN_INFO "Hi from init\n");
+	printk(KERN_INFO "[RToax]Hi from init\n");
 
 	list_tasks();
 
@@ -63,7 +69,7 @@ static int __init _init(void)
 
 static void __exit _exit(void)
 {
-	printk(KERN_INFO "Bye!\n");
+	printk(KERN_INFO "[RToax]Bye!\n");
 }
 
 module_init(_init)

@@ -11,7 +11,7 @@
 //许可证声明
 MODULE_LICENSE("GPL");
 //作者声明
-MODULE_AUTHOR("zwj");
+MODULE_AUTHOR("zwj ReCode by [RToax]");
 //模块功能描述
 MODULE_DESCRIPTION("This module call str_len");
 
@@ -26,9 +26,9 @@ static int init_mod(void)
 {
     int lenght = 0;
     lenght = str_len(string);
-    printk(KERN_INFO "Hello , i am module1!\n");
-    printk(KERN_INFO "Welcome to use the str_len function!\n");
-    printk(KERN_INFO "The lenght of string '%s' is :%d\n",string,lenght);
+    printk(KERN_INFO "[RToax]Hello , i am module1!\n");
+    printk(KERN_INFO "[RToax]Welcome to use the str_len function!\n");
+    printk(KERN_INFO "[RToax]The lenght of string '%s' is :%d\n",string,lenght);
 
     return 0;
 }
@@ -36,7 +36,7 @@ static int init_mod(void)
 //卸载模块时调用此函数
 static void exit_mod(void)
 {
-    printk(KERN_INFO "Goodbye!\n");
+    printk(KERN_INFO "[RToax]Goodbye!\n");
 }
 
 module_param(string,charp,S_IRUGO);//定义模块参数

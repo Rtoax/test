@@ -9,7 +9,7 @@
 #include "workqueue.h"
 
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Slava Imameev");
+MODULE_AUTHOR("Slava Imameev ReCode by [RToax]");
 
 //
 // as a demonstration we will attach to the init task
@@ -19,6 +19,7 @@ pid_t  g_pid = 1;
 void attach_to_task_mm(void* ppid)
 {
 	pid_t                pid = *(pid_t*)ppid;
+//    pid_t                pid = current->pid;
 	struct task_struct*  task = NULL;
 	struct mm_struct*    mm = NULL; // referenced
 
@@ -32,6 +33,8 @@ void attach_to_task_mm(void* ppid)
 			mm = get_task_mm(task); // take a reference to mm
 	} // unlock RCU
 	rcu_read_unlock();
+    
+    printk(KERN_INFO "[RToax] \033[1;5;31mpid = %d\033[m\n", pid);
 
 	if (mm) {
 
@@ -42,7 +45,7 @@ void attach_to_task_mm(void* ppid)
 		set_fs(USER_DS);
 		{ // changed fs
 
-			printk(KERN_INFO "The old user address limit is 0x%lx , the new is 0x%lx\n", old_fs.seg, get_fs().seg);
+			printk(KERN_INFO "[RToax]The old user address limit is 0x%lx , the new is 0x%lx\n", old_fs.seg, get_fs().seg);
 
 			// attach to a task address space
 			use_mm(mm);
@@ -54,7 +57,7 @@ void attach_to_task_mm(void* ppid)
 				// read the first bytes of a code segment
 				bytes_not_read = copy_from_user(&ul, (void*)mm->start_code, sizeof(ul));
 
-				printk(KERN_INFO "read %li bytes of code, ul=0x%lx\n", (sizeof(ul)-bytes_not_read), ul);
+				printk(KERN_INFO "[RToax]read %li bytes of code, ul=0x%lx\n", (sizeof(ul)-bytes_not_read), ul);
 
 				// iterate over all task's VMAs with the mmap semaphor being held
 				down_read(&mm->mmap_sem);
@@ -63,12 +66,12 @@ void attach_to_task_mm(void* ppid)
 					struct vm_area_struct*   vma;
 					for (vma = mm->mmap; vma; vma = vma->vm_next) {
 
-						printk(KERN_INFO "VMA {0x%lx,0x%lx}\n", vma->vm_start, vma->vm_end);
+						printk(KERN_INFO "[RToax]VMA {0x%lx,0x%lx}\n", vma->vm_start, vma->vm_end);
 
 						// read sizeof(long) bytes from user space
 						bytes_not_read = copy_from_user(&ul, (void*)vma->vm_start, sizeof(ul));
 
-						printk(KERN_INFO "read %li bytes VMA start, ul=%lx\n", (sizeof(ul)-bytes_not_read), ul);
+						printk(KERN_INFO "[RToax]read %li bytes VMA start, ul=%lx\n", (sizeof(ul)-bytes_not_read), ul);
 					}
 
 				} // unlock mmap
@@ -83,7 +86,7 @@ void attach_to_task_mm(void* ppid)
 
 	} else {
 
-		printk(KERN_INFO "a task with pid=%i was not found or doesn't have mm\n", pid);
+		printk(KERN_INFO "[RToax]a task with pid=%i was not found or doesn't have mm\n", pid);
 	}
 }
 
@@ -106,7 +109,7 @@ static void __exit _exit(void)
 {
 	wq_exit();
 
-	printk(KERN_INFO "Bye!\n");
+	printk(KERN_INFO "[RToax]Bye!\n");
 }
 
 module_init(_init);

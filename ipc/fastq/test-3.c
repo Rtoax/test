@@ -38,7 +38,7 @@ void *enqueue_task(void*arg){
         pmsg = &ptest_msg[i++%TEST_NUM];
         pmsg->latency = RDTSC();
         unsigned long addr = (unsigned long)pmsg;
-        VOS_FastQTrySend(parg->srcModuleId, NODE_1, &addr, sizeof(unsigned long));
+        rt_FastQTrySend(parg->srcModuleId, NODE_1, &addr, sizeof(unsigned long));
 
         send_cnt++;
         
@@ -78,7 +78,7 @@ void *dequeue_task(void*arg) {
     struct dequeue_arg *parg = (struct dequeue_arg*)arg;
     reset_self_cpuset(parg->cpu_list);
     
-    VOS_FastQRecv( NODE_1, handler_test_msg);
+    rt_FastQRecv( NODE_1, handler_test_msg);
     pthread_exit(NULL);
 }
 
@@ -86,7 +86,7 @@ int sig_handler(int signum) {
 
     switch(signum) {
         case SIGINT:
-            VOS_FastQDump(NULL, NODE_1);
+            rt_FastQDump(NULL, NODE_1);
             exit(1);
             break;
         case SIGALRM:break;
@@ -108,7 +108,7 @@ bool moduleID_filter_fn(unsigned long srcID, unsigned long dstID){
 void sig_alarm_handler(int signum) {
     struct FastQModuleMsgStatInfo buffer[32];
     unsigned int num = 0;
-    VOS_FastQMsgStatInfo(buffer, 32, &num, moduleID_filter_fn);
+    rt_FastQMsgStatInfo(buffer, 32, &num, moduleID_filter_fn);
 
     if(num) {
         printf( "\t SRC -> DST           Enqueue           Dequeue\r\n");
@@ -147,10 +147,10 @@ int main()
     int ret;
     ret = setitimer(ITIMER_REAL,&sa,NULL);
     
-    VOS_FastQCreateModule(NODE_1, max_msg, sizeof(unsigned long));
-    VOS_FastQCreateModule(NODE_2, max_msg, sizeof(unsigned long));
-    VOS_FastQCreateModule(NODE_3, max_msg, sizeof(unsigned long));
-    VOS_FastQCreateModule(NODE_4, max_msg, sizeof(unsigned long));
+    rt_FastQCreateModule(NODE_1, max_msg, sizeof(unsigned long));
+    rt_FastQCreateModule(NODE_2, max_msg, sizeof(unsigned long));
+    rt_FastQCreateModule(NODE_3, max_msg, sizeof(unsigned long));
+    rt_FastQCreateModule(NODE_4, max_msg, sizeof(unsigned long));
     
     unsigned int i =0;
     test_msgs21 = (test_msgs_t *)malloc(sizeof(test_msgs_t)*TEST_NUM);

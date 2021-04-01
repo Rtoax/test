@@ -5,7 +5,7 @@
 static int __init
 hello_2_init(void)
 {
-    printk(KERN_INFO "Hello world 2!\n");
+    printk(KERN_INFO "[RToax]Hello world 2!\n");
 
     return 0;
 }
@@ -13,7 +13,7 @@ hello_2_init(void)
 static void __exit
 hello_2_exit(void)
 {
-    printk(KERN_INFO "Goodbye world 2!\n");
+    printk(KERN_INFO "[RToax]Goodbye world 2!\n");
 }
 
 module_init(hello_2_init);

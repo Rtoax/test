@@ -35,7 +35,7 @@
 # error Unsupported CPU
 #endif
 
-#ifdef MODULE_ID_MAX //VOS moduleID 最大模块索引值
+#ifdef MODULE_ID_MAX // moduleID 最大模块索引值
 #define FASTQ_ID_MAX    MODULE_ID_MAX
 #else
 #define FASTQ_ID_MAX    256
@@ -293,6 +293,30 @@ __power_of_2(unsigned int size) {
 #ifdef _FQ_NAME
 #error You gotta be kidding me, do not define _FQ_NAME.
 #endif
+
+
+FILE* fastq_log_fp = NULL;
+
+#define fastq_log(fmt...) do{\
+                    fprintf(fastq_log_fp, fmt); \
+                    fflush(fastq_log_fp); \
+                }while(0)
+
+#ifndef _fastq_fprintf
+#define _fastq_fprintf(fp, fmt...) do{   \
+                    fastq_log(fmt);     \
+                    LOG_DEBUG(fmt);     \
+                    fprintf(fp, fmt);   \
+                }while(0)
+#endif
+
+static void __attribute__((constructor(101))) __fastq_log_init() {
+    char fasgq_log_file[256] = {"./.fastq.log"};
+    fastq_log_fp = fopen(fasgq_log_file, "w");
+    fastq_log_fp = fastq_log_fp?fastq_log_fp:stderr;
+}
+
+
 /**********************************************************************************************************************
  *  原始接口
  **********************************************************************************************************************/

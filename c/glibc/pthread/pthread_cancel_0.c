@@ -7,8 +7,8 @@ int linux_taskDelete( unsigned long tid)
 #if 1
 	//printf("tid = %lu\n", tid);
     int ret = 0;
-    if(tid == 0) {
-        printf("[ERROR] Try to cancel [tid=0] pthread task.\n");
+    if(tid == 0 || tid < 0x10000) {
+        printf("[ERROR] Try to cancel [tid=%d] pthread task.\n", tid);
         goto task_del_error;
     }
     //线程存在,可 cancel
@@ -47,6 +47,7 @@ int main ()
     
 	pthread_create(&thread_id, NULL, test_task_fn, NULL);
 
+	linux_taskDelete(1);
 	linux_taskDelete(thread_id);
 
 	//pthread_timedjoin_np(thread_id, (void**)&pstatus, &abstime);

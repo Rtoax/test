@@ -5,7 +5,7 @@
 #include <linux/slab.h> // for kmalloc
 
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Slava Imameev");
+MODULE_AUTHOR("Slava Imameev recode by [RToax]");
 
 //
 // a work queue entry
@@ -42,7 +42,7 @@ struct task_struct*    g_wq_thread = NULL;
 
 void wq_print_string(void* string)
 {
-	printk( KERN_INFO "%s\n", (char*)string);
+	printk( KERN_INFO "[RToax]%s\n", (char*)string);
 }
 
 int add_entry(void (*fn)(void*), void* data)
@@ -59,7 +59,7 @@ int add_entry(void (*fn)(void*), void* data)
 	new->data = data;
 	new->next = NULL;
 
-	printk(KERN_INFO "adding a new WQ entry\n");
+	printk(KERN_INFO "[RToax]adding a new WQ entry\n");
 
 	spin_lock(&g_wq_lock);
 	{
@@ -148,7 +148,7 @@ int wq_kthreadf(void* not_used)
 	// clean the queue
 	do_workqueue();
 
-	printk( KERN_INFO "Exiting from the work queue thread\n");
+	printk( KERN_INFO "[RToax]Exiting from the work queue thread\n");
 	return 0;
 }
 
@@ -157,7 +157,7 @@ static int __init _init(void)
 	g_wq_thread = kthread_run(wq_kthreadf, NULL, "my_wq_thread");
 	if (g_wq_thread)
 	{
-		printk(KERN_INFO "kthread_run(wq_kthreadf) was successful\n");
+		printk(KERN_INFO "[RToax]kthread_run(wq_kthreadf) was successful\n");
 
 		// bump the reference, it is safe to access the task structure
 		// as the thread termination is synchronized with module initialization
@@ -186,14 +186,14 @@ static void __exit _exit(void)
 		// wake up the thread
 		wake_up(&g_wq_wait);
 
-		printk(KERN_INFO "Waiting for work queue thread termination\n");
+		printk(KERN_INFO "[RToax]Waiting for work queue thread termination\n");
 
 		// wait fot the kernel thread termination
 		kthread_stop(g_wq_thread);
 		put_task_struct(g_wq_thread);
 	}
 
-	printk(KERN_INFO "Bye!\n");
+	printk(KERN_INFO "[RToax]Bye!\n");
 }
 
 module_init(_init);

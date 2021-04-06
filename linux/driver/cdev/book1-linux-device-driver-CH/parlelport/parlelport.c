@@ -15,23 +15,20 @@
 #include <asm-generic/io.h> /* inb, outb */
 
 /* Function declaration of parlelport.c */
-int parlelport_open(struct inode *inode, struct file
-		*filp);
-int parlelport_release(struct inode *inode, struct file
-		*filp);
-ssize_t parlelport_read(struct file *filp, char *buf,
-		size_t count, loff_t *f_pos);
-ssize_t parlelport_write(struct file *filp, char *buf,
-		size_t count, loff_t *f_pos);
+int parlelport_open(struct inode *inode, struct file *filp);
+int parlelport_release(struct inode *inode, struct file *filp);
+ssize_t parlelport_read(struct file *filp, char *buf, size_t count, loff_t *f_pos);
+ssize_t parlelport_write(struct file *filp, char *buf, size_t count, loff_t *f_pos);
 void parlelport_exit(void);
 int parlelport_init(void);
+
 /* Structure that declares the common */
 /* file access fcuntions */
 struct file_operations parlelport_fops = {
-read: parlelport_read,
-	  write: parlelport_write,
-	  open: parlelport_open,
-	  release: parlelport_release
+    read: parlelport_read,
+    write: parlelport_write,
+    open: parlelport_open,
+    release: parlelport_release
 };
 /* Driver global variables */
 /* Major number */
@@ -43,7 +40,8 @@ int port;
 module_init(parlelport_init);
 module_exit(parlelport_exit);
 
-int parlelport_init(void) {
+int parlelport_init(void) 
+{
 	int result;
 	/* Registering device */
 	result = register_chrdev(parlelport_major,
@@ -63,29 +61,27 @@ fail:
 	return result;
 }
 
-void parlelport_exit(void) {
+void parlelport_exit(void) 
+{
 	/* Make major number free! */
 	unregister_chrdev(parlelport_major, "parlelport");
 	//<parlelport modified exit module>
 		printk("<1>Removing parlelport module\n");
 }
 
-int parlelport_open(struct inode *inode, struct file
-		*filp) {
+int parlelport_open(struct inode *inode, struct file *filp) {
 	/* Success */
 	return 0;
 }
 
 
 
-int parlelport_release(struct inode *inode, struct file
-		*filp) {
+int parlelport_release(struct inode *inode, struct file *filp) {
 	/* Success */
 	return 0;
 }
 
-ssize_t parlelport_read(struct file *filp, char *buf,
-		size_t count, loff_t *f_pos) {
+ssize_t parlelport_read(struct file *filp, char *buf, size_t count, loff_t *f_pos) {
 	/* Buffer to read the device */
 	char parlelport_buffer;
 	//<parlelport inport>
@@ -101,8 +97,7 @@ ssize_t parlelport_read(struct file *filp, char *buf,
 }
 
 
-ssize_t parlelport_write( struct file *filp, char *buf,
-		size_t count, loff_t *f_pos) {
+ssize_t parlelport_write( struct file *filp, char *buf, size_t count, loff_t *f_pos) {
 	char *tmp;
 	/* Buffer writing to the device */
 	char parlelport_buffer;

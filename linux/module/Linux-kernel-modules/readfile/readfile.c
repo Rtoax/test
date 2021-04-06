@@ -6,7 +6,7 @@
 #include <asm/uaccess.h>    // for segment descriptors
 
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Slava Imameev");
+MODULE_AUTHOR("Slava Imameev recode by [RToax]");
 
 static struct task_struct* g_task = NULL;
 
@@ -49,15 +49,15 @@ int kthread_read(void* data)
 	bytes_read = read_file( "/etc/hosts", buffer, size, 0 );
 	if (bytes_read < 0)
 	{
-		printk( KERN_INFO "read_file failed\n");
+		printk( KERN_INFO "[RToax]read_file failed\n");
 		goto leave;
 	}
 
 	// add a zero terminator
 	buffer[ bytes_read%(size-1) ] = '\0';
 
-	printk(KERN_INFO "bytes read %d\n", (unsigned int)bytes_read);
-	printk(KERN_INFO "a first read string: %s\n", buffer);
+	printk(KERN_INFO "[RToax]bytes read %d\n", (unsigned int)bytes_read);
+	printk(KERN_INFO "[RToax]a first read string: %s\n", buffer);
 
 leave:
 
@@ -89,7 +89,7 @@ static void __exit _exit(void)
 		put_task_struct(g_task);
 	}
 
-	printk(KERN_INFO "Bye!\n");
+	printk(KERN_INFO "[RToax]Bye!\n");
 }
 
 module_init(_init);

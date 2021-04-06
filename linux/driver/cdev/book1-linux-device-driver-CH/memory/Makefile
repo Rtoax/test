@@ -11,3 +11,5 @@ mknod:
 	mknod /dev/memory c 60 0
 
 
+clean:
+	make -C $(KERNEL_DIR) M=$(MODULE_DIR) clean

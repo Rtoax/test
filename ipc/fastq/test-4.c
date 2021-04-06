@@ -97,10 +97,10 @@ int main()
     int max_msg = 16;
     
     signal(SIGINT, sig_handler);
-    rt_FastQCreateModule(NODE_1, max_msg, sizeof(test_msgs_t));
-    rt_FastQCreateModule(NODE_2, max_msg, sizeof(test_msgs_t));
-    rt_FastQCreateModule(NODE_3, max_msg, sizeof(test_msgs_t));
-    rt_FastQCreateModule(NODE_4, max_msg, sizeof(test_msgs_t));
+    rt_FastQCreateModule(NODE_1, NULL, max_msg, sizeof(test_msgs_t));
+    rt_FastQCreateModule(NODE_2, NULL, max_msg, sizeof(test_msgs_t));
+    rt_FastQCreateModule(NODE_3, NULL, max_msg, sizeof(test_msgs_t));
+    rt_FastQCreateModule(NODE_4, NULL, max_msg, sizeof(test_msgs_t));
     
     unsigned int i =0;
     test_msgs21 = (test_msgs_t *)malloc(sizeof(test_msgs_t)*TEST_NUM);

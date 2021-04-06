@@ -32,6 +32,53 @@
 #define always_inline /*__attribute__ ((__always_inline__))*/
 #endif
 
+#define mod_set                  __mod_set
+#define MOD_SET_INITIALIZER     __MOD_SET_INITIALIZER
+
+#define MOD_SETSIZE                    __MOD_SETSIZE
+#define MOD_SET(bit, p_mod_set)       __MOD_SET(bit, p_mod_set)
+#define MOD_CLR(bit, p_mod_set)       __MOD_CLR(bit, p_mod_set)
+#define MOD_ISSET(bit, p_mod_set)     __MOD_ISSET(bit, p_mod_set)
+#define MOD_ZERO(p_mod_set)           __MOD_ZERO(p_mod_set)
+
+
+#ifdef MODULE_ID_MAX // moduleID 最大模块索引值
+#define FASTQ_ID_MAX    MODULE_ID_MAX
+#else
+#define FASTQ_ID_MAX    256
+#endif
+
+/**
+ *  Crypto
+ */
+#define __MOD_SETSIZE  FASTQ_ID_MAX
+#define __NMOD     (8 * (int) sizeof (__mod_mask))
+#define __MOD_ELT(d)   ((d) / __NMOD)
+#define __MOD_MASK(d)  ((__mod_mask)(1UL << ((d) % __NMOD)))
+
+typedef long int __mod_mask;
+typedef struct {
+    __mod_mask __mod[__MOD_SETSIZE/__NMOD];
+#define __MOD(set) ((set)->__mod)
+#define __MOD_SET_INITIALIZER    {0}
+}__attribute__((aligned(64))) __mod_set;
+
+
+#define __MOD_ZERO(s) \
+    do {    \
+        unsigned int __i;   \
+        __mod_set *__arr = (s);  \
+        for (__i = 0; __i < sizeof (__mod_set) / sizeof (__mod_mask); ++__i)    \
+            __MOD (__arr)[__i] = 0;  \
+    } while (0)
+#define __MOD_SET(d, s) \
+    ((void) (__MOD (s)[__MOD_ELT(d)] |= __MOD_MASK(d)))
+#define __MOD_CLR(d, s) \
+    ((void) (__MOD (s)[__MOD_ELT(d)] &= ~ __MOD_MASK(d)))
+#define __MOD_ISSET(d, s) \
+    ((__MOD (s)[__MOD_ELT (d)] & __MOD_MASK (d)) != 0)
+    
+
 
 /**
  *  源模块未初始化时可临时使用的模块ID，只允许使用一次 
@@ -82,11 +129,15 @@ typedef bool (*fq_module_filter_t)(unsigned long srcID, unsigned long dstID);
  *  rt_FastQCreateModule - 注册消息队列
  *  
  *  param[in]   moduleID    模块ID， 范围 1 - FASTQ_ID_MAX
+ *  param[in]   moduleSet   需要与该模块创建连接的moduleSet，见 select() fd_set
+ *  param[in]   maxModSetNum      moduleSet 中的最大 set
  *  param[in]   msgMax      该模块 的 消息队列 的大小
  *  param[in]   msgSize     最大传递的消息大小
  */
 always_inline void inline
-rt_FastQCreateModule(const unsigned long moduleID, const unsigned int msgMax, const unsigned int msgSize);
+rt_FastQCreateModule(const unsigned long moduleID, 
+                     const mod_set *moduleSet,
+                     const unsigned int msgMax, const unsigned int msgSize);
 
 /**
  *  rt_FastQDump - 显示信息
@@ -170,14 +221,15 @@ rt_FastQRecv(unsigned int from, fq_msg_handler_t handler);
  **                      从此至该头文件末尾，所有接口禁止应用层使用 
 **
 \**********************************************************************************************************************/
-    
+
+
 #define FastQTmpModuleID    rt_FastQTmpModuleID 
 
 
 
 #ifdef _FASTQ_STATS /* 带有统计类的接口 */
 //# pragma message "[FastQ] Statistic Class API"
-# define rt_FastQCreateModule(moduleID, msgMax, msgSize)    FastQCreateModuleStats(moduleID, msgMax, msgSize, __FILE__, __func__, __LINE__)
+# define rt_FastQCreateModule(moduleID, modSet, msgMax, msgSize)    FastQCreateModuleStats(moduleID, modSet, msgMax, msgSize, __FILE__, __func__, __LINE__)
 # define rt_FastQDump(fp, moduleID)                            FastQDumpStats(fp, moduleID)
 # define rt_FastQDumpAllModule(fp)                            FastQDumpStats(fp, 0)
 # define rt_FastQMsgStatInfo(buf, bufSize, pnum, filter)       FastQMsgStatInfoStats(buf, bufSize, pnum, filter)
@@ -187,7 +239,7 @@ rt_FastQRecv(unsigned int from, fq_msg_handler_t handler);
 
 #else /* 不带有统计类的接口，时延更低 */
 //# pragma message "[FastQ] Low Latency Class API"
-# define rt_FastQCreateModule(moduleID, msgMax, msgSize)    FastQCreateModule(moduleID, msgMax, msgSize, __FILE__, __func__, __LINE__)
+# define rt_FastQCreateModule(moduleID, modSet, msgMax, msgSize)    FastQCreateModule(moduleID, modSet, msgMax, msgSize, __FILE__, __func__, __LINE__)
 # define rt_FastQDump(fp, moduleID)                            FastQDump(fp, moduleID)
 # define rt_FastQDumpAllModule(fp)                            FastQDump(fp, 0)
 # define rt_FastQMsgStatInfo(buf, bufSize, pnum, filter)       FastQMsgStatInfo(buf, bufSize, pnum, filter)
@@ -210,10 +262,14 @@ rt_FastQRecv(unsigned int from, fq_msg_handler_t handler);
  *  param[in]   msgSize     最大传递的消息大小
  */
 always_inline void inline
-FastQCreateModule(const unsigned long moduleID, const unsigned int msgMax, const unsigned int msgSize, 
+FastQCreateModule(const unsigned long moduleID, 
+                        const mod_set *moduleSet, 
+                        const unsigned int msgMax, const unsigned int msgSize, 
                             const char *_file, const char *_func, const int _line);
 always_inline void inline
-FastQCreateModuleStats(const unsigned long moduleID, const unsigned int msgMax, const unsigned int msgSize, 
+FastQCreateModuleStats(const unsigned long moduleID, 
+                        const mod_set *moduleSet, 
+                        const unsigned int msgMax, const unsigned int msgSize, 
                             const char *_file, const char *_func, const int _line);
 
 

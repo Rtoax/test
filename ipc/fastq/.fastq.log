@@ -1,0 +1,31 @@
+Create FastQ module with epoll, moduleID = 1.
+Create ring : src(0)->dst(1) ringsize(16) msgsize(8).
+Create FastQ module with epoll, moduleID = 2.
+Create ring : src(0)->dst(2) ringsize(16) msgsize(8).
+Create ring : src(1)->dst(2) ringsize(16) msgsize(8).
+Create ring : src(2)->dst(1) ringsize(16) msgsize(8).
+Create FastQ module with epoll, moduleID = 3.
+Create ring : src(0)->dst(3) ringsize(16) msgsize(8).
+Create ring : src(1)->dst(3) ringsize(16) msgsize(8).
+Create ring : src(3)->dst(1) ringsize(16) msgsize(8).
+Create ring : src(2)->dst(3) ringsize(16) msgsize(8).
+Create ring : src(3)->dst(2) ringsize(16) msgsize(8).
+Create FastQ module with epoll, moduleID = 4.
+Create ring : src(0)->dst(4) ringsize(16) msgsize(8).
+Create ring : src(1)->dst(4) ringsize(16) msgsize(8).
+Create ring : src(4)->dst(1) ringsize(16) msgsize(8).
+Create ring : src(2)->dst(4) ringsize(16) msgsize(8).
+Create ring : src(4)->dst(2) ringsize(16) msgsize(8).
+Create ring : src(3)->dst(4) ringsize(16) msgsize(8).
+Create ring : src(4)->dst(3) ringsize(16) msgsize(8).
+
+ FastQ Dump Information.
+[1;31mModule ID 1 register in file <test-2.c>'s function <main> at line 102[m
+------------------------------------------
+ID:   1, msgMax   16, msgSize    8
+	 from-> to         head       tail          enqueue          dequeue          current 
+	    0->1              0          0                0                0                0
+	    2->1             13         12          1974636          1974621               15
+	    3->1             13         12          1966124          1966109               15
+	    4->1              3          2          2095874          2095859               15
+	 Total enqueue          6036634, dequeue          6036589

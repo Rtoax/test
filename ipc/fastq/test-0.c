@@ -17,7 +17,7 @@
 #include "common.h"
 
 
-int sig_handler(int signum) {
+void sig_handler(int signum) {
 
     FastQDump(NULL, NODE_1);
     exit(1);
@@ -29,11 +29,11 @@ int main()
     
     signal(SIGINT, sig_handler);
     
-    FastQCreateModule(NODE_1, max_msg, sizeof(unsigned long), __FILE__, __func__, __LINE__);
-    FastQCreateModule(NODE_2, max_msg, sizeof(unsigned long), __FILE__, __func__, __LINE__);
-    FastQCreateModule(NODE_3, max_msg, sizeof(unsigned long), __FILE__, __func__, __LINE__);
-    FastQCreateModule(NODE_4, max_msg, sizeof(unsigned long), __FILE__, __func__, __LINE__);
-    FastQCreateModule(NODE_4, max_msg, sizeof(unsigned long), __FILE__, __func__, __LINE__);
+    FastQCreateModule(NODE_1, NULL, max_msg, sizeof(unsigned long), __FILE__, __func__, __LINE__);
+    FastQCreateModule(NODE_2, NULL, max_msg, sizeof(unsigned long), __FILE__, __func__, __LINE__);
+    FastQCreateModule(NODE_3, NULL, max_msg, sizeof(unsigned long), __FILE__, __func__, __LINE__);
+    FastQCreateModule(NODE_4, NULL, max_msg, sizeof(unsigned long), __FILE__, __func__, __LINE__);
+    FastQCreateModule(NODE_4, NULL, max_msg, sizeof(unsigned long), __FILE__, __func__, __LINE__);
     
 
     return EXIT_SUCCESS;

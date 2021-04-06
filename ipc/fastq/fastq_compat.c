@@ -56,9 +56,11 @@ struct _FQ_NAME(FastQModule) {
     char *_file; //调用注册函数的 文件名
     char *_func; //调用注册函数的 函数名
     int _line; //调用注册函数的 文件中的行号
-    
+
+    bool have_moduleset;
+    mod_set modulesset;
     struct _FQ_NAME(FastQRing) **_ring;
-};
+}__attribute__((aligned(64)));
 
 static struct _FQ_NAME(FastQModule) *_FQ_NAME(_AllModulesRings) = NULL;
 static pthread_rwlock_t _FQ_NAME(_AllModulesRingsLock) = PTHREAD_RWLOCK_INITIALIZER; //只在注册时保护使用
@@ -101,7 +103,7 @@ static void __attribute__((constructor(105))) _FQ_NAME(__FastQInitCtor) () {
     }
 }
 
-always_inline  static inline struct _FQ_NAME(FastQRing) *
+static struct _FQ_NAME(FastQRing) *
 _FQ_NAME(__fastq_create_ring)(
 #if defined(_FASTQ_EPOLL)
                         const int epfd, 
@@ -166,7 +168,9 @@ _FQ_NAME(__fastq_create_ring)(
  *  param[in]   msgSize     最大传递的消息大小
  */
 always_inline void inline
-_FQ_NAME(FastQCreateModule)(const unsigned long module_id, const unsigned int ring_size, const unsigned int msg_size, \
+_FQ_NAME(FastQCreateModule)(const unsigned long module_id, \
+                     const mod_set *moduleSet, \
+                     const unsigned int ring_size, const unsigned int msg_size, \
                             const char *_file, const char *_func, const int _line) {
     assert(module_id <= FASTQ_ID_MAX && "Module ID out of range");
 
@@ -192,6 +196,14 @@ _FQ_NAME(FastQCreateModule)(const unsigned long module_id, const unsigned int ri
     }
     
     _FQ_NAME(_AllModulesRings)[module_id].already_register = true;
+
+    //TODO
+    _FQ_NAME(_AllModulesRings)[module_id].have_moduleset = moduleSet?true:false;
+    if(moduleSet) {
+        memcpy(&_FQ_NAME(_AllModulesRings)[module_id].modulesset, moduleSet, sizeof(mod_set));
+    } else {
+        memset(&_FQ_NAME(_AllModulesRings)[module_id].modulesset, 0x0, sizeof(mod_set));
+    }
     
 #if defined(_FASTQ_EPOLL)
     _FQ_NAME(_AllModulesRings)[module_id].epfd = epoll_create(1);
@@ -262,6 +274,10 @@ _FQ_NAME(FastQCreateModule)(const unsigned long module_id, const unsigned int ri
     for(i=1; i<=FASTQ_ID_MAX && i != module_id; i++) {
         if(!_FQ_NAME(_AllModulesRings)[i].already_register) {
             continue;
+        }
+        //如果没有设置，不会在两个模块间建立通路
+        if(moduleSet) {
+            if(!MOD_ISSET(i, moduleSet)) continue;
         }
         _FQ_NAME(_AllModulesRings)[module_id]._ring[i] = \
                             _FQ_NAME(__fastq_create_ring)(

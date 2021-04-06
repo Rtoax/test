@@ -18,6 +18,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <malloc.h>
 #include <unistd.h>
 #include <string.h>
 #include <stdint.h>
@@ -35,11 +36,7 @@
 # error Unsupported CPU
 #endif
 
-#ifdef MODULE_ID_MAX // moduleID 最大模块索引值
-#define FASTQ_ID_MAX    MODULE_ID_MAX
-#else
-#define FASTQ_ID_MAX    256
-#endif
+
 
 /* 多路复用器 的选择， 默认采用 select()
  *  epoll 实时内核对epoll影响非常严重，详情请见 Sys_epoll_wait->spin_lock_local

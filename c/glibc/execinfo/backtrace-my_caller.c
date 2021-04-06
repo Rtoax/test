@@ -3,7 +3,7 @@
 #include <string.h>
 
 
-#define BACK_TRACE_BUFF_SIZE 100
+#define BACK_TRACE_BUFF_SIZE 1024
 
 long my_caller(char *name,int size,unsigned int depth) 
 {
@@ -21,6 +21,10 @@ long my_caller(char *name,int size,unsigned int depth)
         perror("backtrace_symbols");
         return -1;
     }
+
+//    for(j=0;j<nptrs;j++) {
+//        printf("%s\n", strings[j]);
+//    }
 
     j = (nptrs > 2 ? 2 : 0);
     j+=depth;
@@ -47,7 +51,7 @@ int demo1()
 {
     char caller[1024] = {0};
 
-    my_caller(caller, sizeof(caller)-1, 1);
+    my_caller(caller, sizeof(caller)-1, 0);
     printf("%s caller is %s\n", __func__, caller);
 }
 
@@ -56,7 +60,7 @@ int demo2()
 {
     char caller[1024] = {0};
 
-    my_caller(caller, sizeof(caller)-1, 1);
+    my_caller(caller, sizeof(caller)-1, 0);
     printf("%s caller is %s\n", __func__, caller);
     demo1();
 }

@@ -8,8 +8,10 @@
 *       2021年1月28日 调整代码格式，添加必要的注释
 *       2021年2月1日 添加多入单出队列功能
 *       2021年2月2日 消息队列句柄改成 unsigned long 索引
-*       2021年2月3日 统计类接口 和 低时延接口并存
-*       2021年2月4日 rt_FastQMsgStatInfo 接口
+*       2021年3月3日 统计类接口 和 低时延接口并存
+*       2021年3月4日 rt_FastQMsgStatInfo 接口
+*       2021年4月7日 添加模块掩码，限制底层创建 fd 数量(eventfd)
+*                    
 *
 * API接口概述
 *   
@@ -26,11 +28,6 @@
 #ifndef __fAStMQ_H
 #define __fAStMQ_H 1
 
-#include <stdbool.h>
-
-#ifndef always_inline
-#define always_inline /*__attribute__ ((__always_inline__))*/
-#endif
 
 #define mod_set                  __mod_set
 #define MOD_SET_INITIALIZER     __MOD_SET_INITIALIZER
@@ -48,37 +45,7 @@
 #define FASTQ_ID_MAX    256
 #endif
 
-/**
- *  Crypto
- */
-#define __MOD_SETSIZE  FASTQ_ID_MAX
-#define __NMOD     (8 * (int) sizeof (__mod_mask))
-#define __MOD_ELT(d)   ((d) / __NMOD)
-#define __MOD_MASK(d)  ((__mod_mask)(1UL << ((d) % __NMOD)))
-
-typedef long int __mod_mask;
-typedef struct {
-    __mod_mask __mod[__MOD_SETSIZE/__NMOD];
-#define __MOD(set) ((set)->__mod)
-#define __MOD_SET_INITIALIZER    {0}
-}__attribute__((aligned(64))) __mod_set;
-
-
-#define __MOD_ZERO(s) \
-    do {    \
-        unsigned int __i;   \
-        __mod_set *__arr = (s);  \
-        for (__i = 0; __i < sizeof (__mod_set) / sizeof (__mod_mask); ++__i)    \
-            __MOD (__arr)[__i] = 0;  \
-    } while (0)
-#define __MOD_SET(d, s) \
-    ((void) (__MOD (s)[__MOD_ELT(d)] |= __MOD_MASK(d)))
-#define __MOD_CLR(d, s) \
-    ((void) (__MOD (s)[__MOD_ELT(d)] &= ~ __MOD_MASK(d)))
-#define __MOD_ISSET(d, s) \
-    ((__MOD (s)[__MOD_ELT (d)] & __MOD_MASK (d)) != 0)
-    
-
+#include <fastq_types.h>
 
 /**
  *  源模块未初始化时可临时使用的模块ID，只允许使用一次 
@@ -136,7 +103,7 @@ typedef bool (*fq_module_filter_t)(unsigned long srcID, unsigned long dstID);
  */
 always_inline void inline
 rt_FastQCreateModule(const unsigned long moduleID, 
-                     const mod_set *moduleSet,
+                     const mod_set *rxset, const mod_set *txset,
                      const unsigned int msgMax, const unsigned int msgSize);
 
 /**
@@ -229,7 +196,7 @@ rt_FastQRecv(unsigned int from, fq_msg_handler_t handler);
 
 #ifdef _FASTQ_STATS /* 带有统计类的接口 */
 //# pragma message "[FastQ] Statistic Class API"
-# define rt_FastQCreateModule(moduleID, modSet, msgMax, msgSize)    FastQCreateModuleStats(moduleID, modSet, msgMax, msgSize, __FILE__, __func__, __LINE__)
+# define rt_FastQCreateModule(moduleID, rxset, txset, msgMax, msgSize)    FastQCreateModuleStats(moduleID, rxset, txset, msgMax, msgSize, __FILE__, __func__, __LINE__)
 # define rt_FastQDump(fp, moduleID)                            FastQDumpStats(fp, moduleID)
 # define rt_FastQDumpAllModule(fp)                            FastQDumpStats(fp, 0)
 # define rt_FastQMsgStatInfo(buf, bufSize, pnum, filter)       FastQMsgStatInfoStats(buf, bufSize, pnum, filter)
@@ -239,7 +206,7 @@ rt_FastQRecv(unsigned int from, fq_msg_handler_t handler);
 
 #else /* 不带有统计类的接口，时延更低 */
 //# pragma message "[FastQ] Low Latency Class API"
-# define rt_FastQCreateModule(moduleID, modSet, msgMax, msgSize)    FastQCreateModule(moduleID, modSet, msgMax, msgSize, __FILE__, __func__, __LINE__)
+# define rt_FastQCreateModule(moduleID, rxset, txset, msgMax, msgSize)    FastQCreateModule(moduleID, rxset, txset, msgMax, msgSize, __FILE__, __func__, __LINE__)
 # define rt_FastQDump(fp, moduleID)                            FastQDump(fp, moduleID)
 # define rt_FastQDumpAllModule(fp)                            FastQDump(fp, 0)
 # define rt_FastQMsgStatInfo(buf, bufSize, pnum, filter)       FastQMsgStatInfo(buf, bufSize, pnum, filter)
@@ -263,12 +230,12 @@ rt_FastQRecv(unsigned int from, fq_msg_handler_t handler);
  */
 always_inline void inline
 FastQCreateModule(const unsigned long moduleID, 
-                        const mod_set *moduleSet, 
+                        const mod_set *rxset, const mod_set *txset, 
                         const unsigned int msgMax, const unsigned int msgSize, 
                             const char *_file, const char *_func, const int _line);
 always_inline void inline
 FastQCreateModuleStats(const unsigned long moduleID, 
-                        const mod_set *moduleSet, 
+                        const mod_set *rxset, const mod_set *txset, 
                         const unsigned int msgMax, const unsigned int msgSize, 
                             const char *_file, const char *_func, const int _line);
 

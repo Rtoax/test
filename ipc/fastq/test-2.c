@@ -99,10 +99,10 @@ int main()
     int max_msg = 16;
     
     signal(SIGINT, sig_handler);
-    FastQCreateModuleStats(NODE_1, NULL, max_msg, sizeof(unsigned long), __FILE__, __func__, __LINE__);
-    FastQCreateModuleStats(NODE_2, NULL, max_msg, sizeof(unsigned long), __FILE__, __func__, __LINE__);
-    FastQCreateModuleStats(NODE_3, NULL, max_msg, sizeof(unsigned long), __FILE__, __func__, __LINE__);
-    FastQCreateModuleStats(NODE_4, NULL, max_msg, sizeof(unsigned long), __FILE__, __func__, __LINE__);
+    FastQCreateModuleStats(NODE_1, NULL, NULL, max_msg, sizeof(unsigned long), __FILE__, __func__, __LINE__);
+    FastQCreateModuleStats(NODE_2, NULL, NULL, max_msg, sizeof(unsigned long), __FILE__, __func__, __LINE__);
+    FastQCreateModuleStats(NODE_3, NULL, NULL, max_msg, sizeof(unsigned long), __FILE__, __func__, __LINE__);
+    FastQCreateModuleStats(NODE_4, NULL, NULL, max_msg, sizeof(unsigned long), __FILE__, __func__, __LINE__);
     
     unsigned int i =0;
     test_msgs21 = (test_msgs_t *)malloc(sizeof(test_msgs_t)*TEST_NUM);

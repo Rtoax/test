@@ -57,8 +57,10 @@ struct _FQ_NAME(FastQModule) {
     char *_func; //调用注册函数的 函数名
     int _line; //调用注册函数的 文件中的行号
 
-    bool have_moduleset;
-    mod_set modulesset;
+    struct {
+        bool use;   //是否使用
+        mod_set set;//具体的 bitmap
+    }rx, tx;        //发送和接收
     struct _FQ_NAME(FastQRing) **_ring;
 }__attribute__((aligned(64)));
 
@@ -169,7 +171,7 @@ _FQ_NAME(__fastq_create_ring)(
  */
 always_inline void inline
 _FQ_NAME(FastQCreateModule)(const unsigned long module_id, \
-                     const mod_set *moduleSet, \
+                     const mod_set *rxset, const mod_set *txset, \
                      const unsigned int ring_size, const unsigned int msg_size, \
                             const char *_file, const char *_func, const int _line) {
     assert(module_id <= FASTQ_ID_MAX && "Module ID out of range");
@@ -198,11 +200,17 @@ _FQ_NAME(FastQCreateModule)(const unsigned long module_id, \
     _FQ_NAME(_AllModulesRings)[module_id].already_register = true;
 
     //TODO
-    _FQ_NAME(_AllModulesRings)[module_id].have_moduleset = moduleSet?true:false;
-    if(moduleSet) {
-        memcpy(&_FQ_NAME(_AllModulesRings)[module_id].modulesset, moduleSet, sizeof(mod_set));
+    _FQ_NAME(_AllModulesRings)[module_id].rx.use = rxset?true:false;
+    if(rxset) {
+        memcpy(&_FQ_NAME(_AllModulesRings)[module_id].rx.set, rxset, sizeof(mod_set));
     } else {
-        memset(&_FQ_NAME(_AllModulesRings)[module_id].modulesset, 0x0, sizeof(mod_set));
+        memset(&_FQ_NAME(_AllModulesRings)[module_id].rx.set, 0x0, sizeof(mod_set));
+    }
+    _FQ_NAME(_AllModulesRings)[module_id].tx.use = txset?true:false;
+    if(txset) {
+        memcpy(&_FQ_NAME(_AllModulesRings)[module_id].tx.set, txset, sizeof(mod_set));
+    } else {
+        memset(&_FQ_NAME(_AllModulesRings)[module_id].tx.set, 0x0, sizeof(mod_set));
     }
     
 #if defined(_FASTQ_EPOLL)
@@ -223,16 +231,17 @@ _FQ_NAME(FastQCreateModule)(const unsigned long module_id, \
     _FQ_NAME(_AllModulesRings)[module_id].ring_size = __power_of_2(ring_size);
     _FQ_NAME(_AllModulesRings)[module_id].msg_size = msg_size;
 
-    /* 当源模块未初始化时又想向目的模块发送消息 */
-    _FQ_NAME(_AllModulesRings)[module_id]._ring[0] = _FQ_NAME(__fastq_create_ring)(
+    if(MOD_ISSET(0, &_FQ_NAME(_AllModulesRings)[module_id].rx.set)) {
+        /* 当源模块未初始化时又想向目的模块发送消息 */
+        _FQ_NAME(_AllModulesRings)[module_id]._ring[0] = _FQ_NAME(__fastq_create_ring)(
 #if defined(_FASTQ_EPOLL)
-                                                                _FQ_NAME(_AllModulesRings)[module_id].epfd, 
+                                                                    _FQ_NAME(_AllModulesRings)[module_id].epfd, 
 #elif defined(_FASTQ_SELECT)
-                                                                &_FQ_NAME(_AllModulesRings)[module_id],
+                                                                    &_FQ_NAME(_AllModulesRings)[module_id],
 #endif  
-                                                                0, module_id,\
-                                                                __power_of_2(ring_size), msg_size);
-
+                                                                    0, module_id,\
+                                                                    __power_of_2(ring_size), msg_size);
+    }
     /*建立住的模块和其他模块的连接关系
         若注册前的连接关系如下：
         下图为已经注册过两个模块 (模块 A 和 模块 B) 的数据结构
@@ -275,29 +284,33 @@ _FQ_NAME(FastQCreateModule)(const unsigned long module_id, \
         if(!_FQ_NAME(_AllModulesRings)[i].already_register) {
             continue;
         }
-        //如果没有设置，不会在两个模块间建立通路
-        if(moduleSet) {
-            if(!MOD_ISSET(i, moduleSet)) continue;
+        if(MOD_ISSET(i, &_FQ_NAME(_AllModulesRings)[module_id].rx.set) && 
+           MOD_ISSET(module_id, &_FQ_NAME(_AllModulesRings)[i].tx.set)) {
+            _FQ_NAME(_AllModulesRings)[module_id]._ring[i] = \
+                                _FQ_NAME(__fastq_create_ring)(
+#if defined(_FASTQ_EPOLL)
+                                                            _FQ_NAME(_AllModulesRings)[module_id].epfd, 
+#elif defined(_FASTQ_SELECT)
+                                                            &_FQ_NAME(_AllModulesRings)[module_id],
+#endif                             
+                                                            i, module_id,\
+                                                            __power_of_2(ring_size), msg_size);
         }
-        _FQ_NAME(_AllModulesRings)[module_id]._ring[i] = \
-                            _FQ_NAME(__fastq_create_ring)(
-#if defined(_FASTQ_EPOLL)
-                                                        _FQ_NAME(_AllModulesRings)[module_id].epfd, 
-#elif defined(_FASTQ_SELECT)
-                                                        &_FQ_NAME(_AllModulesRings)[module_id],
-#endif                             
-                                                        i, module_id,\
-                                                        __power_of_2(ring_size), msg_size);
         if(!_FQ_NAME(_AllModulesRings)[i]._ring[module_id]) {
-            _FQ_NAME(_AllModulesRings)[i]._ring[module_id] = \
-                    _FQ_NAME(__fastq_create_ring)(
+            
+            if(MOD_ISSET(i, &_FQ_NAME(_AllModulesRings)[module_id].tx.set) && 
+               MOD_ISSET(module_id, &_FQ_NAME(_AllModulesRings)[i].rx.set)) {
+                _FQ_NAME(_AllModulesRings)[i]._ring[module_id] = \
+                        _FQ_NAME(__fastq_create_ring)(
 #if defined(_FASTQ_EPOLL)
-                                                    _FQ_NAME(_AllModulesRings)[i].epfd, 
+                                                        _FQ_NAME(_AllModulesRings)[i].epfd, 
 #elif defined(_FASTQ_SELECT)
-                                                    &_FQ_NAME(_AllModulesRings)[i],
+                                                        &_FQ_NAME(_AllModulesRings)[i],
 #endif                             
-                                                    module_id, i, \
-                                                    _FQ_NAME(_AllModulesRings)[module_id].ring_size, _FQ_NAME(_AllModulesRings)[i].msg_size);
+                                                        module_id, i, \
+                                                        _FQ_NAME(_AllModulesRings)[module_id].ring_size,\
+                                                        _FQ_NAME(_AllModulesRings)[i].msg_size);
+            }
         }
     }
     
@@ -518,6 +531,7 @@ _FQ_NAME(FastQMsgStatInfo)(struct FastQModuleMsgStatInfo *buf, unsigned int buf_
     *num = 0;
 
     for(dstID=1; dstID<=FASTQ_ID_MAX; dstID++) {
+//        printf("------------------ %d -> reg %d\n",dstID, _FQ_NAME(_AllModulesRings)[dstID].already_register);
         if(!_FQ_NAME(_AllModulesRings)[dstID].already_register) {
             continue;
         }

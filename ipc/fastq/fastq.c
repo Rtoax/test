@@ -10,6 +10,10 @@
 *       2021年2月2日 添加统计功能接口，尽可能减少代码量
 *       2021年2月3日 统计类接口 和 低时延接口并存
 *       2021年3月2日 为满足实时内核，添加 select()，同时支持 epoll()
+*       2021年3月3日 统计类接口 和 低时延接口并存
+*       2021年3月4日 rt_FastQMsgStatInfo 接口
+*       2021年4月7日 添加模块掩码，限制底层创建 fd 数量
+*
 \**********************************************************************************************************************/
 #include <stdint.h>
 #include <assert.h>
@@ -308,7 +312,7 @@ FILE* fastq_log_fp = NULL;
 #endif
 
 static void __attribute__((constructor(101))) __fastq_log_init() {
-    char fasgq_log_file[256] = {"./.fastq.log"};
+    char fasgq_log_file[256] = {"./fastq.log"};
     fastq_log_fp = fopen(fasgq_log_file, "w");
     fastq_log_fp = fastq_log_fp?fastq_log_fp:stderr;
 }

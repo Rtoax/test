@@ -1,3 +1,4 @@
+#include <utils.h>
 #include "virtio_client.h"
 
 struct vring_used_elem *virt_queue__set_used_elem(struct vring_virtqueue *vq, u32 head, u32 len)

@@ -1,3 +1,4 @@
+#include <utils.h>
 #include "virtio_server.h"
 
 #include <stdio.h>
@@ -43,6 +44,9 @@ struct virtqueue *vring_new_virtqueue(unsigned int num,
 				      void (*callback)(struct virtqueue *),
 				      const char *name)
 {
+    linfo("NUM %d, align %d, virtqueue addr 0x%p, pages 0x%p, name %s\n",
+            num, vring_align, vq_addr, pages, name);
+
 	struct vring_virtqueue *vq = vq_addr;
 	unsigned int i;
 
@@ -61,6 +65,9 @@ struct virtqueue *vring_new_virtqueue(unsigned int num,
 	vq->last_used_idx = 0;
 	vq->num_added = 0;
 	list_add_tail(&vq->vq.list, &vdev->vqs);
+
+    linfo("add virtqueue to vdev vqs list.\n");
+    
 #ifdef DEBUG
 	vq->in_use = false;
 #endif
@@ -76,6 +83,7 @@ struct virtqueue *vring_new_virtqueue(unsigned int num,
 	vq->num_free = num;
 	vq->free_head = 0;
 	for (i = 0; i < num-1; i++) {
+        linfo("vq->vring.desc[%2d].next = %d;\n", i, i+1);
 		vq->vring.desc[i].next = i+1;
 		vq->data[i] = NULL;
 	}
@@ -90,6 +98,7 @@ int virtqueue_add_buf(struct virtqueue *_vq,
 			  unsigned int in,
 			  void *data)
 {
+    linfo("add buf to virtqueue.\n");
 	struct vring_virtqueue *vq = to_vvq(_vq);
 	unsigned int i, avail, prev;
 	int head;
@@ -119,6 +128,11 @@ int virtqueue_add_buf(struct virtqueue *_vq,
 		vq->vring.desc[i].flags = VRING_DESC_F_NEXT;
 		vq->vring.desc[i].addr = (unsigned long)sg->iov_base;
 		vq->vring.desc[i].len = sg->iov_len;
+        linfo("out-> add iov to vring.desc[%2d]. flags %d, addr 0x%p, len %d\n",
+                i,
+                vq->vring.desc[i].flags,
+                vq->vring.desc[i].addr,
+                vq->vring.desc[i].len);
 		prev = i;
 		sg++;
 	}
@@ -126,6 +140,11 @@ int virtqueue_add_buf(struct virtqueue *_vq,
 		vq->vring.desc[i].flags = VRING_DESC_F_NEXT|VRING_DESC_F_WRITE;
 		vq->vring.desc[i].addr = (unsigned long)sg->iov_base;
 		vq->vring.desc[i].len = sg->iov_len;
+        linfo(" in-> add iov to vring.desc[%2d]. flags %d, addr 0x%p, len %d\n",
+                i,
+                vq->vring.desc[i].flags,
+                vq->vring.desc[i].addr,
+                vq->vring.desc[i].len);
 		prev = i;
 		sg++;
 	}
@@ -144,7 +163,7 @@ add_head:
 	avail = (vq->vring.avail->idx + vq->num_added++) % vq->vring.num;
 	vq->vring.avail->ring[avail] = head;
 
-	printf("Added buffer head %i to %p\n", head, vq);
+	linfo("Added buffer head %i to %p\n", head, vq);
 	END_USE(vq);
 
 	return vq->num_free;
@@ -152,6 +171,7 @@ add_head:
 
 void virtqueue_kick(struct virtqueue *_vq)
 {
+    linfo("virtqueue kick.\n");
 	struct vring_virtqueue *vq = to_vvq(_vq);
 	u16 new, old;
 	START_USE(vq);

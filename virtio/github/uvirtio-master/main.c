@@ -4,6 +4,8 @@
 #include <virtio_client.h>
 #include <virtio_server.h>
 #include <linux/list.h>
+#include <utils.h>
+
 
 #include <string.h>
 #include <sys/mman.h>
@@ -34,26 +36,28 @@ int main(int argc, char **argv)
 	};
 
 	strncpy(data_ptr, "a1b2c3d4e5", 10);
-	printf("Input: %s\n", (char *)data_ptr);
+	linfo("Input: %s\n", (char *)data_ptr);
 
 	INIT_LIST_HEAD(&vdev.vqs);
+    linfo("Init link list.\n");
+    
 	vq = vring_new_virtqueue(16, 4096, &vdev, vq_ptr, vq_ptr + 1024, NULL, NULL, "test");
 	if (virt_queue__available(to_vvq(vq)))
-		printf("No buffers available - OK!\n");
+		lerror("No buffers available - OK!\n");
 
 	virtqueue_add_buf(vq, iov, 2, 0, NULL);
 	virtqueue_kick(vq);
 	if (virt_queue__available(to_vvq(vq)))
-		printf("Buffers available - OK!\n");
+		linfo("Buffers available - OK!\n");
 
 	virt_queue__get_iov(to_vvq(vq), iov, &out, &in);
 
-	printf("Output: ");
+	linfo("Output: \n");
 	for (i = 0; i < out; i++) {
-		printf("%.*s", (int)iov[i].iov_len, (char*)iov[i].iov_base);
+		linfo("%.*s\n", (int)iov[i].iov_len, (char*)iov[i].iov_base);
 		fflush(stdout);
 	}
-	printf("\n");
+	linfo("\n");
 
 	return 0;
 }

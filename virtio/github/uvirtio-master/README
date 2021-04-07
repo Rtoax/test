@@ -1,0 +1,10 @@
+Userspace Virtio (uvirtio)
+----------------------------
+
+This project is intended to run virtio in userspace.
+
+Userspace client parts are loaned from the KVM tool (https://github.com/penberg/linux-kvm).
+
+Userspace server is really kernel code slightly modified to work in userspace.
+
+Still very broken.

@@ -74,7 +74,7 @@ int main()
 
     mwLimit(1000000);
     mwNoMansLand( MW_NML_ALL );
-    mwDumpCheck();
+//    mwDumpCheck();
     
     /* These may cause a general protection fault (segmentation fault) */
     /* They're here to help test the no-mans-land protection */

@@ -1957,7 +1957,7 @@ static void mwLogFile( const char *name ) {
         mwLogW( NULL );
         }
     if( name == NULL ) return;
-    mwLogW( fopen( name, "a"  ) );
+    mwLogW( fopen( name, "w"  ) );
     if( mwLogR() == NULL )
         mwWrite( "logfile: failed to open/create file '%s'\n", name );
     }

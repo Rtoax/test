@@ -13,14 +13,14 @@
  *
  */
 
-#include <linux/config.h>
+//#include <linux/config.h>
 #include <linux/kernel.h>
 #include <linux/errno.h>
 #include <linux/init.h>
 #include <linux/slab.h>
 #include <linux/module.h>
 #include <linux/kref.h>
-#include <linux/smp_lock.h>
+//#include <linux/smp_lock.h>
 #include <linux/usb.h>
 #include <asm/uaccess.h>
 

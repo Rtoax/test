@@ -35,7 +35,6 @@
 #include <gperftools/tcmalloc.h>
 #include <malloc.h>
 
-
 void *zmalloc(size_t size);
 void *zcalloc(size_t size);
 void *zrealloc(void *ptr, size_t size);
@@ -63,7 +62,6 @@ void zlibc_free(void *ptr);
 
 size_t zmalloc_size(void *ptr);
 size_t zmalloc_usable_size(void *ptr);
-
 
 #endif /* __ZMALLOC_H */
 

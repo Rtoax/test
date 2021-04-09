@@ -105,10 +105,24 @@ int main()
     int max_msg = 16;
     
     signal(SIGINT, sig_handler);
-    FastQCreateModule(NODE_1, NULL, NULL, max_msg, sizeof(unsigned long), __FILE__, __func__, __LINE__);
-    FastQCreateModule(NODE_2, NULL, NULL, max_msg, sizeof(unsigned long), __FILE__, __func__, __LINE__);
-    FastQCreateModule(NODE_3, NULL, NULL, max_msg, sizeof(unsigned long), __FILE__, __func__, __LINE__);
-    FastQCreateModule(NODE_4, NULL, NULL, max_msg, sizeof(unsigned long), __FILE__, __func__, __LINE__);
+
+
+    
+    mod_set rxset, txset;
+    MOD_ZERO(&rxset);
+    MOD_ZERO(&txset);
+
+    MOD_SET(NODE_2, &rxset);
+    MOD_SET(NODE_3, &rxset);
+    MOD_SET(NODE_4, &rxset);
+    
+    MOD_SET(NODE_1, &txset);
+
+    
+    FastQCreateModule(NODE_1, &rxset, NULL, max_msg, sizeof(unsigned long), __FILE__, __func__, __LINE__);
+    FastQCreateModule(NODE_2, NULL, &txset, max_msg, sizeof(unsigned long), __FILE__, __func__, __LINE__);
+    FastQCreateModule(NODE_3, NULL, &txset, max_msg, sizeof(unsigned long), __FILE__, __func__, __LINE__);
+    FastQCreateModule(NODE_4, NULL, &txset, max_msg, sizeof(unsigned long), __FILE__, __func__, __LINE__);
     
     unsigned int i =0;
     test_msgs21 = (test_msgs_t *)malloc(sizeof(test_msgs_t)*TEST_NUM);

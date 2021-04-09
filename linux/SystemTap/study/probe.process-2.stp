@@ -1,0 +1,87 @@
+#!/usr/bin/env stap
+
+/*
+打印函数调用层次（用户程序）
+调用层次需要借助 thread_indent 来打印合适的缩进，另外需要设置函数入口（call）和返回（return）的探测点。函数命名不足以使用function通配符来匹配，而 statement 虽然可以匹配我们想要的结果（过滤第三方函数），但是不支持 call 和return。虽然有一个比较傻但是的确可行的方式是，在脚本里面手动写入这些函数。
+
+// 先取出需要关注的函数名称
+stap -L 'process("/tmp/limlog/build/tests/LogTest").statement("*@*.cpp")' |  sed 's/.*statement(\"\(.*\)@.*\".*/\1/g'  | sort -u
+脚本如下：
+*/
+
+global f;
+
+function init() {
+    f["append"] = 1;
+    f["benchmark"] = 1;
+    f["consumable"] = 1;
+    f["consume"] = 1;
+    f["date"] = 1;
+    f["datetime"] = 1;
+    f["formatTimestamp"] = 1;
+    f["getLogLevel"] = 1;
+    f["gettid"] = 1;
+    f["i16toa"] = 1;
+    f["i2a"] = 1;
+    f["i32toa"] = 1;
+    f["i64toa"] = 1;
+    f["incConsumable"] = 1;
+    f["incConsumablePos"] = 1;
+    f["LimLog"] = 1;
+    f["~LimLog"] = 1;
+    f["listStatistic"] = 1;
+    f["log_10_diff_element_len"] = 1;
+    f["log_10_diff_element_str"] = 1;
+    f["log_10_diff_element_x1"] = 1;
+    f["log_16_same_element_x6"] = 1;
+    f["log_1_same_element_x6"] = 1;
+    f["log_4_same_element_x6"] = 1;
+    f["LogLine"] = 1;
+    f["~LogLine"] = 1;
+    f["LogSink"] = 1;
+    f["~LogSink"] = 1;
+    f["main"] = 1;
+    f["now"] = 1;
+    f["operator<<"] = 1;
+    f["produce"] = 1;
+    f["produceLog"] = 1;
+    f["rollFile"] = 1;
+    f["setLogFile"] = 1;
+    f["setLogLevel"] = 1;
+    f["setRollSize"] = 1;
+    f["singleton"] = 1;
+    f["sink"] = 1;
+    f["sinkThreadFunc"] = 1;
+    f["stringifyLogLevel"] = 1;
+    f["test_blocking_buffer"] = 1;
+    f["test_itoa"] = 1;
+    f["test_timestamp"] = 1;
+    f["time"] = 1;
+    f["u16toa"] = 1;
+    f["u2a"] = 1;
+    f["u32toa"] = 1;
+    f["u64toa"] = 1;
+    f["used"] = 1;
+    f["write"] = 1;
+}
+
+probe begin {
+    printf("=== begin ===\n");
+    init();
+}
+
+probe process("/tmp/limlog/build/tests/LogTest").function("*").call {
+    fn = ppfunc()
+    if (f[fn] == 1)
+        printf("%s -> %s\n", thread_indent(4), ppfunc());
+}
+
+probe process("/tmp/limlog/build/tests/LogTest").function("*").return {
+    fn = ppfunc()
+    if (f[fn] == 1)
+        printf("%s <- %s\n", thread_indent(-4), ppfunc());
+}
+
+probe end {
+    printf("=== end ===\n");
+}

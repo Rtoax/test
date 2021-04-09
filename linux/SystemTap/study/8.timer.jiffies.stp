@@ -1,0 +1,6 @@
+# Refers to a periodic interrupt, every 1000 jiffies:
+timer.jiffies(1000)
+# Fires every 5 seconds:
+timer.sec(5)
+# Refers to a periodic interrupt, every 1000 +/- 200 jiffies:
+timer.jiffies(1000).randomize(200)

@@ -1,0 +1,19 @@
+#!/usr/bin/env stap
+
+//统计某一时间段内运行次数top k的函数
+global top_funcs;
+
+probe begin {
+    printf("=== begin ===\n");
+}
+
+probe process("/tmp/limlog/build/tests/LogTest").statement("*@Log.cpp") {
+    top_funcs[ppfunc()]++;
+}
+
+probe end {
+    foreach(func in top_funcs- limit 10)
+        printf("%s: %d\n", func, top_funcs[func]);
+
+    printf("=== end ===\n");
+}

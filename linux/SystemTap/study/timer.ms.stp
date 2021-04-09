@@ -1,0 +1,6 @@
+#!/usr/bin/env stap
+
+// 定时调用函数
+probe timer.ms(500) {
+	printf("now: %d\n", gettimeofday_s());
+}

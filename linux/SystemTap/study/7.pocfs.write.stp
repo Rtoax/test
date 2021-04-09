@@ -1,0 +1,1 @@
+probe procfs("PATH").write { printf("User wrote: %s", $value) }

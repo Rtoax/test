@@ -1,0 +1,18 @@
+probe syscall.read {
+	printf("reading fd=%d\n", fildes)
+}
+
+# Defines a new probe point syscall.read, which expands to
+# kernel.function("sys_read"), with the given statement as
+# a prologue.
+#
+probe syscall.read = kernel.function("sys_read") {
+	fildes = $fd
+}
+
+# Defines a new probe point with the given statement as an
+# epilogue.
+#
+probe syscall.read += kernel.function("sys_read") {
+	if (traceme) println ("tracing me")
+}

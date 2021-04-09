@@ -1,0 +1,18 @@
+function integer_ops:long (val) %{
+	STAP_PRINTF("%d\n", STAP_ARG_val);
+	STAP_RETVALUE = STAP_ARG_val + 1;
+	if (STAP_RETVALUE == 4)
+	STAP_ERROR("wrong guess: %d", (int) STAP_RETVALUE);
+	if (STAP_RETVALUE == 3)
+	STAP_RETURN(0);
+	STAP_RETVALUE ++;
+%}
+function string_ops:string (val) %{
+	strlcpy (STAP_RETVALUE, STAP_ARG_val, MAXSTRINGLEN);
+	strlcat (STAP_RETVALUE, "one", MAXSTRINGLEN);
+	if (strcmp (STAP_RETVALUE, "three-two-one"))
+	STAP_RETURN("parameter should be three-two-");
+%}
+function no_ops () %{
+	STAP_RETURN(); /* function inferred with no return value */
+%}

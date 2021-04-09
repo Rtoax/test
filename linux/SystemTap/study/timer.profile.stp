@@ -1,0 +1,18 @@
+#!/usr/bin/env stap
+
+//定时调用栈取样
+global bts;
+
+probe timer.profile {
+    if (pid() == 1)
+        bts[backtrace(), ubacktrace()] <<< 1
+}
+
+probe timer.s(1) {
+    foreach([k, u] in bts-) {
+        print_stack(k);
+        print_ustack(u);
+        printf("\\t%d\\n", @count(bts[k, u]));
+    }
+    exit();
+}

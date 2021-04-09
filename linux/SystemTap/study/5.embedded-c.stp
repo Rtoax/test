@@ -1,0 +1,16 @@
+%{
+#include <linux/in.h>
+#include <linux/ip.h>
+%} /* <-- top level */
+
+/* Reads the char value stored at a given address: */
+function __read_char:long(addr:long) %{ /* pure */
+STAP_RETURN(kderef(sizeof(char), STAP_ARG_addr));
+CATCH_DEREF_FAULT ();
+%} /* <-- function body */
+
+/* Determines whether an IP packet is TCP, based on the iphdr: */
+function is_tcp_packet:long(iphdr) {
+	protocol = @cast(iphdr, "iphdr")->protocol
+	return (protocol == %{ IPPROTO_TCP %}) /* <-- expression */
+}

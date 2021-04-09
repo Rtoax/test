@@ -1,0 +1,13 @@
+#!/usr/bin/stap
+probe begin {
+    printf("=== begin ===\n");
+}
+
+probe timer.ms(4000) # after 4 seconds
+{
+    exit ()
+}
+
+probe begin {
+	printf("=== end ===\n");
+}

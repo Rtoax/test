@@ -1,0 +1,20 @@
+#!/usr/bin/stap
+probe begin {
+    printf("=== begin ===\n");
+}
+
+probe kernel.function("sys_open").call {
+	printf("%s call %s\n", execname(), ppfunc());
+}
+probe kernel.function("sys_open").return {
+	printf("%s call %s is over.\n", execname(), ppfunc())
+}
+
+probe timer.ms(4000) # after 4 seconds
+{
+    exit ()
+}
+
+probe begin {
+	printf("=== end ===\n");
+}

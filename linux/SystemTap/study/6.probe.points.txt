@@ -1,0 +1,7 @@
+kernel.function("foo")
+kernel.function("foo").return
+module{"ext3"}.function("ext3_*")
+kernel.function("no_such_function") ?
+syscall.*
+end
+timer.ms(5000)

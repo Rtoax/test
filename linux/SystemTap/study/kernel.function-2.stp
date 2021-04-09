@@ -1,0 +1,19 @@
+#!/usr/bin/env stap
+
+//统计系统调用某一时间段内被调用最频繁的k个程序及次数
+global top_exec;
+
+probe begin {
+    printf("=== begin ===\n");
+}
+
+probe kernel.function("sys_write") {
+    top_exec[execname()]++;
+}
+
+probe end {
+    foreach(exec in top_exec- limit 10)
+        printf("%s: %d\n", exec, top_exec[exec]);
+
+    printf("=== end ===\n");
+}

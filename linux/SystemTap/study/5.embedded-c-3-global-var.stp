@@ -1,0 +1,8 @@
+global var
+global var2[100]
+function increment() %{
+	/* pragma:read:var */ /* pragma:write:var */
+	/* pragma:read:var2 */ /* pragma:write:var2 */
+	STAP_GLOBAL_SET_var(STAP_GLOBAL_GET_var()+1); //var++
+	STAP_GLOBAL_SET_var2(1, 1, STAP_GLOBAL_GET_var2(1, 1)+1); //var2[1,1]++
+%}

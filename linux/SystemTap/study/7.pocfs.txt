@@ -1,0 +1,4 @@
+procfs("PATH").read
+procfs("PATH").write
+procfs.read
+procfs.write

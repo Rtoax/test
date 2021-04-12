@@ -1,0 +1,16 @@
+grep tcp /proc/kallsyms | more
+[...]
+ffffffff817c1bb0 t tcp_get_info_chrono_stats
+ffffffff817c1c60 T tcp_init_sock
+ffffffff817c1e30 t tcp_splice_data_recv
+ffffffff817c1e70 t tcp_push
+ffffffff817c20a0 t tcp_send_mss
+ffffffff817c2170 t tcp_recv_skb
+ffffffff817c2250 t tcp_cleanup_rbuf
+[...]
+ffffffff818524f0 T tcp6_proc_exit
+ffffffff81852510 T tcpv6_exit
+ffffffff818648a0 t tcp6_gro_complete
+ffffffff81864910 t tcp6_gro_receive
+ffffffff81864ae0 t tcp6_gso_segment
+ffffffff8187bd89 t tcp_v4_inbound_md5_hash

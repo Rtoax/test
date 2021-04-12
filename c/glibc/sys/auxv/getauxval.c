@@ -49,7 +49,7 @@ _rte_cpu_getauxval(unsigned long type, const char *str)
 
 	errno = 0;
 	val = getauxval(type);
-    printf("%s:%s\n", (const char *)val, str);
+    printf("%-12s: %s\n", str, (const char *)val);
 
 	if (!val && (errno == ENOTSUP || errno == ENOENT)) {
 		int auxv_fd = open("/proc/self/auxv", O_RDONLY);
@@ -65,7 +65,7 @@ _rte_cpu_getauxval(unsigned long type, const char *str)
 				val = auxv.a_un.a_val;
 				if (str) {
 					val = strcmp((const char *)val, str);
-                    printf("%s:%s\n", (const char *)val, str);
+//                    printf("%-20s:%s\n", str, (const char *)val);
                 }
 				break;
 			}
@@ -87,8 +87,28 @@ rte_cpu_strcmp_auxval(unsigned long type, const char *str)
 {
 	return _rte_cpu_getauxval(type, str);
 }
-
+//AT_SYSINFO_EHDR: 0x7fff35d0d000
+//AT_HWCAP:        bfebfbff
+//AT_PAGESZ:       4096
+//AT_CLKTCK:       100
+//AT_PHDR:         0x400040
+//AT_PHENT:        56
+//AT_PHNUM:        9
+//AT_BASE:         0x0
+//AT_FLAGS:        0x0
+//AT_ENTRY:        0x40164c
+//AT_UID:          1000
+//AT_EUID:         1000
+//AT_GID:          1000
+//AT_EGID:         1000
+//AT_SECURE:       0
+//AT_RANDOM:       0x7fff35c2a209
+//AT_EXECFN:       /usr/bin/sleep
+//AT_PLATFORM:     x86_64
 int main()
 {
+//    rte_cpu_getauxval(AT_HWCAP);
+//    rte_cpu_getauxval(AT_HWCAP2);
     rte_cpu_strcmp_auxval(AT_PLATFORM, "AT_PLATFORM");
+    rte_cpu_strcmp_auxval(AT_EXECFN, "AT_EXECFN");
 }

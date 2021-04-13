@@ -1,0 +1,11 @@
+usage: cachestat [-h] [-T] [interval] [count]
+
+Count cache kernel function calls
+
+positional arguments:
+  interval         output interval, in seconds
+  count            number of outputs
+
+optional arguments:
+  -h, --help       show this help message and exit
+  -T, --timestamp  include timestamp on output

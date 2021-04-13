@@ -1,0 +1,32 @@
+usage: tcpconnect [-h] [-t] [-p PID] [-P PORT] [-L] [-U] [-u UID] [-c]
+                  [--cgroupmap CGROUPMAP] [--mntnsmap MNTNSMAP] [-d]
+
+Trace TCP connects
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -t, --timestamp       include timestamp on output
+  -p PID, --pid PID     trace this PID only
+  -P PORT, --port PORT  comma-separated list of destination ports to trace.
+  -L, --lport           include LPORT on output
+  -U, --print-uid       include UID on output
+  -u UID, --uid UID     trace this UID only
+  -c, --count           count connects per src ip and dest ip/port
+  --cgroupmap CGROUPMAP
+                        trace cgroups in this BPF map only
+  --mntnsmap MNTNSMAP   trace mount namespaces in this BPF map only
+  -d, --dns             include likely DNS query associated with each connect
+
+examples:
+    ./tcpconnect           # trace all TCP connect()s
+    ./tcpconnect -t        # include timestamps
+    ./tcpconnect -d        # include DNS queries associated with connects
+    ./tcpconnect -p 181    # only trace PID 181
+    ./tcpconnect -P 80     # only trace port 80
+    ./tcpconnect -P 80,81  # only trace port 80 and 81
+    ./tcpconnect -U        # include UID
+    ./tcpconnect -u 1000   # only trace UID 1000
+    ./tcpconnect -c        # count connects per src ip and dest ip/port
+    ./tcpconnect -L        # include LPORT while printing outputs
+    ./tcpconnect --cgroupmap mappath  # only trace cgroups in this BPF map
+    ./tcpconnect --mntnsmap mappath   # only trace mount namespaces in the map

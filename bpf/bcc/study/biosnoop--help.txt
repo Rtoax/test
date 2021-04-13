@@ -1,0 +1,11 @@
+usage: biosnoop [-h] [-Q]
+
+Trace block I/O
+
+optional arguments:
+  -h, --help   show this help message and exit
+  -Q, --queue  include OS queued time
+
+examples:
+    ./biosnoop           # trace all block I/O
+    ./biosnoop -Q        # include OS queued time

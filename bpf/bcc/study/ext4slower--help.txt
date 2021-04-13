@@ -1,0 +1,18 @@
+usage: ext4slower [-h] [-j] [-p PID] [min_ms]
+
+Trace common ext4 file operations slower than a threshold
+
+positional arguments:
+  min_ms             minimum I/O duration to trace, in ms (default 10)
+
+optional arguments:
+  -h, --help         show this help message and exit
+  -j, --csv          just print fields: comma-separated values
+  -p PID, --pid PID  trace this PID only
+
+examples:
+    ./ext4slower             # trace operations slower than 10 ms (default)
+    ./ext4slower 1           # trace operations slower than 1 ms
+    ./ext4slower -j 1        # ... 1 ms, parsable output (csv)
+    ./ext4slower 0           # trace all operations (warning: verbose)
+    ./ext4slower -p 185      # trace PID 185 only

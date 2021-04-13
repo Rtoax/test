@@ -110,6 +110,7 @@
 * `linux`: Linux kernel and some other thing
 * `linux-5.0`: 《奔跑吧Linux内核》
 * `linux-5.6.5`: 源码学习
+* `lua`: Lua 是一种轻量小巧的脚本语言，用标准C语言编写并以源代码形式开放， 其设计目的是为了嵌入应用程序中，从而为应用程序提供灵活的扩展和定制功能。
 * `lxc`: 
 * `make`: Makefile代码编译工具
 * `memcached`: 内存缓存

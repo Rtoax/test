@@ -1,0 +1,37 @@
+usage: execsnoop [-h] [-T] [-t] [-x] [--cgroupmap CGROUPMAP]
+                 [--mntnsmap MNTNSMAP] [-u USER] [-q] [-n NAME] [-l LINE] [-U]
+                 [--max-args MAX_ARGS]
+
+Trace exec() syscalls
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -T, --time            include time column on output (HH:MM:SS)
+  -t, --timestamp       include timestamp on output
+  -x, --fails           include failed exec()s
+  --cgroupmap CGROUPMAP
+                        trace cgroups in this BPF map only
+  --mntnsmap MNTNSMAP   trace mount namespaces in this BPF map only
+  -u USER, --uid USER   trace this UID only
+  -q, --quote           Add quotemarks (") around arguments.
+  -n NAME, --name NAME  only print commands matching this name (regex), any
+                        arg
+  -l LINE, --line LINE  only print commands where arg contains this line
+                        (regex)
+  -U, --print-uid       print UID column
+  --max-args MAX_ARGS   maximum number of arguments parsed and displayed,
+                        defaults to 20
+
+examples:
+    ./execsnoop           # trace all exec() syscalls
+    ./execsnoop -x        # include failed exec()s
+    ./execsnoop -T        # include time (HH:MM:SS)
+    ./execsnoop -U        # include UID
+    ./execsnoop -u 1000   # only trace UID 1000
+    ./execsnoop -u user   # get user UID and trace only them
+    ./execsnoop -t        # include timestamps
+    ./execsnoop -q        # add "quotemarks" around arguments
+    ./execsnoop -n main   # only print command lines containing "main"
+    ./execsnoop -l tpkg   # only print command where arguments contains "tpkg"
+    ./execsnoop --cgroupmap mappath  # only trace cgroups in this BPF map
+    ./execsnoop --mntnsmap mappath   # only trace mount namespaces in the map

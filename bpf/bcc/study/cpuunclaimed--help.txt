@@ -1,0 +1,21 @@
+usage: cpuunclaimed [-h] [-j] [-J] [-T] [interval] [count]
+
+Sample CPU run queues and calculate unclaimed idle CPU
+
+positional arguments:
+  interval         output interval, in seconds
+  count            number of outputs
+
+optional arguments:
+  -h, --help       show this help message and exit
+  -j, --csv        print sample summaries (verbose) as comma-separated values
+  -J, --fullcsv    print sample summaries with extra fields: CPU sample
+                   offsets
+  -T, --timestamp  include timestamp on output
+
+examples:
+    ./cpuunclaimed            # sample and calculate unclaimed idle CPUs,
+                              # output every 1 second (default)
+    ./cpuunclaimed 5 10       # print 5 second summaries, 10 times
+    ./cpuunclaimed -T 1       # 1s summaries and timestamps
+    ./cpuunclaimed -j         # raw dump of all samples (verbose), CSV

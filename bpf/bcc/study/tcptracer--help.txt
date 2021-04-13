@@ -1,0 +1,15 @@
+usage: tcptracer [-h] [-t] [-p PID] [-N NETNS] [--cgroupmap CGROUPMAP]
+                 [--mntnsmap MNTNSMAP] [-v]
+
+Trace TCP connections
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -t, --timestamp       include timestamp on output
+  -p PID, --pid PID     trace this PID only
+  -N NETNS, --netns NETNS
+                        trace this Network Namespace only
+  --cgroupmap CGROUPMAP
+                        trace cgroups in this BPF map only
+  --mntnsmap MNTNSMAP   trace mount namespaces in this BPF map only
+  -v, --verbose         include Network Namespace in the output

@@ -1,0 +1,12 @@
+usage: tcpretrans [-h] [-l] [-c]
+
+Trace TCP retransmits
+
+optional arguments:
+  -h, --help       show this help message and exit
+  -l, --lossprobe  include tail loss probe attempts
+  -c, --count      count occurred retransmits per flow
+
+examples:
+    ./tcpretrans           # trace TCP retransmits
+    ./tcpretrans -l        # include TLP attempts

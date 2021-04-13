@@ -1,0 +1,380 @@
+
+LLVM-7.0.1
+
+=================
+
+[http://www.linuxfromscratch.org/blfs/view/8.4/general/llvm.html](Links)
+
+Introduction to LLVM
+The LLVM package contains a collection of modular and reusable compiler and toolchain technologies. The Low Level Virtual Machine (LLVM) Core libraries provide a modern source and target-independent optimizer, along with code generation support for many popular CPUs (as well as some less common ones!). These libraries are built around a well specified code representation known as the LLVM intermediate representation ("LLVM IR").
+
+The optional Clang and Compiler RT packages provide new C, C++, Objective C and Objective C++ front-ends and runtime libraries for the LLVM and are required by some packages which use Rust, for example firefox.
+
+This package is known to build and work properly using an LFS-8.4 platform.
+
+Package Information
+Download (HTTP): http://llvm.org/releases/7.0.1/llvm-7.0.1.src.tar.xz
+
+Download MD5 sum: 79f1256f97d52a054da8660706deb5f6
+
+Download size: 27 MB
+
+Estimated disk space required: 1.8 GB (with Clang, 670MB installed, add 16 GB for tests)
+
+Estimated build time: 20 SBU (with Clang and parallelism=4, add 8 SBU for tests)
+
+Optional Downloads
+Clang
+Download: http://llvm.org/releases/7.0.1/cfe-7.0.1.src.tar.xz
+
+Download MD5 sum: 8583c9fb2af0ce61a7154fd9125363c1
+
+Download size: 12 MB
+
+Compiler RT
+Download: http://llvm.org/releases/7.0.1/compiler-rt-7.0.1.src.tar.xz
+
+Download MD5 sum: 697b70141ae7cc854e4fbde1a07b7287
+
+Download size: 1.8 MB
+
+LLVM Dependencies
+Required
+CMake-3.13.4
+
+Optional
+Doxygen-1.8.15, Graphviz-2.40.1, libxml2-2.9.9, Python-2.7.15, texlive-20180414 (or install-tl-unx), Valgrind-3.14.0, Zip-3.0, OCaml, and Sphinx
+
+User Notes: http://wiki.linuxfromscratch.org/blfs/wiki/llvm
+
+Installation of LLVM
+If you have downloaded the optional packages, install them into the source tree by running the following commands:
+
+tar -xf ../cfe-7.0.1.src.tar.xz -C tools &&
+tar -xf ../compiler-rt-7.0.1.src.tar.xz -C projects &&
+
+mv tools/cfe-7.0.1.src tools/clang &&
+mv projects/compiler-rt-7.0.1.src projects/compiler-rt
+Install LLVM by running the following commands:
+
+mkdir -v build &&
+cd       build &&
+
+CC=gcc CXX=g++                                  \
+cmake -DCMAKE_INSTALL_PREFIX=/usr               \
+      -DLLVM_ENABLE_FFI=ON                      \
+      -DCMAKE_BUILD_TYPE=Release                \
+      -DLLVM_BUILD_LLVM_DYLIB=ON                \
+      -DLLVM_LINK_LLVM_DYLIB=ON                 \
+      -DLLVM_TARGETS_TO_BUILD="host;AMDGPU;BPF" \
+      -DLLVM_BUILD_TESTS=ON                     \
+      -Wno-dev -G Ninja ..                      &&
+ninja
+To test the results, issue: ninja check-all. Tests are built with all available cores, but run using the number of online processors. (The difference is that available cores can be limited using taskset, but taking them offline requires echoing 0 to /sys/devices/system/cpu/cpu<N>/online by the root user and makes them temporarily unusable by all jobs on the machine.) Note that several Sanitizer tests (7 of more than 32000 tests run) are known to fail.
+
+Now, as the root user:
+
+ninja install
+If you have installed Sphinx and wish to generate the html documentation and manual pages, issue the following commands:
+
+cmake -DLLVM_ENABLE_SPHINX=ON         \
+      -DSPHINX_WARNINGS_AS_ERRORS=OFF \
+      -Wno-dev -G Ninja ..            &&
+ninja docs-llvm-html  docs-llvm-man
+If you have downloaded the optional packages, the clang documentation can be built too:
+
+ninja docs-clang-html docs-clang-man
+Install the llvm documentation by running the following command as the root user:
+
+install -v -m644 docs/man/* /usr/share/man/man1             &&
+install -v -d -m755 /usr/share/doc/llvm-7.0.1/llvm-html     &&
+cp -Rv docs/html/* /usr/share/doc/llvm-7.0.1/llvm-html
+The clang documentation can be installed in the same way (again as the root user):
+
+install -v -m644 tools/clang/docs/man/* /usr/share/man/man1 &&
+install -v -d -m755 /usr/share/doc/llvm-7.0.1/clang-html    &&
+cp -Rv tools/clang/docs/html/* /usr/share/doc/llvm-7.0.1/clang-html
+Command Explanations
+-DLLVM_ENABLE_FFI=ON: This switch enables LLVM to use libffi.
+
+-DLLVM_BUILD_LLVM_DYLIB=ON: builds libraries as static and links all of them into an unique shared one. This is the recommended way of building a shared library.
+
+-DCMAKE_BUILD_TYPE=Release: This switch enables compiler optimizations in order to speed up the code and reduce its size. It also disables some compile checks, not necessary on a production system.
+
+-DLLVM_TARGETS_TO_BUILD="host;AMDGPU;BPF": This switch enables building for the same target as the host, and also for the r600 AMD GPU used by the Mesa r600 and radeonsi drivers. The BPF target is required to build v4l-utils-1.16.3. Default is all. You can use a semicolon separated list. Valid targets are: host, X86, Sparc, PowerPC, ARM, AArch64, Mips, Hexagon, Xcore, MSP430, NVPTX, SystemZ, AMDGPU, BPF, CppBackend, or all.
+
+-DLLVM_LINK_LLVM_DYLIB=ON: Used in conjunction with -DLLVM_BUILD_LLVM_DYLIB=ON, this switch enables linking the tools against the shared library instead of the static ones. It also slightly reduces their size and also ensures that llvm-config will correctly use libLLVM-7.0.so.
+
+-DBUILD_SHARED_LIBS=ON: if used instead of -DLLVM_BUILD_LLVM_DYLIB=ON and -DLLVM_LINK_LLVM_DYLIB=ON, builds all the LLVM libraries (about 60) as shared libraries instead of static.
+
+-DLLVM_ENABLE_DOXYGEN: Enables the generation of browsable HTML documentation if you have installed Doxygen-1.8.15. You should run make doxygen-html afterwards, and install the generated documentation manually.
+
+Contents
+Installed Programs:
+bugpoint, c-index-test, clang, clang++ (symlinks to clang-<version>), clang-<version>, clang-check, clang-cl, clang-cpp (last two symlinks to clang), clang-format, clang-func-mapping clang-import-test, clang-offload-bundler, clang-refactor, clang-rename, diagtool, dsymutil, git-clang-format, hmap-tool, llc, lli, llvm-ar, llvm-as, llvm-bcanalyzer, llvm-cat, llvm-cfi-verify, llvm-config, llvm-cov, llvm-c-test, llvm-cvtres, llvm-cxxdump, llvm-cxxfilt, llvm-diff, llvm-dis, llvm-dlltool (symlink to llvm-ar), llvm-dwarfdump, llvm-dwp, llvm-exegenesis, llvm-extract, llvm-lib (symlink to llvm-ar), llvm-link, llvm-lto, llvm-lto2, llvm-mc, llvm-mca, llvm-modextract, llvm-mt, llvm-nm, llvm-objcopy, llvm-objdump, llvm-opt-report, llvm-pdbutil, llvm-profdata, llvm-ranlib (symlink to llvm-ar), llvm-rc, llvm-readelf (symlink to llvm-readobj), llvm-readobj, llvm-rtdyld, llvm-size, llvm-split, llvm-stress, llvm-strings, llvm-strip (symlink to llvm-objcopy), llvm-symbolizer, llvm-tblgen, llvm-undname, llvm-xray, obj2yaml, opt, sancov, sanstats, scan-build, scan-view, verify-uselistorder, and yaml2obj
+Installed Libraries:
+BugpointPasses.so, LLVMHello.so, libLLVM.so, libLLVM*.a (66 libraries), libLTO.so, libclang.so and libclang*.a (30 libraries)
+Installed Directories:
+/usr/include/{clang,clang-c,llvm,llvm-c}, /usr/lib/{clang,cmake/{clang,llvm}}, /usr/share/{clang,opt-viewer,scan-build,scan-view}, and /usr/share/doc/llvm-7.0.1}
+Short Descriptions
+bugpoint
+
+is the automatic test case reduction tool.
+
+c-index-test
+
+is used to test the libclang API and demonstrate its usage.
+
+clang
+
+is the Clang C, C++, and Objective-C compiler.
+
+clang-check
+
+is a tool to perform static code analysis and display Abstract Syntax Trees (AST).
+
+clang-format
+
+is a tool to format C/C++/Java/JavaScript/Objective-C/Protobuf code.
+
+clang-func-mapping
+
+collects the name and location of all function definitions in the source files.
+
+clang-offload-bundler
+
+is a tool to bundle/unbundle openMP offloaded files associated with a common source file.
+
+clang-refactor
+
+is a Clang-based refactoring tool for C, C++ and Objective.
+
+clang-rename
+
+is a tool to rename symbols in C/C++ programs.
+
+diagtool
+
+is a combination of tools for dealing with diagnostics in clang.
+
+dsymutil
+
+is a tool used to manipulate archived DWARF debug symbol files, compatible with the Darwin command dsymutil.
+
+git-clang-format
+
+runs clang-format on git generated patches (requires git-2.20.1)
+
+hmaptool
+
+is a Python tool to dump and construct header maps.
+
+llc
+
+is the LLVM static compiler.
+
+lli
+
+is used to directly execute programs from LLVM bitcode.
+
+llvm-ar
+
+is the LLVM archiver.
+
+llvm-as
+
+is the LLVM assembler.
+
+llvm-bcanalyzer
+
+is the LLVM bitcode analyzer.
+
+llvm-cat
+
+is a tool to concatenate llvm modules.
+
+llvm-cfi-verify
+
+identifies whether Control Flow Integrity protects all indirect control flow instructions in the provided object file, DSO, or binary.
+
+llvm-config
+
+Prints LLVM compilation options.
+
+llvm-cov
+
+is used to emit coverage information.
+
+llvm-c-test
+
+is a bytecode disassembler.
+
+llvm-cvtres
+
+is a tool to convert Microsoft resource files to COFF.
+
+llvm-cxxdump
+
+is used as a C++ ABI Data Dumper.
+
+llvm-cxxfilt
+
+is used to demangle C++ symbols in llvm code.
+
+llvm-diff
+
+is the LLVM structural 'diff'.
+
+llvm-dis
+
+is the LLVM disassembler.
+
+llvm-dwarfdump
+
+prints the content of DWARF sections in object files.
+
+llvm-dwp
+
+merges split DWARF files.
+
+llvm-exegesis
+
+is a benchmarking tool that uses information available in LLVM to measure host machine instruction characteristics like latency or port decomposition.
+
+llvm-extract
+
+is used to extract a function from an LLVM module.
+
+llvm-link
+
+is the LLVM linker.
+
+llvm-lto
+
+is the LLVM LTO (link time optimization) linker.
+
+llvm-lto2
+
+is a test harness for the resolution based LTO interface.
+
+llvm-mc
+
+is a standalone machine code assembler/disassembler.
+
+llvm-mca
+
+is a is a performance analysis tool to statically measure the performance of machine code.
+
+llvm-modextract
+
+is a tool to extract one module from multimodule bitcode files.
+
+llvm-mt
+
+is a tool to generate signed files and catalogs from a side-by-side assembly manifest (used for Microsoft SDK).
+
+llvm-nm
+
+is used to list LLVM bitcode and object file's symbol table.
+
+llvm-objcopy
+
+is LLVM's version of an objcopy tool.
+
+llvm-objdump
+
+is an LLVM object file dumper.
+
+llvm-opt-report
+
+is a tool to generate an optimization report from YAML optimization record files.
+
+llvm-pdbutil
+
+is a PDB (Program Database) dumper. PDB is a Microsoft format.
+
+llvm-profdata
+
+is a small tool to manipulate and print profile data files.
+
+llvm-ranlib
+
+is used to generate an index for a LLVM archive.
+
+llvm-rc
+
+is a platform-independent tool to compile resource scripts into binary resource files.
+
+llvm-readobj
+
+displays low-level format-specific information about object files.
+
+llvm-rtdyld
+
+is the LLVM MC-JIT tool.
+
+llvm-size
+
+is the LLVM object size dumper.
+
+llvm-split
+
+is the LLVM module splitter.
+
+llvm-stress
+
+is used to generate random .ll files.
+
+llvm-strings
+
+print strings found in a binary (object file, executable, or archive library).
+
+llvm-symbolizer
+
+converts adresses into source code locations.
+
+llvm-tblgen
+
+is the LLVM Target Description To C++ Code Generator.
+
+llvm-undname
+
+is a tool to demangle names.
+
+llvm-xray
+
+is an implementation of Google's XRay function call tracing system.
+
+obj2yaml
+
+takes an object file, and produces a YAML representation of the file.
+
+opt
+
+is the LLVM optimizer.
+
+sancov
+
+is the sanitizer coverage processing tool.
+
+sanstats
+
+is the sanitizer statistics processing tool.
+
+scan-build
+
+is a Perl script that invokes the Clang static analyzer.
+
+scan-view
+
+is a viewer for Clang static analyzer results.
+
+verify-uselistorder
+
+is the LLVM tool to verify use-list order.
+
+yaml2obj
+
+takes a YAML representation of an object file and converts it to a binary file.
+
+Last updated on 2019-02-15 13:01:29 -0800

@@ -36,7 +36,7 @@ void *enqueue_task(void*arg){
         pmsg = &ptest_msg[i++%TEST_NUM];
         pmsg->latency = RDTSC();
 //        printf("send %lx(%lx)\n", pmsg->value, *(unsigned long*)pmsg);
-        rt_FastQTrySend(parg->srcModuleId, NODE_1, pmsg, sizeof(test_msgs_t));
+        VOS_FastQTrySend(parg->srcModuleId, NODE_1, pmsg, sizeof(test_msgs_t));
 
         send_cnt++;
         
@@ -73,13 +73,13 @@ void *dequeue_task(void*arg) {
     struct dequeue_arg *parg = (struct dequeue_arg*)arg;
     reset_self_cpuset(parg->cpu_list);
     
-    rt_FastQRecv( NODE_1, handler_test_msg);
+    VOS_FastQRecv( NODE_1, handler_test_msg);
     pthread_exit(NULL);
 }
 
 int sig_handler(int signum) {
 
-    rt_FastQDump(NULL, NODE_1);
+    VOS_FastQDump(NULL, NODE_1);
     exit(1);
 }
 
@@ -106,10 +106,10 @@ int main()
     MOD_SET(NODE_4, &rxset);
     
     MOD_SET(NODE_1, &txset);
-    rt_FastQCreateModule(NODE_1, &rxset, NULL, max_msg, sizeof(test_msgs_t));
-    rt_FastQCreateModule(NODE_2, NULL, &txset, max_msg, sizeof(test_msgs_t));
-    rt_FastQCreateModule(NODE_3, NULL, &txset, max_msg, sizeof(test_msgs_t));
-    rt_FastQCreateModule(NODE_4, NULL, &txset, max_msg, sizeof(test_msgs_t));
+    VOS_FastQCreateModule(NODE_1, &rxset, NULL, max_msg, sizeof(test_msgs_t));
+    VOS_FastQCreateModule(NODE_2, NULL, &txset, max_msg, sizeof(test_msgs_t));
+    VOS_FastQCreateModule(NODE_3, NULL, &txset, max_msg, sizeof(test_msgs_t));
+    VOS_FastQCreateModule(NODE_4, NULL, &txset, max_msg, sizeof(test_msgs_t));
     
     unsigned int i =0;
     test_msgs21 = (test_msgs_t *)malloc(sizeof(test_msgs_t)*TEST_NUM);

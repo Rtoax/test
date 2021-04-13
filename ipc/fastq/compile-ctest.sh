@@ -17,6 +17,12 @@ echo "Redis Dict objects : $redis_dict_objs"
 
 LIBS="$redis_dict_objs fastq.c -lcrypt -pthread -I./ -I$redis_dict_dir -ltcmalloc"
 
+#if [ $# -lt 1 ]; then
+#	echo "$0 [program source file]"
+#	exit 1
+#fi
+
+#file=$1
 for file in `ls test-*`
 do 
 	echo "Compile $file -> ${file%.*}.out"

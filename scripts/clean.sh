@@ -2,7 +2,9 @@
 # 荣涛 
 
 function cleanall {
-	filename=("*.o" "*.d" "*.gch" "*~"  "*.out" "core.*" "vgcore.*" "*.exe" "*.so" "*.a" "perf.data*")
+	filename=("*.o" "*.d" "*.gch" "*~"  "*.out" "core.*" \
+				"vgcore.*" "*.exe" "*.so" "*.a" "perf.data*"\
+				"trace.dat")
 	for name in ${filename[@]}; do
 	    #echo $name
 	    find . -name $name -type f -print -exec rm -rf {} \;

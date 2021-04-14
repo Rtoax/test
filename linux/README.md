@@ -39,6 +39,7 @@
 * `essential`: 基础性内容
 * `etc`: 配置文件夹
 * `fs`: 文件系统
+* `ftrace`: function tracer, ftrace 是个 framework，采用 plugin 的方式添加多种类 trace
 * `functions`: 函数
 * `housekeeping`: TODO
 * `io`: IO

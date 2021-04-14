@@ -1,0 +1,20 @@
+usage: hardirqs [-h] [-T] [-N] [-C] [-d] [interval] [outputs]
+
+Summarize hard irq event time as histograms
+
+positional arguments:
+  interval           output interval, in seconds
+  outputs            number of outputs
+
+optional arguments:
+  -h, --help         show this help message and exit
+  -T, --timestamp    include timestamp on output
+  -N, --nanoseconds  output in nanoseconds
+  -C, --count        show event counts instead of timing
+  -d, --dist         show distributions as histograms
+
+examples:
+    ./hardirqs            # sum hard irq event time
+    ./hardirqs -d         # show hard irq event time as histograms
+    ./hardirqs 1 10       # print 1 second summaries, 10 times
+    ./hardirqs -NT 1      # 1s summaries, nanoseconds, and timestamps

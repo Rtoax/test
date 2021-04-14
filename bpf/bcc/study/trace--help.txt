@@ -1,0 +1,100 @@
+usage: trace [-h] [-b BUFFER_PAGES] [-p PID] [-L TID] [-v] [-Z STRING_SIZE]
+             [-S] [-M MAX_EVENTS] [-t] [-u] [-T] [-C] [-c CGROUP_PATH]
+             [-n NAME] [-f MSG_FILTER] [-B] [-s SYM_FILE_LIST] [-K] [-U] [-a]
+             [-I header]
+             probe [probe ...]
+
+Attach to functions and print trace messages.
+
+positional arguments:
+  probe                 probe specifier (see examples)
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -b BUFFER_PAGES, --buffer-pages BUFFER_PAGES
+                        number of pages to use for perf_events ring buffer
+                        (default: 64)
+  -p PID, --pid PID     id of the process to trace (optional)
+  -L TID, --tid TID     id of the thread to trace (optional)
+  -v, --verbose         print resulting BPF program code before executing
+  -Z STRING_SIZE, --string-size STRING_SIZE
+                        maximum size to read from strings
+  -S, --include-self    do not filter trace's own pid from the trace
+  -M MAX_EVENTS, --max-events MAX_EVENTS
+                        number of events to print before quitting
+  -t, --timestamp       print timestamp column (offset from trace start)
+  -u, --unix-timestamp  print UNIX timestamp instead of offset from trace
+                        start, requires -t
+  -T, --time            print time column
+  -C, --print_cpu       print CPU id
+  -c CGROUP_PATH, --cgroup-path CGROUP_PATH
+                        cgroup path
+  -n NAME, --name NAME  only print process names containing this name
+  -f MSG_FILTER, --msg-filter MSG_FILTER
+                        only print the msg of event containing this string
+  -B, --bin_cmp         allow to use STRCMP with binary values
+  -s SYM_FILE_LIST, --sym_file_list SYM_FILE_LIST
+                        coma separated list of symbol files to use for symbol
+                        resolution
+  -K, --kernel-stack    output kernel stack trace
+  -U, --user-stack      output user stack trace
+  -a, --address         print virtual address in stacks
+  -I header, --include header
+                        additional header files to include in the BPF program
+                        as either full path, or relative to current working
+                        directory, or relative to default kernel header search
+                        path
+
+EXAMPLES:
+
+trace do_sys_open
+        Trace the open syscall and print a default trace message when entered
+trace kfree_skb+0x12
+        Trace the kfree_skb kernel function after the instruction on the 0x12 offset
+trace 'do_sys_open "%s", arg2'
+        Trace the open syscall and print the filename being opened
+trace 'do_sys_open "%s", arg2' -n main
+        Trace the open syscall and only print event that process names containing "main"
+trace 'do_sys_open "%s", arg2' -f config
+        Trace the open syscall and print the filename being opened filtered by "config"
+trace 'sys_read (arg3 > 20000) "read %d bytes", arg3'
+        Trace the read syscall and print a message for reads >20000 bytes
+trace 'r::do_sys_open "%llx", retval'
+        Trace the return from the open syscall and print the return value
+trace 'c:open (arg2 == 42) "%s %d", arg1, arg2'
+        Trace the open() call from libc only if the flags (arg2) argument is 42
+trace 'c:malloc "size = %d", arg1'
+        Trace malloc calls and print the size being allocated
+trace 'p:c:write (arg1 == 1) "writing %d bytes to STDOUT", arg3'
+        Trace the write() call from libc to monitor writes to STDOUT
+trace 'r::__kmalloc (retval == 0) "kmalloc failed!"'
+        Trace returns from __kmalloc which returned a null pointer
+trace 'r:c:malloc (retval) "allocated = %x", retval'
+        Trace returns from malloc and print non-NULL allocated buffers
+trace 't:block:block_rq_complete "sectors=%d", args->nr_sector'
+        Trace the block_rq_complete kernel tracepoint and print # of tx sectors
+trace 'u:pthread:pthread_create (arg4 != 0)'
+        Trace the USDT probe pthread_create when its 4th argument is non-zero
+trace 'u:pthread:libpthread:pthread_create (arg4 != 0)'
+        Ditto, but the provider name "libpthread" is specified.
+trace 'p::SyS_nanosleep(struct timespec *ts) "sleep for %lld ns", ts->tv_nsec'
+        Trace the nanosleep syscall and print the sleep duration in ns
+trace -c /sys/fs/cgroup/system.slice/workload.service '__x64_sys_nanosleep' '__x64_sys_clone'
+        Trace nanosleep/clone syscall calls only under workload.service
+        cgroup hierarchy.
+trace -I 'linux/fs.h' \
+      'p::uprobe_register(struct inode *inode) "a_ops = %llx", inode->i_mapping->a_ops'
+        Trace the uprobe_register inode mapping ops, and the symbol can be found
+        in /proc/kallsyms
+trace -I 'kernel/sched/sched.h' \
+      'p::__account_cfs_rq_runtime(struct cfs_rq *cfs_rq) "%d", cfs_rq->runtime_remaining'
+        Trace the cfs scheduling runqueue remaining runtime. The struct cfs_rq is defined
+        in kernel/sched/sched.h which is in kernel source tree and not in kernel-devel
+        package.  So this command needs to run at the kernel source tree root directory
+        so that the added header file can be found by the compiler.
+trace -I 'net/sock.h' \
+      'udpv6_sendmsg(struct sock *sk) (sk->sk_dport == 13568)'
+        Trace udpv6 sendmsg calls only if socket's destination port is equal
+        to 53 (DNS; 13568 in big endian order)
+trace -I 'linux/fs_struct.h' 'mntns_install "users = %d", $task->fs->users'
+        Trace the number of users accessing the file system of the current task

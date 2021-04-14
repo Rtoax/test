@@ -1,0 +1,26 @@
+usage: tcplife [-h] [-T] [-t] [-w] [-s] [-p PID] [-L LOCALPORT]
+               [-D REMOTEPORT]
+
+Trace the lifespan of TCP sessions and summarize
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -T, --time            include time column on output (HH:MM:SS)
+  -t, --timestamp       include timestamp on output (seconds)
+  -w, --wide            wide column output (fits IPv6 addresses)
+  -s, --csv             comma separated values output
+  -p PID, --pid PID     trace this PID only
+  -L LOCALPORT, --localport LOCALPORT
+                        comma-separated list of local ports to trace.
+  -D REMOTEPORT, --remoteport REMOTEPORT
+                        comma-separated list of remote ports to trace.
+
+examples:
+    ./tcplife           # trace all TCP connect()s
+    ./tcplife -T        # include time column (HH:MM:SS)
+    ./tcplife -w        # wider columns (fit IPv6)
+    ./tcplife -stT      # csv output, with times & timestamps
+    ./tcplife -p 181    # only trace PID 181
+    ./tcplife -L 80     # only trace local port 80
+    ./tcplife -L 80,81  # only trace local ports 80 and 81
+    ./tcplife -D 80     # only trace remote port 80

@@ -1,3 +1,11 @@
+/**
+ *  Redis Dict 性能示例
+ *  荣涛
+ *  2021年4月12日
+ *  2021年4月13日 修改 hash 函数，去重
+ *
+ *  gcc *.c -ltcmalloc
+ */
 #include <string.h>
 #include <assert.h>
 #include "zmalloc.h"

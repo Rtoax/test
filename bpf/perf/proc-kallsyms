@@ -1,0 +1,12 @@
+grep tcp /proc/kallsyms | more
+
+...
+ffffffff876a8870 T tcp_getsockopt
+ffffffff876a88b0 T compat_tcp_getsockopt
+ffffffff876a88e0 t do_tcp_setsockopt.isra.31
+ffffffff876a9220 T tcp_setsockopt
+ffffffff876a9260 T compat_tcp_setsockopt
+ffffffff876a9290 T tcp_disconnect
+ffffffff876a9690 T tcp_poll
+ffffffff876a98d0 T tcp_md5_hash_skb_data
+...

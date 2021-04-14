@@ -1,0 +1,26 @@
+usage: filetop [-h] [-a] [-C] [-r MAXROWS]
+               [-s {all,reads,writes,rbytes,wbytes}] [-p PID]
+               [interval] [count]
+
+File reads and writes by process
+
+positional arguments:
+  interval              output interval, in seconds
+  count                 number of outputs
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -a, --all-files       include non-regular file types (sockets, FIFOs, etc)
+  -C, --noclear         don't clear the screen
+  -r MAXROWS, --maxrows MAXROWS
+                        maximum rows to print, default 20
+  -s {all,reads,writes,rbytes,wbytes}, --sort {all,reads,writes,rbytes,wbytes}
+                        sort column, default all
+  -p PID, --pid PID     trace this PID only
+
+examples:
+    ./filetop            # file I/O top, 1 second refresh
+    ./filetop -C         # don't clear the screen
+    ./filetop -p 181     # PID 181 only
+    ./filetop 5          # 5 second summaries
+    ./filetop 5 10       # 5 second summaries, 10 times only

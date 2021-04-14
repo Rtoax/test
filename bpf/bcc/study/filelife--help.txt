@@ -1,0 +1,11 @@
+usage: filelife [-h] [-p PID]
+
+Trace stat() syscalls
+
+optional arguments:
+  -h, --help         show this help message and exit
+  -p PID, --pid PID  trace this PID only
+
+examples:
+    ./filelife           # trace all stat() syscalls
+    ./filelife -p 181    # only trace PID 181

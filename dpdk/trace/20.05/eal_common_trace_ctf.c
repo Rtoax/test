@@ -5,6 +5,7 @@
 #include <inttypes.h>
 #include <time.h>
 #include <stdarg.h>
+#include <endian.h>
 #include <errno.h>
 
 //#include <rte_byteorder.h>
@@ -99,8 +100,8 @@ meta_data_type_emit(char **meta, int *offset)
 
 static int
 is_be(void)
-{
-#if RTE_BYTE_ORDER == RTE_BIG_ENDIAN
+{ 
+#if __BYTE_ORDER == __BIG_ENDIAN
 	return 1;
 #else
 	return 0;

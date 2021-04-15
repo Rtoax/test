@@ -1,3 +1,13 @@
+/**
+ *  DPDK 20.05 trace
+ *
+ *  格式 CTF, 参见 LTTng
+ *  
+ *  
+ *  二进制结果解析方式：
+ *  babeltrace /home/rongtao/dpdk-traces/rte-2021-04-15-PM-06-11-04
+ */
+
 #include <pthread.h>
 
 #include <rte_common.h>
@@ -48,6 +58,7 @@ int main() {
     rte_trace_point_enable(&__rte_eal_trace_thread_remote_launch);
     rte_trace_point_enable(&__rte_eal_trace_mem_malloc);
     rte_trace_point_enable(&__rte_eal_trace_mem_free);
+    rte_trace_point_disable(&__rte_eal_trace_generic_void);
 
     for(i=0 ; i< NR_TASKS; i++) {
         pthread_create(&tasks[i], NULL, task_routine, NULL);

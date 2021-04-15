@@ -1,0 +1,8 @@
+X86 MSR寄存器介绍
+-------------------------------------------------------------
+MSR（Model Specific Register）是x86架构中的概念，指的是在x86架构处理器中，一系列用于控制CPU运行、功能开关、调试、跟踪程序执行、监测CPU性能等方面的寄存器。
+
+MSR寄存器的雏形开始于Intel 80386和80486处理器，到Intel Pentium处理器的时候，Intel就正式引入RDMSR和WRMSR两个指令用于读和写MSR寄存器，这个时候MSR就算被正式引入。在引入RDMSR和WRMSR指令的同时，也引入了CPUID指令，该指令用于指明具体的CPU芯片中，哪些功能是可用的，或者这些功能对应的MSR寄存器是否存在，软件可以通过CPUID指令查询某些功能是否在当前CPU上是否支持。
+
+每个MSR寄存器都会有一个相应的ID，即MSR Index，或者也叫作MSR寄存器地址，当执行RDMSR或者WRMSR指令的时候，只要提供MSR Index就能让CPU知道目标MSR寄存器。这些MSR寄存器的编号（MSR Index）、名字及其各个数据区域的定义可以在Intel x86架构手册”Intel 64 and IA-32 Architectures Software Developer’s Manual"的Volume 4中找到。
+（以上内容摘自知乎作者河马的文章x86 CPU的MSR寄存器： https://zhuanlan.zhihu.com/p/50142793）

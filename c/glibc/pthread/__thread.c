@@ -1,8 +1,18 @@
+//__thread int i;
+//extern __thread struct state s;
+//static __thread char *p;
+
 
 #include <pthread.h>
 #include <stdio.h>
 
+struct test1 {
+     int  id;
+};
+
+__thread struct test1 t;
 __thread int tid = 0;
+//thread_local  int tl_tid = 0;
 
 /**
 当标记有 __thread 存储类说明符的变量，都将被视为多线程应用程序中每个线程的本地变量。
@@ -15,6 +25,7 @@ void* test_task_fn(void* unused)
 	printf("test_task_fn.\n");
 
     tid ++;
+    t.id ++;
 
     pthread_exit(NULL);
 	return NULL;
@@ -36,6 +47,7 @@ int main ()
 	pthread_join(t2, NULL);
 
     printf("tid = %d\n", tid);
+    printf("t.id = %d\n", t.id);
 
 	return 0;
 }

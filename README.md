@@ -68,6 +68,7 @@
 * `github`: 全球最大的通行交由网站 GitHub
 * `glibc`: GLibc
 * `gnu`: GNU is not UNIX
+* `golang`: Go 语言
 * `google`: 谷歌的黑科技
 * `gperftools`: 谷歌的性能开发套件
 * `grub`: `grub2-mkconfig -o grub.cfg`

@@ -1,0 +1,66 @@
+STPCPY(3)                                   Linux Programmer's Manual                                  STPCPY(3)
+
+
+
+NAME
+       stpcpy - copy a string returning a pointer to its end
+
+SYNOPSIS
+       #include <string.h>
+
+       char *stpcpy(char *dest, const char *src);
+
+   Feature Test Macro Requirements for glibc (see feature_test_macros(7)):
+
+       stpcpy():
+           Since glibc 2.10:
+               _XOPEN_SOURCE >= 700 || _POSIX_C_SOURCE >= 200809L
+           Before glibc 2.10:
+               _GNU_SOURCE
+
+DESCRIPTION
+       The stpcpy() function copies the string pointed to by src (including the terminating null byte ('\0')) to
+       the array pointed to by dest.  The strings may not overlap, and the destination string dest must be large
+       enough to receive the copy.
+
+RETURN VALUE
+       stpcpy()  returns  a  pointer to the end of the string dest (that is, the address of the terminating null
+       byte) rather than the beginning.
+
+CONFORMING TO
+       This function was added to POSIX.1-2008.  Before that, it was not part of the C or POSIX.1 standards, nor
+       customary  on UNIX systems, but was not a GNU invention either.  Perhaps it came from MS-DOS.  It is also
+       present on the BSDs.
+
+BUGS
+       This function may overrun the buffer dest.
+
+EXAMPLE
+       For example, this program uses stpcpy() to concatenate foo and bar  to  produce  foobar,  which  it  then
+       prints.
+
+           #define _GNU_SOURCE
+           #include <string.h>
+           #include <stdio.h>
+
+           int
+           main(void)
+           {
+               char buffer[20];
+               char *to = buffer;
+
+               to = stpcpy(to, "foo");
+               to = stpcpy(to, "bar");
+               printf("%s\n", buffer);
+           }
+
+SEE ALSO
+       bcopy(3), memccpy(3), memcpy(3), memmove(3), stpncpy(3), strcpy(3), string(3), wcpcpy(3)
+
+COLOPHON
+       This  page  is  part  of  release 3.53 of the Linux man-pages project.  A description of the project, and
+       information about reporting bugs, can be found at http://www.kernel.org/doc/man-pages/.
+
+
+
+GNU                                                2012-03-15                                          STPCPY(3)

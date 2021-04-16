@@ -8,6 +8,6 @@ LTTng: http://www.lttng.org
 The Linux Trace Toolkit 
 
 -----------------------------------
-* test/linux/lttng
+* test/linux/LTTng
 * test/linux/cmd/lttng
 * 

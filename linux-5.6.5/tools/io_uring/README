@@ -30,6 +30,7 @@ Fio includes an io_uring engine, you can clone fio here:
 
 -----------------------------------------------------------------------------
 归根结底，这是文件系统的内容： 荣涛 2021年1月6日14:57:41
+内存在内核态，不太适用于用户态的应用对内存的操作
 
 [root@localhost linux-5.9.1]# grep io_uring_setup -rn
 fs/io_uring.c:112: * io_sqring_offsets when calling io_uring_setup.

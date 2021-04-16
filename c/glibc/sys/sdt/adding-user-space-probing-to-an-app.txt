@@ -1,0 +1,299 @@
+Adding User Space Probing to an Application (heapsort example)
+
+https://www.sourceware.org/systemtap/wiki/AddingUserSpaceProbingToApps
+------------------------------------------------------------------------------------
+
+Introduction
+SystemTap is a powerful Linux tool that allows collection of data from both the Linux kernel and user-space applications. SystemTap includes an extensive library of predefined probes and functions for the kernel (tapsets) and a convenient scripting language to do on-the-fly data reduction. SystemTap's probing capabilities can be extended to user-space applications.
+
+Debuginfo-based instrumentation
+There are two basic ways for user-space probing. One can rely on the basic symbolic probing
+
+
+probe process("/bin/foo").function("name") { log($$parms) }
+probe process("/bin/foo").statement("*@file.c:443") { log($$vars) }
+
+style, in which one specifies source code level "co-ordinates", and accesses variables available in context. This style does not require any changes to the target application binaries, merely preserving their debugging data. (In the usual systemtap way, one can package a collection of salient probe points into a tapset script that gives abstract names for given functions/statements.)
+
+Compiled-in instrumentation
+Another way is to instrument the application itself with embedded markers, which expose selected names and values only to systemtap scripts. These permit abstraction (easier usage, by exposing only a small number of salient probe points) and sometimes assist reliable provision of local variable values. This makes it unnecessary to maintain a tapset script, and instead involves adding calls to macros from <sys/sdt.h> into your program. These calls are source compatible with dtrace on other platforms, so the same source code compiled on a system that doesn't have systemtap available, but does have a dtrace implementation will be able to discover the same probe locations. The GNU Debugger (GDB) has also been extended to allow users to set breakpoints on such probes if available.
+
+There are already some applications in Fedora 12 such as java-1.6.0-openjdk and postgresql that support probing by SystemTap. This simple example uses a heapsort program to show how SystemTap support can added to nearly any user-space application and include that support in the RPM.
+
+The user-space probes allow you investigate the operation of the program without the need to recompile the program or restart the program. It also make it very easy to create simple scripts to look at interesting characteristics of program behavior, for example how long did it take to do the average postgresql query, when did any of the Java virtual machines start doing garbage collection, and how long did java garbage collection take.
+
+To implement the userspace application probes you will need to have a kernel that supports utrace (Fedora 10 and later kernels) and the following SystemTap rpms installed on the computer:
+
+systemtap
+systemtap-runtime
+systemtap-sdt-devel
+
+
+The process of adding and using the user-space application probes can be broken down into the following steps:
+
+Modify the application's source code
+Modify the RPM spec file
+Use the New Probes
+An extremely simple heapsort sort written in C++ is used as a starting point for this example. It reads in an arbitrary number of integers from stdin terminated by a ctrl-d, sorts the integers using a heapsort algorithm, and then outputs the sorted integers. This README describes the changes made to add the SystemTap probes to the code. All of this is packaged in heapsort-0.5-2.fc32.src.rpm.
+
+Basic User-Space Instrumentation
+At minimum, a source file can include this at the top:
+
+#include <sys/sdt.h>
+
+and insert the following at each location instrumentation is desired:
+
+
+DTRACE_PROBE(provider, name)
+
+provider is an arbitrary symbol identifying your application or subsystem, and name is an arbitrary symbol identifying your probe point. They are not string literals!. Markers can include a fixed number of arguments that are either integer or pointer values. Below is an example of a marker with four arguments:
+
+
+DTRACE_PROBE4(provider, name, arg1, arg2, arg3, arg4)
+
+After compilation and linking your application will have an additional ELF section named .note.stapsdt. This instrumentation is low overhead because the overhead is limited to the additional nop instruction and any code to ensure the arguments available at that location. See [UserSpaceProbeImplementation] for additional details about the implementation. (
+
+Systemtap can attach to these markers using this syntax. You may use wildcards or fully spell out the provider and marker names in the DTRACE_PROBE. Within the probe handlers, arguments may be accessed with $arg1 for values, user_string($arg2) for dereferencing pointers, or pretty-printed with $$parms. The values $$name and $$provider are also available to match up the current probe pointer. Process names may also be abbreviated.
+
+
+probe process("a.out").mark("n") { println($arg1) }
+probe process("a.out").provider("p").mark("n") { println($arg1) }
+
+Compile-Time Configurable User-Space Instrumentation
+Even though this example is too simple to really need the auto configuration and auto make machinery, it was provided with configure.ac and Makefile.am files to make it more closely match the typical application program. The outline for changing the source code is the following:
+
+Configure and test for SystemTap
+
+Create tapset skeleton
+Add probes list
+Add probes in source code
+Generate tapset
+Configuration
+The first step is to add tests to the configure.ac to enable and disable the SystemTap support. The modification to the application code should not prevent the code from compiling in environments that do not have the SystemTap user-space support. The following lines in the configure.ac file control whether SystemTap support is enabled:
+
+
+AC_MSG_CHECKING([whether to include systemtap tracing support])
+AC_ARG_ENABLE([systemtap],
+              [AS_HELP_STRING([--enable-systemtap],
+                              [Enable inclusion of systemtap trace support])],
+              [ENABLE_SYSTEMTAP="${enableval}"], [ENABLE_SYSTEMTAP='no'])
+AM_CONDITIONAL([ENABLE_SYSTEMTAP], [test x$ENABLE_SYSTEMTAP = xyes])
+AC_MSG_RESULT(${ENABLE_SYSTEMTAP})
+
+if test "x${ENABLE_SYSTEMTAP}" = xyes; then
+  # Additional configuration for --enable-systemtap is HERE
+fi
+When the "--enable-systemtap" is used during configuration the configure.ac needs to check to determine if the dtrace script and the sdt.h header are available. The dtrace script generates a header file and a stub object file. Within the if statement for the SystemTap configure there is the following additional code:
+
+
+AC_CHECK_PROGS(DTRACE, dtrace)
+if test -z "$DTRACE"; then
+  AC_MSG_ERROR([dtrace not found])
+fi
+AC_CHECK_HEADER([sys/sdt.h], [SDT_H_FOUND='yes'],
+                [SDT_H_FOUND='no';
+                   AC_MSG_ERROR([systemtap support needs sys/sdt.h header])])
+If those dtrace script and sys/sdt.h header are found, then HAVE_SYSTEMTAP is de fined in the config.h with:
+
+
+AC_DEFINE([HAVE_SYSTEMTAP], [1], [Define to 1 if using  probes.])
+SystemTap has library files call tapsets. The configuration needs to determine where to install those with the following in the configure.ac:
+
+
+ AC_ARG_WITH([tapset-install-dir],
+              [AS_HELP_STRING([--with-tapset-install-dir],
+                              [The absolute path where the tapset dir will be installed])],
+              [if test "x${withval}" = x; then
+                 ABS_TAPSET_DIR="\$(datadir)/systemtap/tapset"
+               else
+                 ABS_TAPSET_DIR="${withval}"
+               fi], [ABS_TAPSET_DIR="\$(datadir)/systemtap/tapset"])
+  AC_SUBST(ABS_TAPSET_DIR)
+Tapset Skeleton
+The tapset/heapsort.stp is a file that will make it easier for people to use the SystemTap probe points in the code. It hides some of the details about the probe point from the user. The code for the tapset will be placed in tapset/heapsort.stp. Initially, tapset/heapsort.stp can be empty. There is also a very simple Makefile.am in the tapset directory to indicate how to install and remove the tapset file. The Makefile.am in the top level directory will need to indicate that there is a subdirectory with the following lines:
+
+
+SUBDIRS = tapset
+DIST_SUBDIRS = $(SUBDIRS)
+Probe Point Declaration
+The next step is to declare the probes points in the probes.d file and the arguments that they take. The probes.d contents listed below will be processed to generate the needed include file (probes.h) and stub object file (probes.o):
+
+
+provider heapsort {
+         probe input_start();
+         probe input_done(int); /* (int number of items) */
+         probe buffer_resize_start();
+         probe buffer_resize_done();
+         probe output_start(int);       /* (int number of items) */
+         probe output_done();
+         probe heap_place(int, int);    /* (int position, int value) */
+         probe heap_build_start();
+         probe heap_build_done();
+};
+
+Some minor changes are needed in the Makefile.am. First, need to add probes.d and a very simple wrapper trace.h to SOURCES list and indicate the probes.h is a generated file:
+
+
+heapsort_SOURCES = heapsort.cxx probes.d trace.h
+BUILT_SOURCES = probes.h
+Also need some rules to generate the probes.h and probes.o as needed in the Makefile.am:
+
+
+if ENABLE_SYSTEMTAP
+probes.h: probes.d
+        $(DTRACE) -C -h -s $< -o $@
+
+probes.o: probes.d
+        $(DTRACE) -C -G -s $< -o $@
+
+heapsort_LDADD += probes.o
+endif
+
+The following line in probes.d: .
+
+
+probe heap_place(int, int);    (int position, int value)
+Generates the following macro in probes.h:
+
+
+#define HEAPSORT_HEAP_PLACE(arg1,arg2) \
+STAP_PROBE2(provider,heap_place,arg1,arg2)
+What is in STAP_PROBE2() is not important. The important thing is macros are now available to instrument the application code.
+
+Adding Probes in Source Code
+For each source file with added probes the following include will be needed to provide the macros:
+
+
+#include "probes.h"
+The is implemented in the trace.h, a very short include file that conditionally includes the probes.h and has a TRACE macro to conditionally use the tracepoints:
+
+
+#include "config.h"
+#ifdef HAVE_SYSTEMTAP
+// include the generated probes header and put markers in code
+#include "probes.h"
+#define TRACE(probe) probe
+#define TRACE_ENABLED(probe) probe ## _ENABLED()
+#else
+// Wrap the probe to allow it to be removed when no systemtap available
+#define TRACE(probe)
+#define TRACE_ENABLED(probe) (0)
+#endif
+The macros can be placed in any place that normally executable code is placed. They will be inactive until they are used by SystemTap. The arguments can be used to relay useful state information to SystemTap. For the HEAPSORT_HEAP_PLACE the location in the heap and the value being inserted into the heap are available to SystemTap.
+
+The raw TRACE(HEAPSORT_HEAP_PLACE()) probe can be accessed with:
+
+process("heapsort").mark("heap_place")
+The raw probes are not particularly user-friendly. The following section describes how to abstract the interface and hide those details with a tapset.
+
+Adding a Tapset
+Tapsets provide an ABI that hides the details of the probe from the user. The tapsets are typically placed in /usr/share/systemtap/tapsets. The tapsets consists of aliases and local variables for the probes. The tapset can also definite SystemTap functions and local variable that make it easier to use the probes.
+
+The following is an example probe alias for the HEAPSORT_HEAP_PLACE() probe used in the source code:
+
+
+probe heapsort_heap_place = process("heapsort").mark("heap_place")
+{
+  position = $arg1;
+  value = $arg2;
+  probestr = sprintf("%s(position=%d, value=%d)", $$name, position, value);
+}
+Modifying RPM Spec file
+Packaging software that has user-space probing as an RPM requires some additional changes. The changes can be broken down into the following steps:
+
+SystemTap Flag
+
+Build dependencies
+Configure -Files to install
+SystemTap Flag
+As with the original source code, it should be possible to build the RPMs with or without the SystemTap support enabled. The variable sdt in heapsort.spec controls whether SystemTap support is enabled. The following line indicates that the SystemTap support is enabled by default:
+
+
+%{!?sdt:%define sdt 1}
+The SystemTap support can be turned off with the --define on the following rpmbuild line:
+
+
+rpmbuild --define "sdt 0" heapsort.spec
+The variable sdt will be used in the rest of the spec file to control whether the package is built with SystemTap support.
+
+Build Dependencies
+When the package is built with SystemTap support an additional BuildRequires is needed to supply the tools to generate the probes.h header and probes.o stub files:
+
+
+%if %sdt
+BuildRequires: systemtap-sdt-devel
+%endif
+Configure
+In the %build section of the heapsort.spec file the configure is extended to:
+
+
+%configure \
+%if %sdt
+        --enable-systemtap \
+        --with-tapset-install-dir=%tapsetdir \
+%endif
+The %tapsetdir is set earlier in the spec file with:
+
+
+%define tapsetdir       /usr/share/systemtap/tapset
+The build of the executable stays the same with:
+
+
+make %{?_smp_mflags}
+Files to Install
+To make life easier for users the tapset file should be installed. The following is an addition to the %file section of the spec file:
+
+
+%if %sdt
+%{tapsetdir}/*.stp
+%endif
+Verifying Probe existence
+To verify that the probes actually exist in the executable, the following stap command can be used:
+
+
+$ stap -L 'process("heapsort").mark("*")'
+process("heapsort").mark("buffer_resize_done")
+process("heapsort").mark("buffer_resize_start")
+process("heapsort").mark("heap_build_done")
+process("heapsort").mark("heap_build_start")
+process("heapsort").mark("heap_place") $arg1:long $arg2:long
+process("heapsort").mark("input_done") $arg1:long
+process("heapsort").mark("input_start")
+process("heapsort").mark("output_done")
+process("heapsort").mark("output_start") $arg1:long
+Using the New Probes
+One very simple script to run is heap_tap_all.stp which probes all the probes listed in the tapset and prints out data when the each time a probe fires:
+
+
+probe heapsort* {
+      printf("%s\n", probestr);
+}
+This could be run with a specific instance of heapsort and generate something like the following output:
+
+
+$ stap heap_tap_all.stp -c /usr/bin/heapsort
+input_start
+3
+2
+1
+buffer_resize_start
+buffer_resize_done
+1
+2
+3
+input_done(count=3)
+heap_build_start
+heap_place(position=1, value=3)
+heap_build_done
+output_start(count=3)
+output_done
+The heap_time_phases.stp tracks statistics about the amount of time spent in the input, heap_build, and output phases for all runs of /usr/bin/heapsort.
+
+Conclusion
+This is an simple example of how incorporate SystemTap probes into an application. For more information check out the SystemTap webpage:
+
+http://sourceware.org/systemtap/
+
+Also feel free to send email to the mailing list or join the IRC channel to discuss issues with systemtap:
+
+Email: systemtap@sourceware.org IRC #systemtap on irc.freenode.net

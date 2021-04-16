@@ -153,6 +153,7 @@
 * `regular-expression`: 正则表达式
 * `rocketmq`: 消息队列作为高并发系统的核心组件
 * `rpc`: 远端过程访问
+* `sdt`: (Statically Defined Tracing)预定义静态跟踪
 * `samba`: 向客户提供SMB/CIFS服务的服务器
 * `scripts`: 本仓库中用到的脚本
 * `sdl`: （Simple DirectMedia Layer）开源跨平台多媒体开发库

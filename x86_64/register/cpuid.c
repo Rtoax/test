@@ -2,6 +2,8 @@
 #include <stdint.h>
 #include <cpuid.h>
 
+//test/gcc/x86_64-linux-gnu/4.8.5/include/cpuid.h
+
 void my_get_cpuid()
 {
 	uint32_t __attribute__ ((unused)) eax, ebx, ecx, edx;
@@ -16,3 +18,4 @@ int main()
 {
 	my_get_cpuid();
 }
+

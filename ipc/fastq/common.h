@@ -3,6 +3,8 @@ enum {
     NODE_2,
     NODE_3,
     NODE_4,
+    NODE_5,
+    NODE_6,
 };
 
 /* 测试的消息总数 */

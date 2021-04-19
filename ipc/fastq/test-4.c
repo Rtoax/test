@@ -41,7 +41,7 @@ void *enqueue_task(void*arg){
         send_cnt++;
         
         if(send_cnt % 2000000 == 0) {
-//            sleep(10);
+            sleep((unsigned long)(arg)%10);
         }
     }
     pthread_exit(NULL);
@@ -50,6 +50,7 @@ void *enqueue_task(void*arg){
 void handler_test_msg(void* msg, size_t size)
 {
     test_msgs_t *pmsg = (test_msgs_t *)msg;
+    unsigned long nr_en, nr_de, nr_curr;
     
 //    printf("recv %lx\n", pmsg->value);
     
@@ -62,9 +63,11 @@ void handler_test_msg(void* msg, size_t size)
     total_msgs++;
 
     if(total_msgs % 2000000 == 0) {
-        printf("dequeue. per msgs \033[1;31m%lf ns\033[m, msgs (total %ld, err %ld).\n", 
-                latency_total*1.0/total_msgs/3000000000*1000000000,
-                total_msgs, error_msgs);
+        VOS_FastQMsgNum(NODE_1, &nr_en, &nr_de, &nr_curr);
+        printf("dequeue. per msgs \033[1;31m%lf ns\033[m, msgs (total %ld, err %ld). "\
+               "EN %ld, DE %ld, CURR %ld\n", 
+               latency_total*1.0/total_msgs/3000000000*1000000000,
+               total_msgs, error_msgs, nr_en, nr_de, nr_curr);
     }
 
 }
@@ -78,9 +81,47 @@ void *dequeue_task(void*arg) {
 }
 
 int sig_handler(int signum) {
-
+    printf("sighandler.\n");
     VOS_FastQDump(NULL, NODE_1);
+    
     exit(1);
+}
+
+pthread_t new_enqueue_task(int module_id) {
+    pthread_t enqueue;
+    int max_msg = 16;
+    unsigned int i =0;
+    struct enqueue_arg *enqueueArg = malloc(sizeof(struct enqueue_arg));
+
+    mod_set rxset, txset;
+    MOD_ZERO(&rxset);
+    MOD_ZERO(&txset);
+    
+    MOD_SET(NODE_1, &txset);
+    VOS_FastQCreateModule(module_id, NULL, &txset, max_msg, sizeof(test_msgs_t));
+
+    
+    MOD_SET(module_id, &rxset);
+    VOS_FastQAddSet(NODE_1, &rxset, NULL);
+
+    
+    test_msgs_t *test_msg = (test_msgs_t *)malloc(sizeof(test_msgs_t)*TEST_NUM);
+    for(i=0;i<TEST_NUM;i++) {
+        test_msg->magic = TEST_MSG_MAGIC + (i%10000==0?1:0); //有错误的消息
+//        test_msgs21[i].magic = TEST_MSG_MAGIC;
+        test_msg->value = 0xff00000000000000 + i+1;
+    }
+
+
+    enqueueArg->srcModuleId = module_id;
+    enqueueArg->cpu_list = global_cpu_lists[module_id-1-2];
+    enqueueArg->msgs = test_msg;
+
+    sleep(1);
+
+    pthread_create(&enqueue, NULL, enqueue_task, enqueueArg);
+
+    return enqueue;
 }
 
 int main()
@@ -97,6 +138,7 @@ int main()
     int max_msg = 16;
     
     signal(SIGINT, sig_handler);
+    
     mod_set rxset, txset;
     MOD_ZERO(&rxset);
     MOD_ZERO(&txset);
@@ -160,10 +202,19 @@ int main()
 
 	pthread_setname_np(pthread_self(), "test-1");
 
+    sleep(5);
+    pthread_t enqueue_add1 = new_enqueue_task(NODE_5);
+	pthread_setname_np(enqueue_add1, "enqueue4");
+    sleep(5);
+    pthread_t enqueue_add2 = new_enqueue_task(NODE_6);
+	pthread_setname_np(enqueue_add2, "enqueue5");
+
     pthread_join(enqueueTask1, NULL);
     pthread_join(enqueueTask2, NULL);
     pthread_join(enqueueTask3, NULL);
     pthread_join(dequeueTask, NULL);
+    pthread_join(enqueue_add1, NULL);
+    pthread_join(enqueue_add2, NULL);
 
     return EXIT_SUCCESS;
 }

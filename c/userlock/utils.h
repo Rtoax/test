@@ -80,6 +80,7 @@ static void __parse_cpu_list(char* cpu_list, cpu_set_t* cpu_set)
     }
 	int i;
     char* begin = cpu_list;
+    const int np = sysconf(_SC_NPROCESSORS_ONLN);
     while (1)
     {
         bool last_token = false;
@@ -105,12 +106,12 @@ static void __parse_cpu_list(char* cpu_list, cpu_set_t* cpu_set)
             }
             for (i = first_cpu; i <= last_cpu; i++)
             {
-                CPU_SET(i, cpu_set);
+                CPU_SET(i%np, cpu_set);
             }
         }
         else
         {
-            CPU_SET(__convert_str_to_int(begin), cpu_set);
+            CPU_SET(__convert_str_to_int(begin)%np, cpu_set);
         }
 
         if (last_token)

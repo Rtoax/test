@@ -3,15 +3,7 @@
 *  介绍： 低时延队列
 *  作者： 荣涛
 *  日期：
-*       2021年1月25日    创建与开发轮询功能
-*       2021年1月27日 添加 通知+轮询 功能接口，消除零消息时的 CPU100% 问题
-*       2021年1月28日 调整代码格式，添加必要的注释
-*       2021年2月1日 添加多入单出队列功能
-*       2021年2月2日 消息队列句柄改成 unsigned long 索引
-*       2021年3月3日 统计类接口 和 低时延接口并存
-*       2021年3月4日 VOS_FastQMsgStatInfo 接口
-*       2021年4月7日 添加模块掩码，限制底层创建 fd 数量(eventfd)
-*                    
+*       2021年1月25日  - 2021年4月19日     
 *
 * API接口概述
 *   
@@ -22,6 +14,8 @@
 *   VOS_FastQSend           发送消息（轮询直至成功发送）
 *   VOS_FastQTrySend        发送消息（尝试向队列中插入，当队列满是直接返回false）
 *   VOS_FastQRecv           接收消息
+*   VOS_FastQMsgNum         获取消息数(需要开启统计功能 _FASTQ_STATS )
+*   VOS_FastQAddSet         动态添加 发送接收 set
 *   
 \**********************************************************************************************************************/
 
@@ -49,6 +43,8 @@
 
 /**
  *  源模块未初始化时可临时使用的模块ID，只允许使用一次 
+ *
+ *  目前 0 号 不允许使用
  */
 #define VOS_FastQTmpModuleID    0 
 
@@ -96,15 +92,30 @@ typedef bool (*fq_module_filter_t)(unsigned long srcID, unsigned long dstID);
  *  VOS_FastQCreateModule - 注册消息队列
  *  
  *  param[in]   moduleID    模块ID， 范围 1 - FASTQ_ID_MAX
- *  param[in]   moduleSet   需要与该模块创建连接的moduleSet，见 select() fd_set
- *  param[in]   maxModSetNum      moduleSet 中的最大 set
+ *  param[in]   rxset       可能接收对应模块发来的消息 bitmap，见 select() fd_set
+ *  param[in]   txset       可能向对应模块发送消息 bitmap，见 select() fd_set
  *  param[in]   msgMax      该模块 的 消息队列 的大小
  *  param[in]   msgSize     最大传递的消息大小
  */
 always_inline void inline
 VOS_FastQCreateModule(const unsigned long moduleID, 
-                     const mod_set *rxset, const mod_set *txset,
-                     const unsigned int msgMax, const unsigned int msgSize);
+                         const mod_set *rxset, const mod_set *txset,
+                         const unsigned int msgMax, const unsigned int msgSize);
+
+
+/**
+ *  VOS_FastQAddSet - 注册消息队列
+ *  
+ *  param[in]   moduleID    模块ID， 范围 1 - FASTQ_ID_MAX, 通过 `VOS_FastQCreateModule` 注册的函数
+ *  param[in]   rxset       可能接收对应模块发来的消息 bitmap，见 select() fd_set
+ *  param[in]   txset       可能向对应模块发送消息 bitmap，见 select() fd_set
+ *
+ *  注意：这里的`rxset`和`txset`将是`VOS_FastQCreateModule`参数的并集
+ */
+ always_inline bool inline
+VOS_FastQAddSet(const unsigned long moduleID, 
+                    const mod_set *rxset, const mod_set *txset);
+
 
 /**
  *  VOS_FastQDump - 显示信息
@@ -182,6 +193,23 @@ always_inline  bool inline
 VOS_FastQRecv(unsigned int from, fq_msg_handler_t handler);
 
 
+/**
+ *  VOS_FastQMsgNum - 获取消息数
+ *  
+ *  param[in]   ID    从模块ID from 中读取消息， 范围 1 - FASTQ_ID_MAX 
+ *  param[in]   nr_enqueues 总入队数
+ *  param[in]   nr_dequeues 总出队数
+ *  param[in]   nr_currents 当前消息数
+ *
+ *  return 成功true 失败false(不支持, 编译宏控制 _FASTQ_STATS 开启统计功能)
+ *
+ *  注意：ID 需要使用 FastQCreateModule 注册后使用
+ */
+always_inline  bool inline
+VOS_FastQMsgNum(unsigned int ID, unsigned long *nr_enqueues, unsigned long *nr_dequeues, unsigned long *nr_currents);
+
+
+
 
 /**********************************************************************************************************************\
  **
@@ -197,22 +225,26 @@ VOS_FastQRecv(unsigned int from, fq_msg_handler_t handler);
 #ifdef _FASTQ_STATS /* 带有统计类的接口 */
 //# pragma message "[FastQ] Statistic Class API"
 # define VOS_FastQCreateModule(moduleID, rxset, txset, msgMax, msgSize)    FastQCreateModuleStats(moduleID, rxset, txset, msgMax, msgSize, __FILE__, __func__, __LINE__)
+# define VOS_FastQAddSet(moduleID, rxset, txset)            FastQAddSetStats(moduleID, rxset, txset)
 # define VOS_FastQDump(fp, moduleID)                            FastQDumpStats(fp, moduleID)
 # define VOS_FastQDumpAllModule(fp)                            FastQDumpStats(fp, 0)
 # define VOS_FastQMsgStatInfo(buf, bufSize, pnum, filter)       FastQMsgStatInfoStats(buf, bufSize, pnum, filter)
 # define VOS_FastQSend(moduleSrc, moduleDst, pmsg, msgSize)  FastQSendStats(moduleSrc, moduleDst, pmsg, msgSize)  
 # define VOS_FastQTrySend(moduleSrc, moduleDst, pmsg, msgSize)  FastQTrySendStats(moduleSrc, moduleDst, pmsg, msgSize)  
 # define VOS_FastQRecv(fromModule, msgHandlerFn)             FastQRecvStats(fromModule, msgHandlerFn)
+# define VOS_FastQMsgNum(moduleID, nr_en, nr_de, nt_curr)             FastQMsgNumStats(moduleID, nr_en, nr_de, nt_curr)
 
 #else /* 不带有统计类的接口，时延更低 */
 //# pragma message "[FastQ] Low Latency Class API"
 # define VOS_FastQCreateModule(moduleID, rxset, txset, msgMax, msgSize)    FastQCreateModule(moduleID, rxset, txset, msgMax, msgSize, __FILE__, __func__, __LINE__)
+# define VOS_FastQAddSet(moduleID, rxset, txset)            FastQAddSet(moduleID, rxset, txset)
 # define VOS_FastQDump(fp, moduleID)                            FastQDump(fp, moduleID)
 # define VOS_FastQDumpAllModule(fp)                            FastQDump(fp, 0)
 # define VOS_FastQMsgStatInfo(buf, bufSize, pnum, filter)       FastQMsgStatInfo(buf, bufSize, pnum, filter)
 # define VOS_FastQSend(moduleSrc, moduleDst, pmsg, msgSize)  FastQSend(moduleSrc, moduleDst, pmsg, msgSize)  
 # define VOS_FastQTrySend(moduleSrc, moduleDst, pmsg, msgSize)  FastQTrySend(moduleSrc, moduleDst, pmsg, msgSize)  
 # define VOS_FastQRecv(fromModule, msgHandlerFn)             FastQRecv(fromModule, msgHandlerFn)
+# define VOS_FastQMsgNum(moduleID, nr_en, nr_de, nt_curr)             FastQMsgNum(moduleID, nr_en, nr_de, nt_curr)
 
 #endif
 
@@ -239,6 +271,19 @@ FastQCreateModuleStats(const unsigned long moduleID,
                         const unsigned int msgMax, const unsigned int msgSize, 
                             const char *_file, const char *_func, const int _line);
 
+/**
+ *  VOS_FastQAddSet - 注册消息队列
+ *  
+ *  param[in]   moduleID    模块ID， 范围 1 - FASTQ_ID_MAX, 通过 `VOS_FastQCreateModule` 注册的函数
+ *  param[in]   rxset       可能接收对应模块发来的消息 bitmap，见 select() fd_set
+ *  param[in]   txset       可能向对应模块发送消息 bitmap，见 select() fd_set
+ */
+ always_inline bool inline
+FastQAddSet(const unsigned long moduleID, 
+                    const mod_set *rxset, const mod_set *txset);
+ always_inline bool inline
+FastQAddSetStats(const unsigned long moduleID, 
+                    const mod_set *rxset, const mod_set *txset);
 
 /**
  *  FastQDump - 显示信息
@@ -319,6 +364,25 @@ always_inline  bool inline
 FastQRecv(unsigned int from, fq_msg_handler_t handler);
 always_inline  bool inline
 FastQRecvStats(unsigned int from, fq_msg_handler_t handler);
+
+
+/**
+ *  VOS_FastQMsgNum - 获取消息数
+ *  
+ *  param[in]   ID    从模块ID from 中读取消息， 范围 1 - FASTQ_ID_MAX 
+ *  param[in]   nr_enqueues 总入队数
+ *  param[in]   nr_dequeues 总出队数
+ *  param[in]   nr_currents 当前消息数
+ *
+ *  return 成功true 失败false(不支持, 编译宏控制 _FASTQ_STATS 开启统计功能)
+ *
+ *  注意：ID 需要使用 FastQCreateModule 注册后使用
+ */
+always_inline  bool inline
+FastQMsgNum(unsigned int ID, unsigned long *nr_enqueues, unsigned long *nr_dequeues, unsigned long *nr_currents);
+always_inline  bool inline
+FastQMsgNumStats(unsigned int ID, unsigned long *nr_enqueues, unsigned long *nr_dequeues, unsigned long *nr_currents);
+
 
 
 #pragma GCC diagnostic pop

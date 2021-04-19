@@ -15,7 +15,7 @@ done
 
 echo "Redis Dict objects : $redis_dict_objs"
 
-LIBS="$redis_dict_objs fastq.c -lcrypt -pthread -I./ -I$redis_dict_dir -ltcmalloc"
+LIBS="$redis_dict_objs fastq.c -lcrypt -pthread -I./ -I$redis_dict_dir -ltcmalloc -g"
 
 #if [ $# -lt 1 ]; then
 #	echo "$0 [program source file]"
@@ -23,7 +23,8 @@ LIBS="$redis_dict_objs fastq.c -lcrypt -pthread -I./ -I$redis_dict_dir -ltcmallo
 #fi
 
 #file=$1
-for file in `ls test-*`
+test_files=(test-4.c)
+for file in ${test_files[@]}
 do 
 	echo "Compile $file -> ${file%.*}.out"
 	gcc $file $LIBS -o ${file%.*}.epoll.stat.out -w $* -D_FASTQ_EPOLL=1 -D_FASTQ_STATS=1

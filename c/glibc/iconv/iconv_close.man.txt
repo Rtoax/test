@@ -1,0 +1,42 @@
+ICONV_CLOSE(3)                              Linux Programmer's Manual                             ICONV_CLOSE(3)
+
+
+
+NAME
+       iconv_close - 关闭字符转换描述符
+
+
+总
+       #include <iconv.h>
+
+       int iconv_close (iconv_t cd);
+
+
+描
+       iconv_close 函数 关闭 之前 用 iconv_open 打开的 转换 描述符, 并 释放 为其 分配 的 空间.
+
+
+返
+       如果 成功, iconv_close 函数 返回 0. 如果 出错, 函数 设置 errno 变量 同时 返回 -1.
+
+
+遵
+       UNIX98
+
+
+参
+       iconv_open(3), iconv(3)
+
+
+[中
+       唐
+
+[中
+       2002/3/21
+
+[中
+       http://cmpp.linuxforum.net
+
+
+
+GNU                                             November 27, 1999                                 ICONV_CLOSE(3)

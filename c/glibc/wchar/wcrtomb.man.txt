@@ -1,0 +1,56 @@
+WCRTOMB(3)                                  Linux Programmer's Manual                                 WCRTOMB(3)
+
+
+
+NAME
+       wcrtomb - convert a wide character to a multibyte sequence
+
+SYNOPSIS
+       #include <wchar.h>
+
+       size_t wcrtomb(char *s, wchar_t wc, mbstate_t *ps);
+
+DESCRIPTION
+       The  main  case  for this function is when s is not NULL and wc is not a null wide character (L'\0').  In
+       this case, the wcrtomb() function converts the wide character wc  to  its  multibyte  representation  and
+       stores  it  at the beginning of the character array pointed to by s.  It updates the shift state *ps, and
+       returns the length of said multibyte representation, that is, the number of bytes written at s.
+
+       A different case is when s is not NULL, but wc is a null wide character (L'\0').  In this case  the  wcr‐
+       tomb() function stores at the character array pointed to by s the shift sequence needed to bring *ps back
+       to the initial state, followed by a '\0' byte.  It updates the shift state *ps (i.e., brings it into  the
+       initial state), and returns the length of the shift sequence plus one, that is, the number of bytes writ‐
+       ten at s.
+
+       A third case is when s is NULL.  In this case wc is ignored, and the function effectively returns
+
+           wcrtomb(buf, L'\0', ps)
+
+       where buf is an internal anonymous buffer.
+
+       In all of the above cases, if ps is a NULL pointer, a static anonymous state known only to the  wcrtomb()
+       function is used instead.
+
+RETURN VALUE
+       The  wcrtomb() function returns the number of bytes that have been or would have been written to the byte
+       array at s.  If wc can not be represented as a multibyte sequence  (according  to  the  current  locale),
+       (size_t) -1 is returned, and errno set to EILSEQ.
+
+CONFORMING TO
+       C99.
+
+NOTES
+       The behavior of wcrtomb() depends on the LC_CTYPE category of the current locale.
+
+       Passing NULL as ps is not multithread safe.
+
+SEE ALSO
+       wcsrtombs(3)
+
+COLOPHON
+       This  page  is  part  of  release 3.53 of the Linux man-pages project.  A description of the project, and
+       information about reporting bugs, can be found at http://www.kernel.org/doc/man-pages/.
+
+
+
+GNU                                                2011-09-28                                         WCRTOMB(3)

@@ -1,0 +1,47 @@
+CTERMID(3)                                  Linux Programmer's Manual                                 CTERMID(3)
+
+
+
+NAME
+       ctermid - get controlling terminal name
+
+SYNOPSIS
+       #include <stdio.h>
+
+       char *ctermid(char *s);
+
+   Feature Test Macro Requirements for glibc (see feature_test_macros(7)):
+
+       ctermid(): _POSIX_C_SOURCE >= 1 || _XOPEN_SOURCE || _POSIX_SOURCE
+
+DESCRIPTION
+       ctermid()  returns  a string which is the pathname for the current controlling terminal for this process.
+       If s is NULL, a static buffer is used, otherwise s points to a buffer used to hold the terminal pathname.
+       The symbolic constant L_ctermid is the maximum number of characters in the returned pathname.
+
+RETURN VALUE
+       The pointer to the pathname.
+
+ATTRIBUTES
+   Multithreading (see pthreads(7))
+       The  ctermid()  function  is  thread-safe  with  exceptions.  It is not thread-safe if called with a NULL
+       parameter.
+
+CONFORMING TO
+       Svr4, POSIX.1-2001.
+
+BUGS
+       The path returned may not uniquely identify the controlling terminal; it may, for example, be /dev/tty.
+
+       It is not assured that the program can open the terminal.
+
+SEE ALSO
+       ttyname(3)
+
+COLOPHON
+       This page is part of release 3.53 of the Linux man-pages project.  A  description  of  the  project,  and
+       information about reporting bugs, can be found at http://www.kernel.org/doc/man-pages/.
+
+
+
+GNU                                                2013-07-04                                         CTERMID(3)

@@ -1,0 +1,44 @@
+GCVT(3)                                     Linux Programmer's Manual                                    GCVT(3)
+
+
+
+NAME
+       gcvt - convert a floating-point number to a string
+
+SYNOPSIS
+       #include <stdlib.h>
+
+       char *gcvt(double number, size_t ndigit, char *buf);
+
+   Feature Test Macro Requirements for glibc (see feature_test_macros(7)):
+
+       gcvt():
+           Since glibc 2.12:
+               _SVID_SOURCE ||
+                   (_XOPEN_SOURCE >= 500 ||
+                       _XOPEN_SOURCE && _XOPEN_SOURCE_EXTENDED) &&
+                   !(_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600)
+           Before glibc 2.12:
+               _SVID_SOURCE || _XOPEN_SOURCE >= 500 || _XOPEN_SOURCE && _XOPEN_SOURCE_EXTENDED
+
+DESCRIPTION
+       The  gcvt()  function  converts  number  to  a minimal length null-terminated ASCII string and stores the
+       result in buf.  It produces ndigit significant digits in either printf(3) F format or E format.
+
+RETURN VALUE
+       The gcvt() function returns the address of the string pointed to by buf.
+
+CONFORMING TO
+       Marked as LEGACY in POSIX.1-2001.  POSIX.1-2008 removes the specification of gcvt(), recommending the use
+       of sprintf(3) instead (though snprintf(3) may be preferable).
+
+SEE ALSO
+       ecvt(3), fcvt(3), sprintf(3)
+
+COLOPHON
+       This  page  is  part  of  release 3.53 of the Linux man-pages project.  A description of the project, and
+       information about reporting bugs, can be found at http://www.kernel.org/doc/man-pages/.
+
+
+
+                                                   2010-09-20                                            GCVT(3)

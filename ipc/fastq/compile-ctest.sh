@@ -23,7 +23,9 @@ LIBS="$redis_dict_objs fastq.c -lcrypt -pthread -I./ -I$redis_dict_dir -ltcmallo
 #fi
 
 #file=$1
-test_files=(test-4.c)
+# (test-0.c test-1.c test-2.c test-3.c test-4.c)
+# 
+test_files=(test-0.c test-1.c test-2.c test-3.c test-4.c)
 for file in ${test_files[@]}
 do 
 	echo "Compile $file -> ${file%.*}.out"

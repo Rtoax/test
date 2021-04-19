@@ -5,6 +5,17 @@ enum {
     NODE_4,
     NODE_5,
     NODE_6,
+    NODE_7,
+};
+
+const char *ModuleName[] = {
+[NODE_1] = "cucp",
+[NODE_2] = "cuup",
+[NODE_3] = "du-l2",
+[NODE_4] = "du-phy",
+[NODE_5] = "om-cucp",
+[NODE_6] = "om-cuup",
+[NODE_7] = "om-du",
 };
 
 /* 测试的消息总数 */

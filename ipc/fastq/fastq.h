@@ -12,12 +12,18 @@
 *   VOS_FastQDumpAllModule  显示信息（所有模块）
 *   VOS_FastQMsgStatInfo    查询队列内存入队出队信息
 *   VOS_FastQSend           发送消息（轮询直至成功发送）
+*   VOS_FastQSendByName         模块名索引版本
 *   VOS_FastQTrySend        发送消息（尝试向队列中插入，当队列满是直接返回false）
+*   VOS_FastQTrySendByName      模块名索引版本
 *   VOS_FastQRecv           接收消息
 *   VOS_FastQMsgNum         获取消息数(需要开启统计功能 _FASTQ_STATS )
 *   VOS_FastQAddSet         动态添加 发送接收 set
 *   
+*   
 \**********************************************************************************************************************/
+    
+    
+        
 
 #ifndef __fAStMQ_H
 #define __fAStMQ_H 1
@@ -91,6 +97,7 @@ typedef bool (*fq_module_filter_t)(unsigned long srcID, unsigned long dstID);
 /**
  *  VOS_FastQCreateModule - 注册消息队列
  *  
+ *  param[in]   name        模块名(长度 <= 64)
  *  param[in]   moduleID    模块ID， 范围 1 - FASTQ_ID_MAX
  *  param[in]   rxset       可能接收对应模块发来的消息 bitmap，见 select() fd_set
  *  param[in]   txset       可能向对应模块发送消息 bitmap，见 select() fd_set
@@ -98,7 +105,7 @@ typedef bool (*fq_module_filter_t)(unsigned long srcID, unsigned long dstID);
  *  param[in]   msgSize     最大传递的消息大小
  */
 always_inline void inline
-VOS_FastQCreateModule(const unsigned long moduleID, 
+VOS_FastQCreateModule(const char *name, const unsigned long moduleID, 
                          const mod_set *rxset, const mod_set *txset,
                          const unsigned int msgMax, const unsigned int msgSize);
 
@@ -163,6 +170,21 @@ VOS_FastQMsgStatInfo(struct FastQModuleMsgStatInfo *buf, unsigned int buf_mod_si
 always_inline bool inline
 VOS_FastQSend(unsigned int from, unsigned int to, const void *msg, size_t size);
 
+/**
+ *  VOS_FastQSendByName - 发送消息（轮询直至成功发送）
+ *  
+ *  param[in]   from    源模块名
+ *  param[in]   to      目的模块名
+ *  param[in]   msg     传递的消息体
+ *  param[in]   size    传递的消息大小
+ *
+ *  return 成功true （轮询直至发送成功，只可能返回 true ）
+ *
+ *  注意：from 和 to 需要使用 FastQCreateModule 注册后使用
+ */
+always_inline bool inline
+VOS_FastQSendByName(const char *from, const char *to, const void *msg, size_t size);
+
 
 /**
  *  VOS_FastQTrySend - 发送消息（尝试向队列中插入，当队列满是直接返回false）
@@ -178,6 +200,23 @@ VOS_FastQSend(unsigned int from, unsigned int to, const void *msg, size_t size);
  */
 always_inline bool inline
 VOS_FastQTrySend(unsigned int from, unsigned int to, const void *msg, size_t size);
+
+
+/**
+ *  VOS_FastQTrySendByName - 发送消息（尝试发送）
+ *  
+ *  param[in]   from    源模块名
+ *  param[in]   to      目的模块名
+ *  param[in]   msg     传递的消息体
+ *  param[in]   size    传递的消息大小
+ *
+ *  return 成功true 失败false
+ *
+ *  注意：from 和 to 需要使用 FastQCreateModule 注册后使用
+ */
+always_inline bool inline
+VOS_FastQTrySendByName(const char *from, const char *to, const void *msg, size_t size);
+
 
 /**
  *  VOS_FastQRecv - 接收消息
@@ -224,25 +263,29 @@ VOS_FastQMsgNum(unsigned int ID, unsigned long *nr_enqueues, unsigned long *nr_d
 
 #ifdef _FASTQ_STATS /* 带有统计类的接口 */
 //# pragma message "[FastQ] Statistic Class API"
-# define VOS_FastQCreateModule(moduleID, rxset, txset, msgMax, msgSize)    FastQCreateModuleStats(moduleID, rxset, txset, msgMax, msgSize, __FILE__, __func__, __LINE__)
+# define VOS_FastQCreateModule(name, moduleID, rxset, txset, msgMax, msgSize)    FastQCreateModuleStats(name, moduleID, rxset, txset, msgMax, msgSize, __FILE__, __func__, __LINE__)
 # define VOS_FastQAddSet(moduleID, rxset, txset)            FastQAddSetStats(moduleID, rxset, txset)
 # define VOS_FastQDump(fp, moduleID)                            FastQDumpStats(fp, moduleID)
 # define VOS_FastQDumpAllModule(fp)                            FastQDumpStats(fp, 0)
 # define VOS_FastQMsgStatInfo(buf, bufSize, pnum, filter)       FastQMsgStatInfoStats(buf, bufSize, pnum, filter)
 # define VOS_FastQSend(moduleSrc, moduleDst, pmsg, msgSize)  FastQSendStats(moduleSrc, moduleDst, pmsg, msgSize)  
+# define VOS_FastQSendByName(moduleSrc, moduleDst, pmsg, msgSize)  FastQSendByNameStats(moduleSrc, moduleDst, pmsg, msgSize)  
 # define VOS_FastQTrySend(moduleSrc, moduleDst, pmsg, msgSize)  FastQTrySendStats(moduleSrc, moduleDst, pmsg, msgSize)  
+# define VOS_FastQTrySendByName(moduleSrc, moduleDst, pmsg, msgSize)  FastQTrySendByNameStats(moduleSrc, moduleDst, pmsg, msgSize)  
 # define VOS_FastQRecv(fromModule, msgHandlerFn)             FastQRecvStats(fromModule, msgHandlerFn)
 # define VOS_FastQMsgNum(moduleID, nr_en, nr_de, nt_curr)             FastQMsgNumStats(moduleID, nr_en, nr_de, nt_curr)
 
 #else /* 不带有统计类的接口，时延更低 */
 //# pragma message "[FastQ] Low Latency Class API"
-# define VOS_FastQCreateModule(moduleID, rxset, txset, msgMax, msgSize)    FastQCreateModule(moduleID, rxset, txset, msgMax, msgSize, __FILE__, __func__, __LINE__)
+# define VOS_FastQCreateModule(name, moduleID, rxset, txset, msgMax, msgSize)    FastQCreateModule(name, moduleID, rxset, txset, msgMax, msgSize, __FILE__, __func__, __LINE__)
 # define VOS_FastQAddSet(moduleID, rxset, txset)            FastQAddSet(moduleID, rxset, txset)
 # define VOS_FastQDump(fp, moduleID)                            FastQDump(fp, moduleID)
 # define VOS_FastQDumpAllModule(fp)                            FastQDump(fp, 0)
 # define VOS_FastQMsgStatInfo(buf, bufSize, pnum, filter)       FastQMsgStatInfo(buf, bufSize, pnum, filter)
 # define VOS_FastQSend(moduleSrc, moduleDst, pmsg, msgSize)  FastQSend(moduleSrc, moduleDst, pmsg, msgSize)  
+# define VOS_FastQSendByName(moduleSrc, moduleDst, pmsg, msgSize)  FastQSendByName(moduleSrc, moduleDst, pmsg, msgSize)  
 # define VOS_FastQTrySend(moduleSrc, moduleDst, pmsg, msgSize)  FastQTrySend(moduleSrc, moduleDst, pmsg, msgSize)  
+# define VOS_FastQTrySendByName(moduleSrc, moduleDst, pmsg, msgSize)  FastQTrySendByName(moduleSrc, moduleDst, pmsg, msgSize)  
 # define VOS_FastQRecv(fromModule, msgHandlerFn)             FastQRecv(fromModule, msgHandlerFn)
 # define VOS_FastQMsgNum(moduleID, nr_en, nr_de, nt_curr)             FastQMsgNum(moduleID, nr_en, nr_de, nt_curr)
 
@@ -261,12 +304,12 @@ VOS_FastQMsgNum(unsigned int ID, unsigned long *nr_enqueues, unsigned long *nr_d
  *  param[in]   msgSize     最大传递的消息大小
  */
 always_inline void inline
-FastQCreateModule(const unsigned long moduleID, 
+FastQCreateModule(const char *name, const unsigned long moduleID, 
                         const mod_set *rxset, const mod_set *txset, 
                         const unsigned int msgMax, const unsigned int msgSize, 
                             const char *_file, const char *_func, const int _line);
 always_inline void inline
-FastQCreateModuleStats(const unsigned long moduleID, 
+FastQCreateModuleStats(const char *name, const unsigned long moduleID, 
                         const mod_set *rxset, const mod_set *txset, 
                         const unsigned int msgMax, const unsigned int msgSize, 
                             const char *_file, const char *_func, const int _line);
@@ -334,6 +377,25 @@ FastQSendStats(unsigned int from, unsigned int to, const void *msg, size_t size)
 
 
 /**
+ *  VOS_FastQSendByName - 发送消息（轮询直至成功发送）
+ *  
+ *  param[in]   from    源模块名
+ *  param[in]   to      目的模块名
+ *  param[in]   msg     传递的消息体
+ *  param[in]   size    传递的消息大小
+ *
+ *  return 成功true （轮询直至发送成功，只可能返回 true ）
+ *
+ *  注意：from 和 to 需要使用 FastQCreateModule 注册后使用
+ */
+always_inline bool inline
+FastQSendByName(const char* from, const char* to, const void *msg, size_t size);
+always_inline bool inline
+FastQSendByNameStats(const char* from, const char* to, const void *msg, size_t size);
+
+
+
+/**
  *  FastQTrySend - 发送消息（尝试向队列中插入，当队列满是直接返回false）
  *  
  *  param[in]   from    源模块ID， 范围 1 - FASTQ_ID_MAX 
@@ -349,6 +411,25 @@ always_inline bool inline
 FastQTrySend(unsigned int from, unsigned int to, const void *msg, size_t size);
 always_inline bool inline
 FastQTrySendStats(unsigned int from, unsigned int to, const void *msg, size_t size);
+
+
+/**
+ *  VOS_FastQTrySendByName - 发送消息（轮询直至成功发送）
+ *  
+ *  param[in]   from    源模块名
+ *  param[in]   to      目的模块名
+ *  param[in]   msg     传递的消息体
+ *  param[in]   size    传递的消息大小
+ *
+ *  return 成功true （轮询直至发送成功，只可能返回 true ）
+ *
+ *  注意：from 和 to 需要使用 FastQCreateModule 注册后使用
+ */
+always_inline bool inline
+FastQTrySendByName(const char* from, const char* to, const void *msg, size_t size);
+always_inline bool inline
+FastQTrySendByNameStats(const char* from, const char* to, const void *msg, size_t size);
+
 
 /**
  *  FastQRecv - 接收消息

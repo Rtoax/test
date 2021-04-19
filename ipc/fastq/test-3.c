@@ -38,7 +38,9 @@ void *enqueue_task(void*arg){
         pmsg = &ptest_msg[i++%TEST_NUM];
         pmsg->latency = RDTSC();
         unsigned long addr = (unsigned long)pmsg;
-        VOS_FastQTrySend(parg->srcModuleId, NODE_1, &addr, sizeof(unsigned long));
+//        VOS_FastQTrySend(parg->srcModuleId, NODE_1, &addr, sizeof(unsigned long));
+//        VOS_FastQSendByName(ModuleName[parg->srcModuleId], ModuleName[NODE_1], &addr, sizeof(unsigned long));
+        VOS_FastQTrySendByName(ModuleName[parg->srcModuleId], ModuleName[NODE_1], &addr, sizeof(unsigned long));
 
         send_cnt++;
         
@@ -157,10 +159,10 @@ int main()
     
     MOD_SET(NODE_1, &txset);
     
-    VOS_FastQCreateModule(NODE_1, &rxset, NULL, max_msg, sizeof(unsigned long));
-    VOS_FastQCreateModule(NODE_2, NULL, &txset, max_msg, sizeof(unsigned long));
-    VOS_FastQCreateModule(NODE_3, NULL, &txset, max_msg, sizeof(unsigned long));
-    VOS_FastQCreateModule(NODE_4, NULL, &txset, max_msg, sizeof(unsigned long));
+    VOS_FastQCreateModule(ModuleName[NODE_1], NODE_1, &rxset, NULL, max_msg, sizeof(unsigned long));
+    VOS_FastQCreateModule(ModuleName[NODE_2], NODE_2, NULL, &txset, max_msg, sizeof(unsigned long));
+    VOS_FastQCreateModule(ModuleName[NODE_3], NODE_3, NULL, &txset, max_msg, sizeof(unsigned long));
+    VOS_FastQCreateModule(ModuleName[NODE_4], NODE_4, NULL, &txset, max_msg, sizeof(unsigned long));
     
     unsigned int i =0;
     test_msgs21 = (test_msgs_t *)malloc(sizeof(test_msgs_t)*TEST_NUM);

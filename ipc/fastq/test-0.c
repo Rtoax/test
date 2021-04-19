@@ -59,10 +59,10 @@ int main()
     MOD_SET(NODE_4, &txset);
     
     
-    FastQCreateModuleStats(NODE_1, &rxset, &txset, max_msg, sizeof(unsigned long), __FILE__, __func__, __LINE__);
-    FastQCreateModuleStats(NODE_2, &rxset, &txset, max_msg, sizeof(unsigned long), __FILE__, __func__, __LINE__);
-    FastQCreateModuleStats(NODE_3, &rxset, &txset, max_msg, sizeof(unsigned long), __FILE__, __func__, __LINE__);
-    FastQCreateModuleStats(NODE_4, &rxset, &txset, max_msg, sizeof(unsigned long), __FILE__, __func__, __LINE__);
+    FastQCreateModuleStats(ModuleName[NODE_1], NODE_1, &rxset, &txset, max_msg, sizeof(unsigned long), __FILE__, __func__, __LINE__);
+    FastQCreateModuleStats(ModuleName[NODE_2], NODE_2, &rxset, &txset, max_msg, sizeof(unsigned long), __FILE__, __func__, __LINE__);
+    FastQCreateModuleStats(ModuleName[NODE_3], NODE_3, &rxset, &txset, max_msg, sizeof(unsigned long), __FILE__, __func__, __LINE__);
+    FastQCreateModuleStats(ModuleName[NODE_4], NODE_4, &rxset, &txset, max_msg, sizeof(unsigned long), __FILE__, __func__, __LINE__);
     
 
     FastQDump(stderr, 0);

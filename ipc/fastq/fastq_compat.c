@@ -38,9 +38,10 @@ static  struct {
 
 //从 源module ID 和 目的module ID 到 _ring 最快的方法
 struct _FQ_NAME(FastQModule) {
+    char name[NAME_LEN];          //模块名
     bool already_register;  //true - 已注册, other - 没注册
 #if defined(_FASTQ_EPOLL)
-    int epfd; //epoll fd
+    int epfd;               //epoll fd
 #elif defined(_FASTQ_SELECT)
     struct {
         int maxfd;
@@ -49,13 +50,13 @@ struct _FQ_NAME(FastQModule) {
         int producer[FD_SETSIZE];
     } selector;
 #endif
-    unsigned long module_id; //是 1- FASTQ_ID_MAX 的任意值
+    unsigned long module_id;//是 1- FASTQ_ID_MAX 的任意值
     unsigned int ring_size; //队列大小，ring 节点数
-    unsigned int msg_size; //消息大小， ring 节点大小
+    unsigned int msg_size;  //消息大小， ring 节点大小
     
-    char *_file; //调用注册函数的 文件名
-    char *_func; //调用注册函数的 函数名
-    int _line; //调用注册函数的 文件中的行号
+    char *_file;    //调用注册函数的 文件名
+    char *_func;    //调用注册函数的 函数名
+    int _line;      //调用注册函数的 文件中的行号
 
     struct {
         bool use;   //是否使用
@@ -66,7 +67,7 @@ struct _FQ_NAME(FastQModule) {
 
 static struct _FQ_NAME(FastQModule) *_FQ_NAME(_AllModulesRings) = NULL;
 static pthread_rwlock_t _FQ_NAME(_AllModulesRingsLock) = PTHREAD_RWLOCK_INITIALIZER; //只在注册时保护使用
-
+static dict *_FQ_NAME(dictModuleNameID) = NULL;
 
 /**
  *  FastQ 初始化 函数，初始化 _AllModulesRings 全局变量
@@ -103,6 +104,10 @@ static void __attribute__((constructor(105))) _FQ_NAME(__FastQInitCtor) () {
             _FQ_NAME(_AllModulesRings)[i]._ring[j] = NULL;
         }
     }
+    
+    //初始化 模块名->模块ID 字典
+    _FQ_NAME(dictModuleNameID) = dictCreate(&commandTableDictType,NULL);
+    dictExpand(_FQ_NAME(dictModuleNameID), FASTQ_ID_MAX);
 }
 
 static struct _FQ_NAME(FastQRing) *
@@ -170,13 +175,13 @@ _FQ_NAME(__fastq_create_ring)(
  *  param[in]   msgSize     最大传递的消息大小
  */
 always_inline void inline
-_FQ_NAME(FastQCreateModule)(const unsigned long module_id, \
+_FQ_NAME(FastQCreateModule)(const char *name, const unsigned long module_id, \
                      const mod_set *rxset, const mod_set *txset, \
                      const unsigned int ring_size, const unsigned int msg_size, \
                             const char *_file, const char *_func, const int _line) {
     assert(module_id <= FASTQ_ID_MAX && "Module ID out of range");
 
-    if(unlikely(!_file) || unlikely(!_func) || unlikely(_line <= 0)) {
+    if(unlikely(!_file) || unlikely(!_func) || unlikely(_line <= 0) || unlikely(!name)) {
         assert(0 && "NULL pointer error");
     }
     
@@ -198,6 +203,10 @@ _FQ_NAME(FastQCreateModule)(const unsigned long module_id, \
         assert(0);
         return ;
     }
+
+    //保存名字并添加至 字典
+    strncpy(_FQ_NAME(_AllModulesRings)[module_id].name, name, NAME_LEN);
+    dict_register_module(_FQ_NAME(dictModuleNameID), name, module_id);
 
     //设置注册标志位
     __atomic_store_n(&_FQ_NAME(_AllModulesRings)[module_id].already_register, true, __ATOMIC_RELEASE);
@@ -467,6 +476,16 @@ _FQ_NAME(FastQSend)(unsigned int from, unsigned int to, const void *msg, size_t 
     return true;
 }
 
+always_inline bool inline
+_FQ_NAME(FastQSendByName)(const char* from, const char* to, const void *msg, size_t size) {
+    unsigned long from_id = dict_find_module_id_byname(_FQ_NAME(dictModuleNameID), from);
+    unsigned long to_id = dict_find_module_id_byname(_FQ_NAME(dictModuleNameID), to);
+    
+    return _FQ_NAME(FastQSend)(from_id, to_id, msg, size);
+}
+
+
+
 /**
  *  FastQTrySend - 发送消息（尝试向队列中插入，当队列满是直接返回false）
  *  
@@ -489,6 +508,15 @@ _FQ_NAME(FastQTrySend)(unsigned int from, unsigned int to, const void *msg, size
         LOG_DEBUG("Send done %ld->%ld, event fd = %d.\n", ring->src, ring->dst, ring->_evt_fd);
     }
     return ret;
+}
+
+always_inline bool inline
+_FQ_NAME(FastQTrySendByName)(const char* from, const char* to, const void *msg, size_t size) {
+
+    unsigned long from_id = dict_find_module_id_byname(_FQ_NAME(dictModuleNameID), from);
+    unsigned long to_id = dict_find_module_id_byname(_FQ_NAME(dictModuleNameID), to);
+
+    return _FQ_NAME(FastQTrySend)(from_id, to_id, msg, size);
 }
 
 always_inline static bool inline

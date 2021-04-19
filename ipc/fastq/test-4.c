@@ -98,7 +98,7 @@ pthread_t new_enqueue_task(int module_id) {
     MOD_ZERO(&txset);
     
     MOD_SET(NODE_1, &txset);
-    VOS_FastQCreateModule(module_id, NULL, &txset, max_msg, sizeof(test_msgs_t));
+    VOS_FastQCreateModule(ModuleName[module_id], module_id, NULL, &txset, max_msg, sizeof(test_msgs_t));
 
     
     MOD_SET(module_id, &rxset);
@@ -148,10 +148,10 @@ int main()
     MOD_SET(NODE_4, &rxset);
     
     MOD_SET(NODE_1, &txset);
-    VOS_FastQCreateModule(NODE_1, &rxset, NULL, max_msg, sizeof(test_msgs_t));
-    VOS_FastQCreateModule(NODE_2, NULL, &txset, max_msg, sizeof(test_msgs_t));
-    VOS_FastQCreateModule(NODE_3, NULL, &txset, max_msg, sizeof(test_msgs_t));
-    VOS_FastQCreateModule(NODE_4, NULL, &txset, max_msg, sizeof(test_msgs_t));
+    VOS_FastQCreateModule(ModuleName[NODE_1], NODE_1, &rxset, NULL, max_msg, sizeof(test_msgs_t));
+    VOS_FastQCreateModule(ModuleName[NODE_2], NODE_2, NULL, &txset, max_msg, sizeof(test_msgs_t));
+    VOS_FastQCreateModule(ModuleName[NODE_3], NODE_3, NULL, &txset, max_msg, sizeof(test_msgs_t));
+    VOS_FastQCreateModule(ModuleName[NODE_4], NODE_4, NULL, &txset, max_msg, sizeof(test_msgs_t));
     
     unsigned int i =0;
     test_msgs21 = (test_msgs_t *)malloc(sizeof(test_msgs_t)*TEST_NUM);

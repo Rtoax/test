@@ -15,7 +15,7 @@
 *       2021年4月7日 添加模块掩码，限制底层创建 fd 数量
 *       2021年4月19日 获取当前队列消息数    (需要开启统计功能 _FASTQ_STATS )
 *                     动态添加 发送接收 set
-*
+*                     模块名索引 发送接口(明天写接收接口)
 *
 \**********************************************************************************************************************/
 #include <stdint.h>
@@ -38,6 +38,8 @@
 
 #include "fastq.h"
 
+#include <dict.h>   //哈希查找 模块名 -> moduleID
+#include <sds.h>
 
 #if (!defined(__i386__) && !defined(__x86_64__))
 # error Unsupported CPU
@@ -94,6 +96,8 @@
 #define _unused             __attribute__((unused))
 #endif
 
+#define NAME_LEN 64
+
 //#define FASTQ_DEBUG
 #ifdef FASTQ_DEBUG
 #define LOG_DEBUG(fmt...)  do{printf("\033[33m[%s:%d]", __func__, __LINE__);printf(fmt);printf("\033[m");}while(0)
@@ -107,6 +111,51 @@
 typedef struct {
 	volatile int64_t cnt;  /**< Internal counter value. */
 } atomic64_t;
+
+
+static uint64_t _unused dictSdsCaseHash(const void *key) {
+    return dictGenCaseHashFunction((unsigned char*)key, sdslen((char*)key));
+}
+static void _unused dictSdsDestructor(void *privdata, void *val)
+{
+    DICT_NOTUSED(privdata);
+
+    sdsfree(val);
+}
+
+/* A case insensitive version used for the command lookup table and other
+ * places where case insensitive non binary-safe comparison is needed. */
+static int _unused dictSdsKeyCaseCompare(void *privdata, const void *key1,
+        const void *key2)
+{
+    DICT_NOTUSED(privdata);
+
+    return strcasecmp(key1, key2) == 0;
+}
+
+/* Command table. sds string -> command struct pointer. */
+static dictType _unused commandTableDictType = {
+    dictSdsCaseHash,            /* hash function */
+    NULL,                       /* key dup */
+    NULL,                       /* val dup */
+    dictSdsKeyCaseCompare,      /* key compare */
+    dictSdsDestructor,          /* key destructor */
+    NULL,                       /* val destructor */
+    NULL                        /* allow to expand */
+};
+
+static void _unused dict_register_module(dict *d, char *name, unsigned long id) {
+    int ret = dictAdd(d, name, (void*)id);
+    if(ret != DICT_OK) {
+        assert(ret==DICT_OK && "Your Module's name is invalide.\n");
+    }
+}
+
+static unsigned long _unused dict_find_module_id_byname(dict *d, char *name) {
+    dictEntry *entry = dictFind(d, name);
+    return (unsigned long)dictGetVal(entry);
+}
+
 
 #pragma GCC diagnostic push
 

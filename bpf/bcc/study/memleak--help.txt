@@ -1,0 +1,59 @@
+usage: memleak [-h] [-p PID] [-t] [-a] [-o OLDER] [-c COMMAND]
+               [--combined-only] [--wa-missing-free] [-s SAMPLE_RATE] [-T TOP]
+               [-z MIN_SIZE] [-Z MAX_SIZE] [-O OBJ] [--percpu]
+               [interval] [count]
+
+Trace outstanding memory allocations that weren't freed.
+Supports both user-mode allocations made with libc functions and kernel-mode
+allocations made with kmalloc/kmem_cache_alloc/get_free_pages and corresponding
+memory release functions.
+
+positional arguments:
+  interval              interval in seconds to print outstanding allocations
+  count                 number of times to print the report before exiting
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -p PID, --pid PID     the PID to trace; if not specified, trace kernel
+                        allocs
+  -t, --trace           print trace messages for each alloc/free call
+  -a, --show-allocs     show allocation addresses and sizes as well as call
+                        stacks
+  -o OLDER, --older OLDER
+                        prune allocations younger than this age in
+                        milliseconds
+  -c COMMAND, --command COMMAND
+                        execute and trace the specified command
+  --combined-only       show combined allocation statistics only
+  --wa-missing-free     Workaround to alleviate misjudgments when free is
+                        missing
+  -s SAMPLE_RATE, --sample-rate SAMPLE_RATE
+                        sample every N-th allocation to decrease the overhead
+  -T TOP, --top TOP     display only this many top allocating stacks (by size)
+  -z MIN_SIZE, --min-size MIN_SIZE
+                        capture only allocations larger than this size
+  -Z MAX_SIZE, --max-size MAX_SIZE
+                        capture only allocations smaller than this size
+  -O OBJ, --obj OBJ     attach to allocator functions in the specified object
+  --percpu              trace percpu allocations
+
+EXAMPLES:
+
+./memleak -p $(pidof allocs)
+        Trace allocations and display a summary of "leaked" (outstanding)
+        allocations every 5 seconds
+./memleak -p $(pidof allocs) -t
+        Trace allocations and display each individual allocator function call
+./memleak -ap $(pidof allocs) 10
+        Trace allocations and display allocated addresses, sizes, and stacks
+        every 10 seconds for outstanding allocations
+./memleak -c "./allocs"
+        Run the specified command and trace its allocations
+./memleak
+        Trace allocations in kernel mode and display a summary of outstanding
+        allocations every 5 seconds
+./memleak -o 60000
+        Trace allocations in kernel mode and display a summary of outstanding
+        allocations that are at least one minute (60 seconds) old
+./memleak -s 5
+        Trace roughly every 5th allocation, to reduce overhead

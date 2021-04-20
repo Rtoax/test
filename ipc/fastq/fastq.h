@@ -24,6 +24,46 @@
 #ifndef __fAStMQ_H
 #define __fAStMQ_H 1
 
+#include <stdbool.h>
+
+
+
+#ifdef MODULE_ID_MAX // moduleID 最大模块索引值
+#define FASTQ_ID_MAX    MODULE_ID_MAX
+#else
+#define FASTQ_ID_MAX    256
+#endif
+
+/**
+ *  Crypto
+ */
+#define __MOD_SETSIZE  FASTQ_ID_MAX
+#define __NMOD     (8 * (int) sizeof (__mod_mask))
+#define __MOD_ELT(d)   ((d) / __NMOD)
+#define __MOD_MASK(d)  ((__mod_mask)(1UL << ((d) % __NMOD)))
+
+typedef long int __mod_mask;
+typedef struct {
+    __mod_mask __mod[__MOD_SETSIZE/__NMOD];
+#define __MOD(set) ((set)->__mod)
+#define __MOD_SET_INITIALIZER    {0}
+}__attribute__((aligned(64))) __mod_set;
+
+
+#define __MOD_ZERO(s) \
+    do {    \
+        unsigned int __i;   \
+        __mod_set *__arr = (s);  \
+        for (__i = 0; __i < sizeof (__mod_set) / sizeof (__mod_mask); ++__i)    \
+            __MOD (__arr)[__i] = 0;  \
+    } while (0)
+#define __MOD_SET(d, s) \
+    ((void) (__MOD (s)[__MOD_ELT(d)] |= __MOD_MASK(d)))
+#define __MOD_CLR(d, s) \
+    ((void) (__MOD (s)[__MOD_ELT(d)] &= ~ __MOD_MASK(d)))
+#define __MOD_ISSET(d, s) \
+    ((__MOD (s)[__MOD_ELT (d)] & __MOD_MASK (d)) != 0)
+    
 
 #define mod_set                  __mod_set
 #define MOD_SET_INITIALIZER     __MOD_SET_INITIALIZER
@@ -35,13 +75,11 @@
 #define MOD_ZERO(p_mod_set)           __MOD_ZERO(p_mod_set)
 
 
-#ifdef MODULE_ID_MAX // moduleID 最大模块索引值
-#define FASTQ_ID_MAX    MODULE_ID_MAX
-#else
-#define FASTQ_ID_MAX    256
+
+#ifndef always_inline
+#define always_inline /*__attribute__ ((__always_inline__))*/
 #endif
 
-#include <fastq_types.h>
 
 /**
  *  源模块未初始化时可临时使用的模块ID，只允许使用一次 
@@ -334,73 +372,54 @@ FastQCreateModule(const char *name, const unsigned long moduleID,
                         const mod_set *rxset, const mod_set *txset, 
                         const unsigned int msgMax, const unsigned int msgSize, 
                             const char *_file, const char *_func, const int _line);
-always_inline void inline
-FastQCreateModuleStats(const char *name, const unsigned long moduleID, 
-                        const mod_set *rxset, const mod_set *txset, 
-                        const unsigned int msgMax, const unsigned int msgSize, 
-                            const char *_file, const char *_func, const int _line);
 
 always_inline bool inline
 FastQDeleteModule(const char *name, const unsigned long moduleID, 
                         void *residual_msgs, int *residual_nbytes);
-always_inline bool inline
-FastQDeleteModuleStats(const char *name, const unsigned long moduleID, 
-                        void *residual_msgs, int *residual_nbytes);
+
 
  always_inline bool inline
 FastQAddSet(const unsigned long moduleID, 
                     const mod_set *rxset, const mod_set *txset);
- always_inline bool inline
-FastQAddSetStats(const unsigned long moduleID, 
-                    const mod_set *rxset, const mod_set *txset);
+
 
 always_inline void inline
 FastQDump(FILE*fp, unsigned long module_id);
-always_inline void inline
-FastQDumpStats(FILE*fp, unsigned long module_id);
+
 
 always_inline bool inline
 FastQMsgStatInfo(struct FastQModuleMsgStatInfo *buf, unsigned int buf_mod_size, unsigned int *num, 
                 fq_module_filter_t filter);
-always_inline bool inline
-FastQMsgStatInfoStats(struct FastQModuleMsgStatInfo *buf, unsigned int buf_mod_size, unsigned int *num, 
-                fq_module_filter_t filter);
+
 
 always_inline bool inline
 FastQSend(unsigned int from, unsigned int to, const void *msg, size_t size);
-always_inline bool inline
-FastQSendStats(unsigned int from, unsigned int to, const void *msg, size_t size);
+
 
 always_inline bool inline
 FastQSendByName(const char* from, const char* to, const void *msg, size_t size);
-always_inline bool inline
-FastQSendByNameStats(const char* from, const char* to, const void *msg, size_t size);
+
 
 always_inline bool inline
 FastQTrySend(unsigned int from, unsigned int to, const void *msg, size_t size);
-always_inline bool inline
-FastQTrySendStats(unsigned int from, unsigned int to, const void *msg, size_t size);
+
 
 always_inline bool inline
 FastQTrySendByName(const char* from, const char* to, const void *msg, size_t size);
-always_inline bool inline
-FastQTrySendByNameStats(const char* from, const char* to, const void *msg, size_t size);
+
 
 
 always_inline  bool inline
 FastQRecv(unsigned int from, fq_msg_handler_t handler);
-always_inline  bool inline
-FastQRecvStats(unsigned int from, fq_msg_handler_t handler);
+
 
 always_inline  bool inline
 FastQRecvByName(const char *from, fq_msg_handler_t handler);
-always_inline  bool inline
-FastQRecvByNameStats(const char *from, fq_msg_handler_t handler);
+
+
 
 always_inline  bool inline
 FastQMsgNum(unsigned int ID, unsigned long *nr_enqueues, unsigned long *nr_dequeues, unsigned long *nr_currents);
-always_inline  bool inline
-FastQMsgNumStats(unsigned int ID, unsigned long *nr_enqueues, unsigned long *nr_dequeues, unsigned long *nr_currents);
 
 
 

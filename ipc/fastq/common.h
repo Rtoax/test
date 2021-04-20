@@ -42,11 +42,14 @@ typedef struct  {
 
 struct enqueue_arg {
     int srcModuleId;
+    int dstModuleId;
     char *cpu_list;
     test_msgs_t *msgs;
 };
 
 struct dequeue_arg {
+    int srcModuleId;
+    int dstModuleId;
     char *cpu_list;
 };
 

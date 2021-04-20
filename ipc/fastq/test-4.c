@@ -41,7 +41,7 @@ void *enqueue_task(void*arg){
         send_cnt++;
         
         if(send_cnt % 2000000 == 0) {
-            sleep((unsigned long)(arg)%10);
+            sleep((unsigned long)(arg)%4);
         }
     }
     pthread_exit(NULL);
@@ -202,10 +202,10 @@ int main()
 
 	pthread_setname_np(pthread_self(), "test-1");
 
-    sleep(5);
+    sleep(1);
     pthread_t enqueue_add1 = new_enqueue_task(NODE_5);
 	pthread_setname_np(enqueue_add1, "enqueue4");
-    sleep(5);
+    sleep(1);
     pthread_t enqueue_add2 = new_enqueue_task(NODE_6);
 	pthread_setname_np(enqueue_add2, "enqueue5");
 

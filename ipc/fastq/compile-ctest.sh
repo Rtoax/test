@@ -23,15 +23,15 @@ LIBS="$redis_dict_objs fastq.c -lcrypt -pthread -I./ -I$redis_dict_dir -ltcmallo
 #fi
 
 #file=$1
-# (test-0.c test-1.c test-2.c test-3.c test-4.c)
+# (test-0.c test-1.c test-2.c test-3.c test-4.c test-5.c)
 # 
-test_files=(test-0.c test-1.c test-2.c test-3.c test-4.c)
+test_files=(test-0.c test-1.c test-2.c test-3.c test-4.c )
 for file in ${test_files[@]}
 do 
 	echo "Compile $file -> ${file%.*}.out"
-	gcc $file $LIBS -o ${file%.*}.epoll.stat.out -w $* -D_FASTQ_EPOLL=1 -D_FASTQ_STATS=1
+#	gcc $file $LIBS -o ${file%.*}.epoll.stat.out -w $* -D_FASTQ_EPOLL=1 -D_FASTQ_STATS=1
 	gcc $file $LIBS -o ${file%.*}.epoll.out -w $* -D_FASTQ_EPOLL=1 
-	gcc $file $LIBS -o ${file%.*}.select.stat.out -w $* -D_FASTQ_SELECT=1  -D_FASTQ_STATS=1
+#	gcc $file $LIBS -o ${file%.*}.select.stat.out -w $* -D_FASTQ_SELECT=1  -D_FASTQ_STATS=1
 	gcc $file $LIBS -o ${file%.*}.select.out -w $* -D_FASTQ_SELECT=1
 done
 

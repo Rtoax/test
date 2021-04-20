@@ -113,6 +113,57 @@ typedef struct {
 } atomic64_t;
 
 
+// FastQRing
+struct FastQRing {
+    unsigned long src;  //是 1- FASTQ_ID_MAX 的任意值
+    unsigned long dst;  //是 1- FASTQ_ID_MAX 的任意值 二者不能重复
+
+    //统计字段
+    struct {
+        atomic64_t nr_enqueue;
+        atomic64_t nr_dequeue;
+    }__attribute__((aligned(64)));
+    
+    unsigned int _size;
+    size_t _msg_size;
+    char _pad1[64];
+    volatile unsigned int _head;
+    char _pad2[64];    
+    volatile unsigned int _tail;
+    char _pad3[64];    
+    int _evt_fd;        //队列eventfd通知
+    char _ring_data[];  //保存实际对象
+}__attribute__((aligned(64)));
+
+//模块
+struct FastQModule {
+    char name[NAME_LEN];          //模块名
+    bool already_register;  //true - 已注册, other - 没注册
+    union {
+        int epfd;               //epoll fd
+        struct {
+            int maxfd;
+            pthread_rwlock_t rwlock;    //保护 fd_set
+            fd_set readset, allset;
+            int producer[FD_SETSIZE];
+        } selector;
+    };
+    unsigned long module_id;//是 1- FASTQ_ID_MAX 的任意值
+    unsigned int ring_size; //队列大小，ring 节点数
+    unsigned int msg_size;  //消息大小， ring 节点大小
+    
+    char *_file;    //调用注册函数的 文件名
+    char *_func;    //调用注册函数的 函数名
+    int _line;      //调用注册函数的 文件中的行号
+
+    struct {
+        bool use;   //是否使用
+        mod_set set;//具体的 bitmap
+    }rx, tx;        //发送和接收
+    struct FastQRing **_ring;
+}__attribute__((aligned(64)));
+
+
 static uint64_t _unused dictSdsCaseHash(const void *key) {
     return dictGenCaseHashFunction((unsigned char*)key, sdslen((char*)key));
 }

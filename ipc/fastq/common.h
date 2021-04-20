@@ -6,6 +6,16 @@ enum {
     NODE_5,
     NODE_6,
     NODE_7,
+    NODE_8,
+    NODE_9,
+    NODE_10,
+    NODE_11,
+    NODE_12,
+    NODE_13,
+    NODE_14,
+    NODE_15,
+    NODE_16,
+    NODE_17,
 };
 
 const char *ModuleName[] = {

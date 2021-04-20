@@ -80,7 +80,7 @@ void *dequeue_task(void*arg) {
     struct dequeue_arg *parg = (struct dequeue_arg*)arg;
     reset_self_cpuset(parg->cpu_list);
     
-    VOS_FastQRecv( NODE_1, handler_test_msg);
+    VOS_FastQRecvByName( ModuleName[NODE_1], handler_test_msg);
     pthread_exit(NULL);
 }
 

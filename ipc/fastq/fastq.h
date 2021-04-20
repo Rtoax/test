@@ -3,7 +3,7 @@
 *  介绍： 低时延队列
 *  作者： 荣涛
 *  日期：
-*       2021年1月25日  - 2021年4月19日     
+*       2021年1月   - 2021年4月    
 *
 * API接口概述
 *   
@@ -21,10 +21,6 @@
 *   
 *   
 \**********************************************************************************************************************/
-    
-    
-        
-
 #ifndef __fAStMQ_H
 #define __fAStMQ_H 1
 
@@ -108,6 +104,24 @@ always_inline void inline
 VOS_FastQCreateModule(const char *name, const unsigned long moduleID, 
                          const mod_set *rxset, const mod_set *txset,
                          const unsigned int msgMax, const unsigned int msgSize);
+
+/**
+ *  VOS_FastQDeleteModule - 销毁消息队列
+ *  
+ *  param[in]   name        模块名(长度 <= 64)
+ *  param[in]   moduleID    模块ID， 范围 1 - FASTQ_ID_MAX
+ *  param[in][out]   residual_msgs        保存残留的消息，NULL 时忽略
+ *  param[in][out]   residual_nbytes      残留 的 字节数
+ *
+ *  return 成功true 失败false
+ *
+ *  需要注意的是，name 和 moduleID 二选一，但是，如果与注册时的对应关系不一致
+ *  将销毁失败
+ */
+always_inline bool inline
+VOS_FastQDeleteModule(const char *name, const unsigned long moduleID, 
+                        void *residual_msgs, int *residual_nbytes);
+
 
 
 /**
@@ -233,6 +247,20 @@ VOS_FastQRecv(unsigned int from, fq_msg_handler_t handler);
 
 
 /**
+ *  VOS_FastQRecvByName - 接收消息
+ *  
+ *  param[in]   from    源模块名
+ *  param[in]   handler 消息处理函数，参照 fq_msg_handler_t 说明
+ *
+ *  return 成功true 失败false
+ *
+ *  注意：from 需要使用 FastQCreateModule 注册后使用
+ */
+always_inline  bool inline
+VOS_FastQRecvByName(const char *from, fq_msg_handler_t handler);
+
+
+/**
  *  VOS_FastQMsgNum - 获取消息数
  *  
  *  param[in]   ID    从模块ID from 中读取消息， 范围 1 - FASTQ_ID_MAX 
@@ -264,6 +292,7 @@ VOS_FastQMsgNum(unsigned int ID, unsigned long *nr_enqueues, unsigned long *nr_d
 #ifdef _FASTQ_STATS /* 带有统计类的接口 */
 //# pragma message "[FastQ] Statistic Class API"
 # define VOS_FastQCreateModule(name, moduleID, rxset, txset, msgMax, msgSize)    FastQCreateModuleStats(name, moduleID, rxset, txset, msgMax, msgSize, __FILE__, __func__, __LINE__)
+# define VOS_FastQDeleteModule(name, moduleID, residual_msgs, residual_nbytes)   FastQDeleteModuleStats(name, moduleID, residual_msgs, residual_nbytes)
 # define VOS_FastQAddSet(moduleID, rxset, txset)            FastQAddSetStats(moduleID, rxset, txset)
 # define VOS_FastQDump(fp, moduleID)                            FastQDumpStats(fp, moduleID)
 # define VOS_FastQDumpAllModule(fp)                            FastQDumpStats(fp, 0)
@@ -273,11 +302,13 @@ VOS_FastQMsgNum(unsigned int ID, unsigned long *nr_enqueues, unsigned long *nr_d
 # define VOS_FastQTrySend(moduleSrc, moduleDst, pmsg, msgSize)  FastQTrySendStats(moduleSrc, moduleDst, pmsg, msgSize)  
 # define VOS_FastQTrySendByName(moduleSrc, moduleDst, pmsg, msgSize)  FastQTrySendByNameStats(moduleSrc, moduleDst, pmsg, msgSize)  
 # define VOS_FastQRecv(fromModule, msgHandlerFn)             FastQRecvStats(fromModule, msgHandlerFn)
+# define VOS_FastQRecvByName(fromModule, msgHandlerFn)             FastQRecvByNameStats(fromModule, msgHandlerFn)
 # define VOS_FastQMsgNum(moduleID, nr_en, nr_de, nt_curr)             FastQMsgNumStats(moduleID, nr_en, nr_de, nt_curr)
 
 #else /* 不带有统计类的接口，时延更低 */
 //# pragma message "[FastQ] Low Latency Class API"
 # define VOS_FastQCreateModule(name, moduleID, rxset, txset, msgMax, msgSize)    FastQCreateModule(name, moduleID, rxset, txset, msgMax, msgSize, __FILE__, __func__, __LINE__)
+# define VOS_FastQDeleteModule(name, moduleID, residual_msgs, residual_nbytes)   FastQDeleteModule(name, moduleID, residual_msgs, residual_nbytes)
 # define VOS_FastQAddSet(moduleID, rxset, txset)            FastQAddSet(moduleID, rxset, txset)
 # define VOS_FastQDump(fp, moduleID)                            FastQDump(fp, moduleID)
 # define VOS_FastQDumpAllModule(fp)                            FastQDump(fp, 0)
@@ -287,6 +318,7 @@ VOS_FastQMsgNum(unsigned int ID, unsigned long *nr_enqueues, unsigned long *nr_d
 # define VOS_FastQTrySend(moduleSrc, moduleDst, pmsg, msgSize)  FastQTrySend(moduleSrc, moduleDst, pmsg, msgSize)  
 # define VOS_FastQTrySendByName(moduleSrc, moduleDst, pmsg, msgSize)  FastQTrySendByName(moduleSrc, moduleDst, pmsg, msgSize)  
 # define VOS_FastQRecv(fromModule, msgHandlerFn)             FastQRecv(fromModule, msgHandlerFn)
+# define VOS_FastQRecvByName(fromModule, msgHandlerFn)             FastQRecvByName(fromModule, msgHandlerFn)
 # define VOS_FastQMsgNum(moduleID, nr_en, nr_de, nt_curr)             FastQMsgNum(moduleID, nr_en, nr_de, nt_curr)
 
 #endif
@@ -296,13 +328,7 @@ VOS_FastQMsgNum(unsigned int ID, unsigned long *nr_enqueues, unsigned long *nr_d
 
 #pragma GCC diagnostic ignored "-Wattributes"
 
-/**
- *  FastQCreateModule - 注册消息队列
- *  
- *  param[in]   moduleID    模块ID， 范围 1 - FASTQ_ID_MAX
- *  param[in]   msgMax      该模块 的 消息队列 的大小
- *  param[in]   msgSize     最大传递的消息大小
- */
+
 always_inline void inline
 FastQCreateModule(const char *name, const unsigned long moduleID, 
                         const mod_set *rxset, const mod_set *txset, 
@@ -314,13 +340,13 @@ FastQCreateModuleStats(const char *name, const unsigned long moduleID,
                         const unsigned int msgMax, const unsigned int msgSize, 
                             const char *_file, const char *_func, const int _line);
 
-/**
- *  VOS_FastQAddSet - 注册消息队列
- *  
- *  param[in]   moduleID    模块ID， 范围 1 - FASTQ_ID_MAX, 通过 `VOS_FastQCreateModule` 注册的函数
- *  param[in]   rxset       可能接收对应模块发来的消息 bitmap，见 select() fd_set
- *  param[in]   txset       可能向对应模块发送消息 bitmap，见 select() fd_set
- */
+always_inline bool inline
+FastQDeleteModule(const char *name, const unsigned long moduleID, 
+                        void *residual_msgs, int *residual_nbytes);
+always_inline bool inline
+FastQDeleteModuleStats(const char *name, const unsigned long moduleID, 
+                        void *residual_msgs, int *residual_nbytes);
+
  always_inline bool inline
 FastQAddSet(const unsigned long moduleID, 
                     const mod_set *rxset, const mod_set *txset);
@@ -328,26 +354,10 @@ FastQAddSet(const unsigned long moduleID,
 FastQAddSetStats(const unsigned long moduleID, 
                     const mod_set *rxset, const mod_set *txset);
 
-/**
- *  FastQDump - 显示信息
- *  
- *  param[in]   fp    文件指针
- *  param[in]   module_id 需要显示的模块ID， 等于 0 时显示全部
- */
 always_inline void inline
 FastQDump(FILE*fp, unsigned long module_id);
 always_inline void inline
 FastQDumpStats(FILE*fp, unsigned long module_id);
-
-
-/**
- *  FastQMsgStatInfo - 获取统计信息
- *  
- *  param[in]   buf    FastQModuleMsgStatInfo 信息结构体
- *  param[in]   buf_mod_size    buf 信息结构体个数
- *  param[in]   num 函数返回时填回 的 FastQModuleMsgStatInfo 结构个数
- *  param[in]   filter    根据目的和源模块ID进行过滤 详见 fq_module_filter_t
- */
 
 always_inline bool inline
 FastQMsgStatInfo(struct FastQModuleMsgStatInfo *buf, unsigned int buf_mod_size, unsigned int *num, 
@@ -356,109 +366,37 @@ always_inline bool inline
 FastQMsgStatInfoStats(struct FastQModuleMsgStatInfo *buf, unsigned int buf_mod_size, unsigned int *num, 
                 fq_module_filter_t filter);
 
-
-
-/**
- *  FastQSend - 发送消息（轮询直至成功发送）
- *  
- *  param[in]   from    源模块ID， 范围 1 - FASTQ_ID_MAX 
- *  param[in]   to      目的模块ID， 范围 1 - FASTQ_ID_MAX
- *  param[in]   msg     传递的消息体
- *  param[in]   size    传递的消息大小
- *
- *  return 成功true （轮询直至发送成功，只可能返回 true ）
- *
- *  注意：from 和 to 需要使用 FastQCreateModule 注册后使用
- */
 always_inline bool inline
 FastQSend(unsigned int from, unsigned int to, const void *msg, size_t size);
 always_inline bool inline
 FastQSendStats(unsigned int from, unsigned int to, const void *msg, size_t size);
 
-
-/**
- *  VOS_FastQSendByName - 发送消息（轮询直至成功发送）
- *  
- *  param[in]   from    源模块名
- *  param[in]   to      目的模块名
- *  param[in]   msg     传递的消息体
- *  param[in]   size    传递的消息大小
- *
- *  return 成功true （轮询直至发送成功，只可能返回 true ）
- *
- *  注意：from 和 to 需要使用 FastQCreateModule 注册后使用
- */
 always_inline bool inline
 FastQSendByName(const char* from, const char* to, const void *msg, size_t size);
 always_inline bool inline
 FastQSendByNameStats(const char* from, const char* to, const void *msg, size_t size);
 
-
-
-/**
- *  FastQTrySend - 发送消息（尝试向队列中插入，当队列满是直接返回false）
- *  
- *  param[in]   from    源模块ID， 范围 1 - FASTQ_ID_MAX 
- *  param[in]   to      目的模块ID， 范围 1 - FASTQ_ID_MAX
- *  param[in]   msg     传递的消息体
- *  param[in]   size    传递的消息大小
- *
- *  return 成功true 失败false
- *
- *  注意：from 和 to 需要使用 FastQCreateModule 注册后使用
- */
 always_inline bool inline
 FastQTrySend(unsigned int from, unsigned int to, const void *msg, size_t size);
 always_inline bool inline
 FastQTrySendStats(unsigned int from, unsigned int to, const void *msg, size_t size);
 
-
-/**
- *  VOS_FastQTrySendByName - 发送消息（轮询直至成功发送）
- *  
- *  param[in]   from    源模块名
- *  param[in]   to      目的模块名
- *  param[in]   msg     传递的消息体
- *  param[in]   size    传递的消息大小
- *
- *  return 成功true （轮询直至发送成功，只可能返回 true ）
- *
- *  注意：from 和 to 需要使用 FastQCreateModule 注册后使用
- */
 always_inline bool inline
 FastQTrySendByName(const char* from, const char* to, const void *msg, size_t size);
 always_inline bool inline
 FastQTrySendByNameStats(const char* from, const char* to, const void *msg, size_t size);
 
 
-/**
- *  FastQRecv - 接收消息
- *  
- *  param[in]   from    从模块ID from 中读取消息， 范围 1 - FASTQ_ID_MAX 
- *  param[in]   handler 消息处理函数，参照 fq_msg_handler_t 说明
- *
- *  return 成功true 失败false
- *
- *  注意：from 需要使用 FastQCreateModule 注册后使用
- */
 always_inline  bool inline
 FastQRecv(unsigned int from, fq_msg_handler_t handler);
 always_inline  bool inline
 FastQRecvStats(unsigned int from, fq_msg_handler_t handler);
 
+always_inline  bool inline
+FastQRecvByName(const char *from, fq_msg_handler_t handler);
+always_inline  bool inline
+FastQRecvByNameStats(const char *from, fq_msg_handler_t handler);
 
-/**
- *  VOS_FastQMsgNum - 获取消息数
- *  
- *  param[in]   ID    从模块ID from 中读取消息， 范围 1 - FASTQ_ID_MAX 
- *  param[in]   nr_enqueues 总入队数
- *  param[in]   nr_dequeues 总出队数
- *  param[in]   nr_currents 当前消息数
- *
- *  return 成功true 失败false(不支持, 编译宏控制 _FASTQ_STATS 开启统计功能)
- *
- *  注意：ID 需要使用 FastQCreateModule 注册后使用
- */
 always_inline  bool inline
 FastQMsgNum(unsigned int ID, unsigned long *nr_enqueues, unsigned long *nr_dequeues, unsigned long *nr_currents);
 always_inline  bool inline

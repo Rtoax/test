@@ -24,3 +24,4 @@ trace 'p:c:nanosleep(struct timespec *req) "%d sec %d nsec", req->tv_sec, req->t
 
 # Trace the pthread_create USDT probe, and print arg1 as hex:
 trace 'u:pthread:pthread_create "%x", arg1'
+

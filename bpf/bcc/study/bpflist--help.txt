@@ -1,0 +1,12 @@
+usage: bpflist [-h] [-v]
+
+Display processes currently using BPF programs and maps
+
+optional arguments:
+  -h, --help       show this help message and exit
+  -v, --verbosity  count and display kprobes/uprobes as well
+
+examples:
+    bpflist     # display all processes currently using BPF
+    bpflist -v  # also count kprobes/uprobes
+    bpflist -vv # display kprobes/uprobes and count them

@@ -13,3 +13,6 @@
 ./opensnoop -f O_WRONLY -f O_RDWR  # only print calls for writing
 ./opensnoop --cgroupmap mappath  # only trace cgroups in this BPF map
 ./opensnoop --mntnsmap mappath   # only trace mount namespaces in the map
+
+# 打印出最终生成的BPF程序
+opensnoop --ebpf

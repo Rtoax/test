@@ -1,0 +1,11 @@
+// bpftrace watchconn.bt 181
+BEGIN 
+{
+	printf("Watching connect() calls by PID %d\n", $1);
+}
+
+tracepoint:syscalls:sys_enter_connect
+/pid == $1/
+{
+	printf("PID %d called connect()\n", $1);
+}

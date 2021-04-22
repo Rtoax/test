@@ -1,0 +1,18 @@
+#!/usr/bin/bpftrace
+
+//统计 vfs_read 次数
+//执行： sudo bpftrace vfs_read.bt
+
+kprobe:vfs_read
+{
+	@start[tid] = nsecs;
+} 
+
+kretprobe:vfs_read
+/@start[tid]/
+{
+	$duration_us = (nsecs - @start[tid])/1000;
+	//@us = hist($duration_us);
+	@us[pid, comm] = hist($duration_us);
+	delete(@start[tid])
+}

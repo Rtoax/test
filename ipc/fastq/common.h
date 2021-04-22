@@ -19,13 +19,25 @@ enum {
 };
 
 const char *ModuleName[] = {
-[NODE_1] = "cucp",
-[NODE_2] = "cuup",
-[NODE_3] = "du-l2",
-[NODE_4] = "du-phy",
-[NODE_5] = "om-cucp",
-[NODE_6] = "om-cuup",
-[NODE_7] = "om-du",
+#define __(a) [a] = #a
+__(NODE_1),
+__(NODE_2),
+__(NODE_3),
+__(NODE_4),
+__(NODE_5),
+__(NODE_6),
+__(NODE_7),
+__(NODE_8),
+__(NODE_9),
+__(NODE_10),
+__(NODE_11),
+__(NODE_12),
+__(NODE_13),
+__(NODE_14),
+__(NODE_15),
+__(NODE_16),
+__(NODE_17),
+#undef __
 };
 
 /* 测试的消息总数 */
@@ -67,3 +79,38 @@ static char *global_cpu_lists[10] = {
     "9",    
 };
 
+
+static bool moduleID_filter_fn(unsigned long srcID, unsigned long dstID){
+//    if(srcID != NODE_1 && 
+//       srcID != NODE_2 && 
+//       srcID != NODE_3 && 
+//       srcID != NODE_4 && 
+//       srcID != 0) return false;
+//    
+//    if(dstID == NODE_1) return true;
+//    else return false;
+//    printf("filter.\n");
+    return true;
+}
+
+static dump_all_fastq() {
+
+    FastQDump(stderr, 0);
+
+    struct FastQModuleMsgStatInfo buffer[32];
+    unsigned int num = 0;
+    bool ret = VOS_FastQMsgStatInfo(buffer, 32, &num, moduleID_filter_fn);
+//        sleep(1);
+//        printf("statistics. ret = %d, %d\n", ret, num);
+
+    if(num) {
+        printf( "\t SRC -> DST           Enqueue           Dequeue\r\n");
+        printf( "\t ----------------------------------------------------\r\n");
+    }
+    int i;
+    for(i=0;i<num;i++) {
+        
+        printf( "\t %3ld -> %3ld:  %16ld %16ld\r\n", 
+                buffer[i].src_module, buffer[i].dst_module, buffer[i].enqueue, buffer[i].dequeue);
+    }
+}

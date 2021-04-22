@@ -16,8 +16,9 @@
 *       2021年4月19日 获取当前队列消息数    (需要开启统计功能 _FASTQ_STATS )
 *                     动态添加 发送接收 set
 *                     模块名索引 发送接口(明天写接收接口)
-*       2021年4月20日 模块名索引
+*       2021年4月20日 模块名索引 (commit 7e72afee5a5ebdea819d6a5212f4afdd906d921d)
 *                     接口统一，只支持统计类接口
+*       2021年4月22日 模块名索引不是必要的
 \**********************************************************************************************************************/
 #include <stdint.h>
 #include <assert.h>
@@ -86,10 +87,6 @@
 #define __cachelinealigned __attribute__((aligned(64)))
 #endif
 
-#ifndef weak_alias
-#define weak_alias(name, aliasname) extern typeof (name) aliasname __attribute__ ((weak, alias(#name)))
-#endif
-
 #ifndef _unused
 #define _unused             __attribute__((unused))
 #endif
@@ -126,7 +123,6 @@ struct FastQRing {
     struct {
         atomic64_t nr_enqueue;
         atomic64_t nr_dequeue;
-        
     }__cachelinealigned;
     
     unsigned int _size;
@@ -145,6 +141,7 @@ struct FastQRing {
 struct FastQModule {
 #define NAME_LEN 64
     char name[NAME_LEN];          //模块名
+    bool name_attached;
     bool already_register;  //true - 已注册, other - 没注册
     module_status_t status;
     union {
@@ -202,17 +199,36 @@ static dictType _unused commandTableDictType = {
     NULL,                       /* val destructor */
     NULL                        /* allow to expand */
 };
+    
+static dict *dictModuleNameID = NULL;
+static pthread_spinlock_t dict_spinlock;
 
-static void _unused inline dict_register_module(dict *d, char *name, unsigned long id) {
-    int ret = dictAdd(d, name, (void*)id);
+static void dict_init() {
+    
+    pthread_spin_init(&dict_spinlock, PTHREAD_PROCESS_PRIVATE);
+    
+    //初始化 模块名->模块ID 字典
+    dictModuleNameID = dictCreate(&commandTableDictType,NULL);
+    dictExpand(dictModuleNameID, FASTQ_ID_MAX);
+}
+
+static void _unused inline dict_register_module(char *name, unsigned long id) {
+    pthread_spin_lock(&dict_spinlock);
+
+    int ret = dictAdd(dictModuleNameID, name, (void*)id);
     if(ret != DICT_OK) {
         assert(ret==DICT_OK && "Your Module's name is invalide.\n");
     }
+    
+    pthread_spin_unlock(&dict_spinlock);
 }
 
-static unsigned long inline _unused dict_find_module_id_byname(dict *d, char *name) {
-    dictEntry *entry = dictFind(d, name);
-    return (unsigned long)dictGetVal(entry);
+static unsigned long inline _unused dict_find_module_id_byname(char *name) {
+    pthread_spin_lock(&dict_spinlock);
+    dictEntry *entry = dictFind(dictModuleNameID, name);
+    unsigned long moduleID = (unsigned long)dictGetVal(entry);
+    pthread_spin_unlock(&dict_spinlock);
+    return moduleID;
 }
 
 
@@ -228,13 +244,10 @@ always_inline static void  inline _unused mbarrier() { asm volatile("": : :"memo
 always_inline static void  inline _unused mrwbarrier() { asm volatile("mfence":::"memory"); }
 always_inline static void  inline _unused mrbarrier()  { asm volatile("lfence":::"memory"); }
 always_inline static void  inline _unused mwbarrier()  { asm volatile("sfence":::"memory"); }
-always_inline static void  inline _unused __relax()  { asm volatile ("pause":::"memory"); } 
-always_inline static void  inline _unused __lock()   { asm volatile ("cli" ::: "memory"); }
-always_inline static void  inline _unused __unlock() { asm volatile ("sti" ::: "memory"); }
+always_inline static void  inline _unused __relax()  { asm volatile ("pause":::"memory"); }
 
 static inline int always_inline _unused 
-atomic64_cmpset(volatile uint64_t *dst, uint64_t exp, uint64_t src)
-{
+atomic64_cmpset(volatile uint64_t *dst, uint64_t exp, uint64_t src) {
 	uint8_t res;
 
 	asm volatile(
@@ -251,39 +264,18 @@ atomic64_cmpset(volatile uint64_t *dst, uint64_t exp, uint64_t src)
 	return res;
 }
 
-static inline uint64_t always_inline _unused
-atomic64_exchange(volatile uint64_t *dst, uint64_t val)
-{
-	asm volatile(
-			"lock ; "
-			"xchgq %0, %1;"
-			: "=r" (val), "=m" (*dst)
-			: "0" (val),  "m" (*dst)
-			: "memory");         /* no-clobber list */
-	return val;
-}
-
 static inline void always_inline _unused
-atomic64_init(atomic64_t *v)
-{
+atomic64_init(atomic64_t *v) {
 	atomic64_cmpset((volatile uint64_t *)&v->cnt, v->cnt, 0);
 }
 
 static inline int64_t always_inline _unused
-atomic64_read(atomic64_t *v)
-{
+atomic64_read(atomic64_t *v) {
     return v->cnt;
 }
 
 static inline void always_inline _unused
-atomic64_set(atomic64_t *v, int64_t new_value)
-{
-    atomic64_cmpset((volatile uint64_t *)&v->cnt, v->cnt, new_value);
-}
-
-static inline void always_inline _unused
-atomic64_add(atomic64_t *v, int64_t inc)
-{
+atomic64_add(atomic64_t *v, int64_t inc) {
 	asm volatile(
 			"lock ; "
 			"addq %[inc], %[cnt]"
@@ -294,20 +286,7 @@ atomic64_add(atomic64_t *v, int64_t inc)
 }
 
 static inline void always_inline _unused
-atomic64_sub(atomic64_t *v, int64_t dec)
-{
-	asm volatile(
-			"lock ; "
-			"subq %[dec], %[cnt]"
-			: [cnt] "=m" (v->cnt)   /* output */
-			: [dec] "ir" (dec),     /* input */
-			  "m" (v->cnt)
-			);
-}
-
-static inline void always_inline _unused
-atomic64_inc(atomic64_t *v)
-{
+atomic64_inc(atomic64_t *v) {
 	asm volatile(
 			"lock ; "
 			"incq %[cnt]"
@@ -315,82 +294,6 @@ atomic64_inc(atomic64_t *v)
 			: "m" (v->cnt)          /* input */
 			);
 }
-
-static inline void always_inline _unused
-atomic64_dec(atomic64_t *v)
-{
-	asm volatile(
-			"lock ; "
-			"decq %[cnt]"
-			: [cnt] "=m" (v->cnt)   /* output */
-			: "m" (v->cnt)          /* input */
-			);
-}
-
-static inline int64_t always_inline _unused
-atomic64_add_return(atomic64_t *v, int64_t inc)
-{
-	int64_t prev = inc;
-
-	asm volatile(
-			"lock ; "
-			"xaddq %[prev], %[cnt]"
-			: [prev] "+r" (prev),   /* output */
-			  [cnt] "=m" (v->cnt)
-			: "m" (v->cnt)          /* input */
-			);
-	return prev + inc;
-}
-
-static inline int64_t always_inline _unused
-atomic64_sub_return(atomic64_t *v, int64_t dec)
-{
-	return atomic64_add_return(v, -dec);
-}
-
-static inline int always_inline _unused
-atomic64_inc_and_test(atomic64_t *v)
-{
-	uint8_t ret;
-
-	asm volatile(
-			"lock ; "
-			"incq %[cnt] ; "
-			"sete %[ret]"
-			: [cnt] "+m" (v->cnt), /* output */
-			  [ret] "=qm" (ret)
-			);
-
-	return ret != 0;
-}
-
-static inline int always_inline _unused
-atomic64_dec_and_test(atomic64_t *v)
-{
-	uint8_t ret;
-
-	asm volatile(
-			"lock ; "
-			"decq %[cnt] ; "
-			"sete %[ret]"
-			: [cnt] "+m" (v->cnt),  /* output */
-			  [ret] "=qm" (ret)
-			);
-	return ret != 0;
-}
-
-static inline int always_inline _unused
-atomic64_test_and_set(atomic64_t *v)
-{
-	return atomic64_cmpset((volatile uint64_t *)&v->cnt, 0, 1);
-}
-
-static inline void always_inline _unused
-atomic64_clear(atomic64_t *v)
-{
-	atomic64_set(v, 0);
-}
-
 
 always_inline static unsigned int  _unused
 __power_of_2(unsigned int size) {
@@ -417,12 +320,13 @@ FILE* fastq_log_fp = NULL;
 
 static struct FastQModule *_AllModulesRings = NULL;
 static pthread_rwlock_t _AllModulesRingsLock = PTHREAD_RWLOCK_INITIALIZER; //只在注册时保护使用
-static dict *dictModuleNameID = NULL;
+
 
 // 从 event fd 查找 ring 的最快方法
 static  struct {
     struct FastQRing *tlb_ring;
 }__cachelinealigned _evtfd_to_ring[FD_SETSIZE] = {{NULL}};
+
 
 
 static void  __fastq_log_init() {
@@ -448,7 +352,8 @@ static void __attribute__((constructor(105))) __FastQInitCtor() {
     
         __atomic_store_n(&this_module->already_register, false, __ATOMIC_RELEASE);
         __atomic_store_n(&this_module->status, MODULE_STATUS_INVALIDE, __ATOMIC_RELEASE);
-    
+        __atomic_store_n(&this_module->name_attached, false, __ATOMIC_RELEASE);
+        
         this_module->module_id = i;
     
 #if defined(_FASTQ_EPOLL)
@@ -487,10 +392,8 @@ static void __attribute__((constructor(105))) __FastQInitCtor() {
 	        __atomic_store_n(&this_module->_ring[j], NULL, __ATOMIC_RELAXED);
         }
     }
-    
-    //初始化 模块名->模块ID 字典
-    dictModuleNameID = dictCreate(&commandTableDictType,NULL);
-    dictExpand(dictModuleNameID, FASTQ_ID_MAX);
+
+    dict_init();
 }
 
 
@@ -559,22 +462,19 @@ __fastq_create_ring(struct FastQModule *pmodule, const unsigned long src, const 
 
 
 always_inline void inline
-FastQCreateModule(const char *name, const unsigned long module_id, 
+FastQCreateModule(const unsigned long module_id, 
                      const mod_set *rxset, const mod_set *txset, 
                      const unsigned int ring_size, const unsigned int msg_size, 
                             const char *_file, const char *_func, const int _line) {
     assert(module_id <= FASTQ_ID_MAX && "Module ID out of range");
 
-    if(unlikely(!_file) || unlikely(!_func) || unlikely(_line <= 0) || unlikely(!name)) {
+    if(unlikely(!_file) || unlikely(!_func) || unlikely(_line <= 0)) {
         assert(0 && "NULL pointer error");
     }
     
     int i;
 
     struct FastQModule *this_module = &_AllModulesRings[module_id];
-
-    //锁
-    pthread_rwlock_wrlock(&_AllModulesRingsLock);
     
     //检查模块是否已经注册 并 设置已注册标志
     bool after_status = false;
@@ -586,7 +486,6 @@ FastQCreateModule(const char *name, const unsigned long module_id,
                         this_module->_func,
                         this_module->_line);
         
-        pthread_rwlock_unlock(&_AllModulesRingsLock);
         assert(0 && "ERROR: Already register module.");
         return ;
     }
@@ -595,12 +494,7 @@ FastQCreateModule(const char *name, const unsigned long module_id,
      *  从这里开始, `this_module`的访问线程安全
      */
     __atomic_store_n(&this_module->status, MODULE_STATUS_REGISTED, __ATOMIC_RELEASE);   //已注册
-    __atomic_store_n(&this_module->status, MODULE_STATUS_MODIFY, __ATOMIC_RELEASE);     //在修改
-
-    //保存名字并添加至 字典
-    strncpy(this_module->name, name, NAME_LEN);
-    dict_register_module(dictModuleNameID, name, module_id);
-    
+    __atomic_store_n(&this_module->status, MODULE_STATUS_MODIFY, __ATOMIC_RELEASE);     //在修改    
         
     //设置 发送 接收 set
     if(rxset) {
@@ -741,7 +635,6 @@ FastQCreateModule(const char *name, const unsigned long module_id,
         }
     }
     
-    pthread_rwlock_unlock(&_AllModulesRingsLock);
     __atomic_store_n(&this_module->status, MODULE_STATUS_REGISTED, __ATOMIC_RELEASE);   //已注册
 
     return;
@@ -780,8 +673,6 @@ FastQAddSet(const unsigned long moduleID, const mod_set *rxset, const mod_set *t
     int i;
     _fastq_fprintf(stderr, "Add FastQ module set to moduleID = %ld.\n", moduleID);
     
-    pthread_rwlock_wrlock(&_AllModulesRingsLock);
-
     //遍历
     for(i=1; i<=FASTQ_ID_MAX; i++) {
         if(i==moduleID) continue;
@@ -818,15 +709,14 @@ FastQAddSet(const unsigned long moduleID, const mod_set *rxset, const mod_set *t
         pthread_rwlock_unlock(&this_module->tx.rwlock);
     }
     
-    pthread_rwlock_unlock(&_AllModulesRingsLock);
     __atomic_store_n(&this_module->status, MODULE_STATUS_OK, __ATOMIC_RELEASE);
 
     return true;
 }
 
 always_inline bool inline
-FastQDeleteModule(const char *name, const unsigned long moduleID, void *residual_msgs, int *residual_nbytes) {
-    if(!name && (moduleID <= 0 || moduleID > FASTQ_ID_MAX) ) {
+FastQDeleteModule(const unsigned long moduleID, void *residual_msgs, int *residual_nbytes) {
+    if((moduleID <= 0 || moduleID > FASTQ_ID_MAX) ) {
         fastq_log("Try to delete not exist MODULE.\n");
         assert(0);
         return false;
@@ -846,12 +736,53 @@ FastQDeleteModule(const char *name, const unsigned long moduleID, void *residual
         
         pthread_rwlock_unlock(&_AllModulesRingsLock);
         assert(0);
-        return ;
+        return false;
     }
+    pthread_rwlock_unlock(&_AllModulesRingsLock);
 
     return true;
 }
 
+
+always_inline bool inline
+FastQAttachName(const unsigned long moduleID, const char *name) {
+    
+    if(unlikely(moduleID <= 0 || moduleID > FASTQ_ID_MAX) ) {
+        fastq_log("Try to delete not exist MODULE.\n");
+        assert(0);
+        return false;
+    }
+    if(unlikely(!name)) {
+        fastq_log("Invalid MODULE name.\n");
+        assert(0);
+        return false;
+    }
+    struct FastQModule *this_module = &_AllModulesRings[moduleID];
+    
+    //检查模块是否已经注册
+    if(!__atomic_load_n(&this_module->already_register, __ATOMIC_RELAXED)) {
+        fastq_log("ERROR: MODULE not registed error(id = %ld).\n", moduleID);
+        return false;
+    }
+
+    if(__atomic_load_n(&this_module->name_attached, __ATOMIC_RELAXED)) {
+        fastq_log("ERROR: MODULE name already attached error(id = %ld).\n", moduleID);
+        return false;
+    }
+
+    
+    mrbarrier();
+    //保存名字并添加至 字典
+    strncpy(this_module->name, name, NAME_LEN);
+    mwbarrier();
+    
+    dict_register_module(this_module->name, moduleID);
+
+
+    __atomic_store_n(&this_module->name_attached, true, __ATOMIC_RELEASE);
+
+    return true;
+}
 
 /**
  *  __FastQSend - 公共发送函数
@@ -918,8 +849,8 @@ FastQSendByName(const char* from, const char* to, const void *msg, size_t size) 
     assert(from && "NULL string.");
     assert(to && "NULL string.");
     
-    unsigned long from_id = dict_find_module_id_byname(dictModuleNameID, from);
-    unsigned long to_id = dict_find_module_id_byname(dictModuleNameID, to);
+    unsigned long from_id = dict_find_module_id_byname(from);
+    unsigned long to_id = dict_find_module_id_byname(to);
     
     if(unlikely(!__atomic_load_n(&_AllModulesRings[from_id].already_register, __ATOMIC_RELAXED))) {
         fastq_log("No such module %s.\n", from);
@@ -964,8 +895,8 @@ FastQTrySendByName(const char* from, const char* to, const void *msg, size_t siz
 
     assert(from && "NULL string.");
     assert(to && "NULL string.");
-    unsigned long from_id = dict_find_module_id_byname(dictModuleNameID, from);
-    unsigned long to_id = dict_find_module_id_byname(dictModuleNameID, to);
+    unsigned long from_id = dict_find_module_id_byname(from);
+    unsigned long to_id = dict_find_module_id_byname(to);
     if(unlikely(!__atomic_load_n(&_AllModulesRings[from_id].already_register, __ATOMIC_RELAXED))) {
         fastq_log("No such module %s.\n", from);
         return false;
@@ -1084,7 +1015,7 @@ FastQRecv(unsigned int from, fq_msg_handler_t handler) {
 always_inline  bool inline
 FastQRecvByName(const char *from, fq_msg_handler_t handler) { 
     assert(from && "NULL string.");
-    unsigned long from_id = dict_find_module_id_byname(dictModuleNameID, from);
+    unsigned long from_id = dict_find_module_id_byname(from);
     if(unlikely(!__atomic_load_n(&_AllModulesRings[from_id].already_register, __ATOMIC_RELAXED))) {
         fastq_log("No such module %s.\n", from);
         return false;
@@ -1111,15 +1042,15 @@ FastQMsgStatInfo(struct FastQModuleMsgStatInfo *buf, unsigned int buf_mod_size, 
 
     for(dstID=1; dstID<=FASTQ_ID_MAX; dstID++) {
 //        printf("------------------ %d -> reg %d\n",dstID, _AllModulesRings[dstID].already_register);
-        if(!__atomic_load_n(&_AllModulesRings[dstID].already_register, __ATOMIC_RELAXED)) {
+        if(!__atomic_load_n(&_AllModulesRings[dstID].already_register, __ATOMIC_ACQUIRE)) {
             continue;
         }
-        if(!__atomic_load_n(&_AllModulesRings[dstID]._ring, __ATOMIC_RELAXED)) {
+        if(!__atomic_load_n(&_AllModulesRings[dstID]._ring, __ATOMIC_ACQUIRE)) {
             continue;
         }
         for(srcID=0; srcID<=FASTQ_ID_MAX; srcID++) { 
             
-            if(!__atomic_load_n(&_AllModulesRings[dstID]._ring[srcID], __ATOMIC_RELAXED)) {
+            if(!__atomic_load_n(&_AllModulesRings[dstID]._ring[srcID], __ATOMIC_ACQUIRE)) {
                 continue;
             }
         
@@ -1246,19 +1177,5 @@ FastQMsgNum(unsigned int ID,
     return true;
 
 }
-
-weak_alias(FastQCreateModule, FastQCreateModuleStats);
-weak_alias(FastQDeleteModule, FastQDeleteModuleStats);
-weak_alias(FastQAddSet, FastQAddSetStats);
-weak_alias(FastQDump, FastQDumpStats);
-weak_alias(FastQMsgStatInfo, FastQMsgStatInfoStats);
-weak_alias(FastQSend, FastQSendStats);
-weak_alias(FastQSendByName, FastQSendByNameStats);
-weak_alias(FastQTrySend, FastQTrySendStats);
-weak_alias(FastQTrySendByName, FastQTrySendByNameStats);
-weak_alias(FastQRecv, FastQRecvStats);
-weak_alias(FastQRecvByName, FastQRecvByNameStats);
-weak_alias(FastQMsgNum, FastQMsgNumStats);
-
 #pragma GCC diagnostic pop
 

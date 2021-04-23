@@ -157,8 +157,6 @@ VOS_FastQAttachName(const unsigned long moduleID, const char *name);
  *  VOS_FastQDeleteModule - 销毁消息队列
  *  
  *  param[in]   moduleID    模块ID， 范围 1 - FASTQ_ID_MAX
- *  param[in][out]   residual_msgs        保存残留的消息，NULL 时忽略
- *  param[in][out]   residual_nbytes      残留 的 字节数
  *
  *  return 成功true 失败false
  *
@@ -166,8 +164,7 @@ VOS_FastQAttachName(const unsigned long moduleID, const char *name);
  *  将销毁失败
  */
 always_inline bool inline
-VOS_FastQDeleteModule(const unsigned long moduleID, 
-                        void *residual_msgs, int *residual_nbytes);
+VOS_FastQDeleteModule(const unsigned long moduleID);
 
 
 
@@ -355,7 +352,7 @@ VOS_FastQMsgNum(unsigned int ID, unsigned long *nr_enqueues, unsigned long *nr_d
 //#else /* 不带有统计类的接口，时延更低 */
 //# pragma message "[FastQ] Low Latency Class API"
 # define VOS_FastQCreateModule(moduleID, rxset, txset, msgMax, msgSize)    FastQCreateModule(moduleID, rxset, txset, msgMax, msgSize, __FILE__, __func__, __LINE__)
-# define VOS_FastQDeleteModule(moduleID, residual_msgs, residual_nbytes)   FastQDeleteModule(moduleID, residual_msgs, residual_nbytes)
+# define VOS_FastQDeleteModule(moduleID)   FastQDeleteModule(moduleID)
 # define VOS_FastQAttachName(moduleID, Name)                FastQAttachName(moduleID, Name)
 # define VOS_FastQAddSet(moduleID, rxset, txset)            FastQAddSet(moduleID, rxset, txset)
 # define VOS_FastQDump(fp, moduleID)                            FastQDump(fp, moduleID)
@@ -384,8 +381,7 @@ FastQCreateModule(const unsigned long moduleID,
                             const char *_file, const char *_func, const int _line);
 
 always_inline bool inline
-FastQDeleteModule(const unsigned long moduleID, 
-                        void *residual_msgs, int *residual_nbytes);
+FastQDeleteModule(const unsigned long moduleID);
                         
 always_inline bool inline
 FastQAttachName(const unsigned long moduleID, const char *name);

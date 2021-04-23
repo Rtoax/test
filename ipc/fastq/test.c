@@ -13,7 +13,6 @@
 #include <sys/time.h>
 #include <pthread.h>
 
-//#define _FASTQ_STATS //开启统计功能
 #include <fastq.h>
 
 #include "common.h"
@@ -23,10 +22,15 @@
 uint64_t latency_total = 0;
 uint64_t total_msgs = 0;
 uint64_t error_msgs = 0;
+uint64_t send_failed = 0;
+
+
+test_msgs_t *test_msgs[NODE_NUM] = {NULL};
 
 
 void *enqueue_task(void*arg){
     int i =0;
+    bool ret;
     struct enqueue_arg *parg = (struct enqueue_arg *)arg;
     reset_self_cpuset(parg->cpu_list);
     test_msgs_t *ptest_msg = parg->msgs;
@@ -37,31 +41,35 @@ void *enqueue_task(void*arg){
     unsigned long dstModuleId = parg->dstModuleId;
     
     while(1) {
-        pmsg = &ptest_msg[i++%TEST_NUM];
+        pmsg = &ptest_msg[i%TEST_NUM];
         pmsg->latency = RDTSC();
         unsigned long addr = (unsigned long)pmsg;
 
         switch(pmsg->latency%4) {
             case 0:
-                VOS_FastQSend(srcModuleID, dstModuleId, &addr, sizeof(unsigned long));
+                ret = VOS_FastQSend(srcModuleID, dstModuleId, &addr, sizeof(unsigned long));
                 break;
             case 1:
-                VOS_FastQTrySend(srcModuleID, dstModuleId, &addr, sizeof(unsigned long));
+                ret = VOS_FastQTrySend(srcModuleID, dstModuleId, &addr, sizeof(unsigned long));
                 break;
             case 2:
-                VOS_FastQSendByName(ModuleName[srcModuleID], ModuleName[dstModuleId], &addr, sizeof(unsigned long));
+                ret = VOS_FastQSendByName(ModuleName[srcModuleID], ModuleName[dstModuleId], &addr, sizeof(unsigned long));
                 break;
             case 3:
-                VOS_FastQTrySendByName(ModuleName[srcModuleID], ModuleName[dstModuleId], &addr, sizeof(unsigned long));
+                ret = VOS_FastQTrySendByName(ModuleName[srcModuleID], ModuleName[dstModuleId], &addr, sizeof(unsigned long));
                 break;
         }
-        
-//        printf("send: %x,(%x)\n", pmsg->magic, TEST_MSG_MAGIC);
-//        sleep(1);
-        send_cnt++;
+        i = ret?(i+1):i;
+        if(!ret) send_failed++;
+
+        if(ret) {
+//            printf("send: %x,(%x) , ret = %d\n", pmsg->magic, TEST_MSG_MAGIC, ret);
+//            sleep(1);
+            send_cnt++;
+        }
         
         if(send_cnt % 5000000 == 0) {
-            printf("enqueue sleep().\n");
+            printf("enqueue sleep(). send failed %ld\n", send_failed);
             sleep(5);
         }
     }
@@ -76,19 +84,20 @@ void handler_test_msg(void* msg, size_t size)
     test_msgs_t *pmsg;
 
     pmsg = (test_msgs_t *)addr;
-//    printf("recv: %x,(%x)\n", pmsg->magic, TEST_MSG_MAGIC);
     latency_total += RDTSC() - pmsg->latency;
     pmsg->latency = 0;
     if(pmsg->magic != TEST_MSG_MAGIC) {
         error_msgs++;
     }
     
+//    printf("recv: %x,(%x) %ld\n", pmsg->magic, TEST_MSG_MAGIC, total_msgs);
     total_msgs++;
     
-    if(total_msgs % 50000 == 0) {
+    if(total_msgs % 400000 == 0) {
         printf("dequeue. per msgs \033[1;31m%lf ns\033[m, msgs (total %ld, err %ld).\n", 
-                latency_total*1.0/total_msgs/3000000000*1000000000,
+                latency_total*1.0/400000/3000000000*1000000000,
                 total_msgs, error_msgs);
+        latency_total = 0;
     }
 
 }
@@ -98,6 +107,7 @@ void *dequeue_task(void*arg) {
     reset_self_cpuset(parg->cpu_list);
     
     VOS_FastQRecvByName( ModuleName[parg->srcModuleId], handler_test_msg);
+    printf("Dequeue task exit.\n");
     pthread_exit(NULL);
 }
 
@@ -106,10 +116,9 @@ pthread_t new_enqueue_task(unsigned long moduleId, unsigned long dstModuleId, ch
                                unsigned long *RxArray, int nRx,
                                unsigned long *TxArray, int nTx,
                                size_t maxMsg, size_t msgSize,
-                               const char *cpulist) {
-    pthread_t task;
+                               const char *cpulist, bool new_task) {
+    pthread_t task = 0;
     unsigned int i =0;
-    struct enqueue_arg *enqueueArg = malloc(sizeof(struct enqueue_arg));
 
     mod_set rxset, txset;
     MOD_ZERO(&rxset);
@@ -125,21 +134,31 @@ pthread_t new_enqueue_task(unsigned long moduleId, unsigned long dstModuleId, ch
     if(moduleName)
         VOS_FastQAttachName(moduleId, ModuleName[moduleId]);
 
-    
-    test_msgs_t *test_msg = (test_msgs_t *)malloc(sizeof(test_msgs_t)*TEST_NUM);
-    for(i=0;i<TEST_NUM;i++) {
-        test_msg->magic = TEST_MSG_MAGIC + (i%10000==0?1:0); //有比特错误的消息
-//        test_msg[i].magic = TEST_MSG_MAGIC; 
-        test_msg[i].value = 0xff00000000000000 + i+1;
+    test_msgs_t *test_msg = NULL;
+
+    if(!test_msgs[moduleId]) {
+        test_msgs[moduleId] = (test_msgs_t *)malloc(sizeof(test_msgs_t)*TEST_NUM);
+        test_msg = test_msgs[moduleId];
+        for(i=0;i<TEST_NUM;i++) {
+            test_msg[i].magic = TEST_MSG_MAGIC + (i%10000==0?1:0); //有比特错误的消息
+    //        test_msg[i].magic = TEST_MSG_MAGIC; 
+            test_msg[i].value = 0xff00000000000000 + i+1;
+        }
+    } else {
+        test_msg = test_msgs[moduleId];
     }
 
-    enqueueArg->srcModuleId = moduleId;
-    enqueueArg->dstModuleId = dstModuleId;
-    enqueueArg->cpu_list = strdup(cpulist);
-    enqueueArg->msgs = test_msg;
+    if(new_task) {
+        struct enqueue_arg *enqueueArg = malloc(sizeof(struct enqueue_arg));
 
-    pthread_create(&task, NULL, enqueue_task, enqueueArg);
-	pthread_setname_np(task, moduleName?moduleName:"enqueue");
+        enqueueArg->srcModuleId = moduleId;
+        enqueueArg->dstModuleId = dstModuleId;
+        enqueueArg->cpu_list = strdup(cpulist);
+        enqueueArg->msgs = test_msg;
+
+        pthread_create(&task, NULL, enqueue_task, enqueueArg);
+    	pthread_setname_np(task, moduleName?moduleName:"enqueue");
+    }
 
     return task;
 }
@@ -196,36 +215,62 @@ int sig_handler(int signum) {
    }
 }
 
+pthread_t start_enqueue(int node, size_t msgNum, bool new_task) {
+    unsigned long TXarr[] = {NODE_1};
+    return new_enqueue_task(node, NODE_1, ModuleName[node], 
+                                    NULL, 0, TXarr, 1, 
+                                    msgNum, sizeof(long), 
+                                    global_cpu_lists[(node-1)%NR_PROCESSOR], new_task);
+
+}
 
 int main()
 {
     pthread_t dequeueTask;
     pthread_t enqueueTask;
     unsigned long i;
-    unsigned long TXarr[] = {NODE_1};
-
+    size_t msgNum = 64;
     struct itimerval sa;
-    sa.it_value.tv_sec = 10;
+    sa.it_value.tv_sec = 100;
     sa.it_value.tv_usec = 0;
-    sa.it_interval.tv_sec = 10;
+    sa.it_interval.tv_sec = 100;
     sa.it_interval.tv_usec = 0;
 
     signal(SIGINT, sig_handler);
     signal(SIGALRM, sig_handler);
     setitimer(ITIMER_REAL,&sa,NULL);
-
+    
     dequeueTask = new_dequeue_task(NODE_1, ModuleName[NODE_1], 
-                                    NULL, 0, NULL, 0, 16, 
-                                    sizeof(test_msgs_t), global_cpu_lists[NODE_1-1]);
+                                    NULL, 0, NULL, 0, msgNum, 
+                                    sizeof(long), global_cpu_lists[(NODE_1-1)%NR_PROCESSOR]);
 
-    for(i=NODE_2; i<=NODE_5; i++) {
-        enqueueTask = new_enqueue_task(i, NODE_1, ModuleName[i], 
-                                        NULL, 0, TXarr, 1, 
-                                        16, sizeof(test_msgs_t), 
-                                        global_cpu_lists[(i-1)%NR_PROCESSOR]);
+    unsigned long start_node_id = NODE_2;
+    unsigned long end_node_id = NODE_4;
 
+    for(i=start_node_id; i<=end_node_id; i++) {
+        enqueueTask = start_enqueue(i, msgNum, true);
     }
+
 	pthread_setname_np(pthread_self(), "test-1");
+
+
+    /* 动态删除建立发送队列 */
+    while(1) {
+        sleep(1);
+
+        for(i=start_node_id; i<=end_node_id; i++) {
+            printf(" Delete Q %s\n", ModuleName[i]);
+            VOS_FastQDeleteModule(i);
+        }
+        sleep(1);
+        for(i=start_node_id; i<=end_node_id; i++) {
+            printf(" Create Q %s\n", ModuleName[i]);
+            start_enqueue(i, msgNum, false);
+        }
+        
+        sleep(5);
+    }
+    
 
     pthread_join(dequeueTask, NULL);
     pthread_join(enqueueTask, NULL);

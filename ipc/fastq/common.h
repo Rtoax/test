@@ -16,6 +16,7 @@ enum {
     NODE_15,
     NODE_16,
     NODE_17,
+    NODE_NUM
 };
 
 const char *ModuleName[] = {

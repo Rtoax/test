@@ -9,7 +9,7 @@ redis_dict_objs=""
 for dict in ${redis_dict_srcs[@]}
 do 
 	echo "Compile $dict -> ${dict%.*}.o"
-	gcc $redis_dict_dir/$dict -c -o ${dict%.*}.o -I$redis_dict_dir -ltcmalloc
+	gcc $redis_dict_dir/$dict -c -o ${dict%.*}.o -I$redis_dict_dir -ltcmalloc -g
 	redis_dict_objs="$redis_dict_objs ${dict%.*}.o"
 done
 

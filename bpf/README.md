@@ -29,5 +29,7 @@ Berkeley Packet Filter
 
 
 
+# /proc
 
+* /sys/kernel/debug/tracing/events/
 

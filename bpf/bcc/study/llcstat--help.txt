@@ -1,0 +1,12 @@
+usage: llcstat [-h] [-c SAMPLE_PERIOD] [duration]
+
+Summarize cache references and misses by PID
+
+positional arguments:
+  duration              Duration, in seconds, to run
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -c SAMPLE_PERIOD, --sample_period SAMPLE_PERIOD
+                        Sample one in this many number of cache reference /
+                        miss events

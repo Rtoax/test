@@ -1,0 +1,15 @@
+usage: statsnoop [-h] [-t] [-x] [-p PID]
+
+Trace stat() syscalls
+
+optional arguments:
+  -h, --help         show this help message and exit
+  -t, --timestamp    include timestamp on output
+  -x, --failed       only show failed stats
+  -p PID, --pid PID  trace this PID only
+
+examples:
+    ./statsnoop           # trace all stat() syscalls
+    ./statsnoop -t        # include timestamps
+    ./statsnoop -x        # only show failed stats
+    ./statsnoop -p 181    # only trace PID 181

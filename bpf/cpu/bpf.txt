@@ -1,0 +1,17 @@
+
+BPF CPU 相关命令
+
+* syscount
+* execsnoop
+* exitsnoop
+* cpudist
+* runqlat
+* runqlen
+* offcputime
+* softirqs
+* smpcalls
+* hardirqs
+
+* llcstat
+* cpufreq
+

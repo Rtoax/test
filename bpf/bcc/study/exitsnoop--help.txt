@@ -1,0 +1,22 @@
+usage: exitsnoop [-h] [-t] [--utc] [-p PID] [--label LABEL] [-x]
+                 [--per-thread]
+
+Trace all process termination (exit, fatal signal)
+
+optional arguments:
+  -h, --help         show this help message and exit
+  -t, --timestamp    include timestamp (local time default)
+  --utc              include timestamp in UTC (-t implied)
+  -p PID, --pid PID  trace this PID only
+  --label LABEL      label each line
+  -x, --failed       trace only fails, exclude exit(0)
+  --per-thread       trace per thread termination
+
+examples:
+    exitsnoop                # trace all process termination
+    exitsnoop -x             # trace only fails, exclude exit(0)
+    exitsnoop -t             # include timestamps (local time)
+    exitsnoop --utc          # include timestamps (UTC)
+    exitsnoop -p 181         # only trace PID 181
+    exitsnoop --label=exit   # label each output line with 'exit'
+    exitsnoop --per-thread   # trace per thread termination

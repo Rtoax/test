@@ -507,7 +507,7 @@ FastQCreateModule(const unsigned long module_id,
     bool after_status = false;
     if(!__atomic_compare_exchange_n(&this_module->already_register, &after_status, 
                                         true, 0, __ATOMIC_RELEASE, __ATOMIC_RELAXED)) {
-        fastq_log(stderr, "\033[1;5;31mModule ID %ld already register in file <%s>'s function <%s> at line %d\033[m\n", \
+        fastq_log("\033[1;5;31mModule ID %ld already register in file <%s>'s function <%s> at line %d\033[m\n", \
                         module_id,
                         this_module->_file,
                         this_module->_func,
@@ -548,7 +548,7 @@ FastQCreateModule(const unsigned long module_id,
     event.events = EPOLLIN; //必须采用水平触发
     epoll_ctl(this_module->epfd, EPOLL_CTL_ADD, event.data.fd, &event);
     
-    fastq_log(stderr, "Create FastQ module with epoll, moduleID = %ld.\n", module_id);
+    fastq_log("Create FastQ module with epoll, moduleID = %ld.\n", module_id);
     
 #elif defined(_FASTQ_SELECT)
     
@@ -560,7 +560,7 @@ FastQCreateModule(const unsigned long module_id,
     }
     pthread_rwlock_unlock(&this_module->selector.rwlock);
     
-    fastq_log(stderr, "Create FastQ module with select, moduleID = %ld.\n", module_id);
+    fastq_log("Create FastQ module with select, moduleID = %ld.\n", module_id);
     
 #endif
 
@@ -667,7 +667,7 @@ FastQCreateModule(const unsigned long module_id,
         }
         if(!__atomic_load_n(&peer_module->_ring[module_id], __ATOMIC_RELAXED)) {
 
-            fastq_log("create peer ring. %ld -> %ld \n", module_id, i);
+            fastq_log("create peer ring. %ld -> %d \n", module_id, i);
             if(MOD_ISSET(i, &this_module->tx.set) || 
                MOD_ISSET(module_id, &peer_module->rx.set)) {
                
@@ -792,7 +792,7 @@ FastQDeleteModule(const unsigned long moduleID) {
         pthread_rwlock_wrlock(&this_module->rx.rwlock);
         if(MOD_ISSET(i, &this_module->rx.set)) {
             MOD_CLR(i, &this_module->rx.set);
-            fastq_log("delete ring %ld -> %ld\n", i, moduleID);
+            fastq_log("delete ring %d -> %ld\n", i, moduleID);
             __fastq_destroy_ring(this_module, i, moduleID);
         }
         pthread_rwlock_unlock(&this_module->rx.rwlock);
@@ -801,7 +801,7 @@ FastQDeleteModule(const unsigned long moduleID) {
         pthread_rwlock_wrlock(&this_module->tx.rwlock);
         if(MOD_ISSET(i, &this_module->tx.set)) {
             MOD_CLR(i, &this_module->tx.set);
-            fastq_log("delete ring %ld -> %ld\n", moduleID, i);
+            fastq_log("delete ring %ld -> %d\n", moduleID, i);
             __fastq_destroy_ring( peer_module, moduleID, i);
         }
         pthread_rwlock_unlock(&this_module->tx.rwlock);

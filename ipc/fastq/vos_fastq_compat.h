@@ -24,15 +24,7 @@ LONG VOS_SendAsynMsg2Module(LONG dst_slot,CHAR dst_moduleName[MODULE_NAME_LEN],C
 
 LONG VOS_SendAsynMsg2Module_byID(LONG dst_slot,ULONG dst_moduleID,ULONG src_moduleID, LONG msgCode,VOID *msgData,LONG msgDataLen,LONG memType);
 
-LONG VOS_SendAsynMsg2Module_byID_withQue(LONG dst_slot,ULONG dst_moduleID,ULONG src_moduleID, LONG msgCode,VOID *msgData,LONG msgDataLen,LONG memType);
-
 LONG VOS_SendSynMsg2Module(LONG dst_slot,CHAR dst_moduleName[MODULE_NAME_LEN],CHAR src_moduleName[MODULE_NAME_LEN], LONG msgCode,VOID *msgData,LONG msgDataLen,VOID *ackData,LONG *ackDataLen,LONG timeout);
-
-LONG VOS_SendAsynMsg2ModuleEx(LONG dst_slot,CHAR dst_moduleName[MODULE_NAME_LEN],CHAR src_moduleName[MODULE_NAME_LEN], LONG msgCode,VOID *msgData,LONG msgDataLen, module_comm_type_t commType,VOID *optval,LONG optlen);
-
-LONG VOS_SendSynMsg2ModuleEx(LONG dst_slot,CHAR dst_moduleName[MODULE_NAME_LEN],CHAR src_moduleName[MODULE_NAME_LEN], LONG msgCode,VOID *msgData,LONG msgDataLen,VOID *ackData,LONG *ackDataLen,LONG timeout, module_comm_type_t commType,VOID *optval,LONG optlen);
-
-LONG VOS_SendAsynMsg2Module_Raw(LONG dst_slot,CHAR dst_moduleName[MODULE_NAME_LEN],CHAR src_moduleName[MODULE_NAME_LEN], ULONG aulMsg[VOS_QUEUE_MSG_SIZE]);
 
 LONG VOS_SendSynAckMsg(ULONG aulMsg[VOS_QUEUE_MSG_SIZE],VOID *ackData,LONG ackDataLen);
 

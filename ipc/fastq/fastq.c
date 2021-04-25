@@ -20,6 +20,8 @@
 *                     接口统一，只支持统计类接口
 *       2021年4月22日 模块名索引不是必要的
 *       2021年4月23日 队列动态删建
+*       2021年4月25日 如果注册时未填写 rxset 和 txset，将在发送第一条消失时候添加并创建底层环形队列
+*       2021年4月25日 添加 msgCode,msgType,moduleID
 \**********************************************************************************************************************/
 #include <stdint.h>
 #include <assert.h>
@@ -402,7 +404,10 @@ __fastq_create_ring(struct FastQModule *pmodule, const unsigned long src, const 
 
     fastq_log("Create ring : src(%lu)->dst(%lu) ringsize(%d) msgsize(%d).\n", src, dst, ring_size, msg_size);
 
-    unsigned long ring_real_size = sizeof(struct FastQRing) + ring_size*(msg_size+sizeof(size_t));
+    /* 消息大小 + 实际发送大小字段 + msgType + msgCode, */
+    unsigned long ring_node_size = msg_size + sizeof(size_t) + sizeof(unsigned long)*2;
+
+    unsigned long ring_real_size = sizeof(struct FastQRing) + ring_size*(ring_node_size);
                       
     struct FastQRing *new_ring = FastQMalloc(ring_real_size);
     assert(new_ring && "Allocate FastQRing Failed. (OOM error)");
@@ -413,7 +418,7 @@ __fastq_create_ring(struct FastQModule *pmodule, const unsigned long src, const 
     new_ring->dst = dst;
     new_ring->_size = ring_size - 1;
     
-    new_ring->_msg_size = msg_size + sizeof(size_t);
+    new_ring->_msg_size = ring_node_size;
     new_ring->_evt_fd = eventfd(0, EFD_CLOEXEC);
     assert(new_ring->_evt_fd && "Too much eventfd called, no fd to use."); //都TMD没有fd了，你也是厉害
     
@@ -885,9 +890,9 @@ FastQAttachName(const unsigned long moduleID, const char *name) {
  *  __FastQSend - 公共发送函数
  */
 always_inline static bool inline
-__FastQSend(struct FastQRing *ring, const void *msg, const size_t size) {
+__FastQSend(struct FastQRing *ring, unsigned long msgType, unsigned long msgCode, const void *msg, const size_t size) {
     assert(ring);
-    assert(size <= (ring->_msg_size - sizeof(size_t)));
+    assert(size <= (ring->_msg_size - sizeof(size_t) - sizeof(unsigned long)*2));
 
     unsigned int h = (ring->_head - 1) & ring->_size;
     unsigned int t = ring->_tail;
@@ -895,11 +900,12 @@ __FastQSend(struct FastQRing *ring, const void *msg, const size_t size) {
         return false;
     }
 
-
     char *d = &ring->_ring_data[t*ring->_msg_size];
     
     memcpy(d, &size, sizeof(size));
-    memcpy(d + sizeof(size), msg, size);
+    memcpy(d + sizeof(size), &msgType, sizeof(unsigned long));
+    memcpy(d + sizeof(size) + sizeof(unsigned long), &msgCode, sizeof(unsigned long));
+    memcpy(d + sizeof(size) + sizeof(unsigned long)*2, msg, size);
 
     // Barrier is needed to make sure that item is updated 
     // before it's made available to the reader
@@ -911,6 +917,24 @@ __FastQSend(struct FastQRing *ring, const void *msg, const size_t size) {
     ring->_tail = (t + 1) & ring->_size;
     return true;
 }
+
+static inline struct FastQRing * __create_ring_when_send(unsigned int from, unsigned int to) {
+
+    struct FastQRing *ring = NULL;
+    
+    /* 创建环形队列 */
+    __fastq_create_ring(&_AllModulesRings[to], from, to);
+    
+    ring = __atomic_load_n(&_AllModulesRings[to]._ring[from], __ATOMIC_RELAXED);
+    
+    MOD_SET(from, &_AllModulesRings[to].rx.set);
+    MOD_SET(to, &_AllModulesRings[from].tx.set);
+
+    eventfd_write(_AllModulesRings[to].notify_new_enqueue_evt_fd, 1);
+
+    return ring;
+}
+
 
 /**
  *  FastQSend - 发送消息（轮询直至成功发送）
@@ -925,13 +949,13 @@ __FastQSend(struct FastQRing *ring, const void *msg, const size_t size) {
  *  注意：from 和 to 需要使用 FastQCreateModule 注册后使用
  */
 always_inline bool inline
-FastQSend(unsigned int from, unsigned int to, const void *msg, size_t size) {
+FastQSend(unsigned int from, unsigned int to, unsigned long msgType, unsigned long msgCode, const void *msg, size_t size) {
 
     struct FastQRing *ring = __atomic_load_n(&_AllModulesRings[to]._ring[from], __ATOMIC_RELAXED);
     if(unlikely(!ring)) {
-        return false;
+        ring = __create_ring_when_send(from, to);
     }
-    while (!__FastQSend(ring, msg, size)) {__relax();}
+    while (!__FastQSend(ring, msgType, msgCode, msg, size)) {__relax();}
     
     eventfd_write(ring->_evt_fd, 1);
     
@@ -939,7 +963,7 @@ FastQSend(unsigned int from, unsigned int to, const void *msg, size_t size) {
 }
 
 always_inline bool inline
-FastQSendByName(const char* from, const char* to, const void *msg, size_t size) {
+FastQSendByName(const char* from, const char* to, unsigned long msgType, unsigned long msgCode, const void *msg, size_t size) {
 
     assert(from && "NULL string.");
     assert(to && "NULL string.");
@@ -952,7 +976,7 @@ FastQSendByName(const char* from, const char* to, const void *msg, size_t size) 
     } if(unlikely(!__atomic_load_n(&_AllModulesRings[to_id].already_register, __ATOMIC_RELAXED))) {
         return false;
     }
-    return FastQSend(from_id, to_id, msg, size);
+    return FastQSend(from_id, to_id, msgType, msgCode, msg, size);
 }
 
 
@@ -970,13 +994,13 @@ FastQSendByName(const char* from, const char* to, const void *msg, size_t size) 
  *  注意：from 和 to 需要使用 FastQCreateModule 注册后使用
  */
 always_inline bool inline
-FastQTrySend(unsigned int from, unsigned int to, const void *msg, size_t size) {
+FastQTrySend(unsigned int from, unsigned int to, unsigned long msgType, unsigned long msgCode, const void *msg, size_t size) {
 
     struct FastQRing *ring = __atomic_load_n(&_AllModulesRings[to]._ring[from], __ATOMIC_RELAXED);
     if(unlikely(!ring)) {
-        return false;
+        ring = __create_ring_when_send(from, to);
     }
-    bool ret = __FastQSend(ring, msg, size);
+    bool ret = __FastQSend(ring, msgType, msgCode, msg, size);
     if(ret) {
         eventfd_write(ring->_evt_fd, 1);
     }
@@ -984,7 +1008,7 @@ FastQTrySend(unsigned int from, unsigned int to, const void *msg, size_t size) {
 }
 
 always_inline bool inline
-FastQTrySendByName(const char* from, const char* to, const void *msg, size_t size) {
+FastQTrySendByName(const char* from, const char* to, unsigned long msgType, unsigned long msgCode, const void *msg, size_t size) {
 
     assert(from && "NULL string.");
     assert(to && "NULL string.");
@@ -996,11 +1020,11 @@ FastQTrySendByName(const char* from, const char* to, const void *msg, size_t siz
         return false;
     }
 
-    return FastQTrySend(from_id, to_id, msg, size);
+    return FastQTrySend(from_id, to_id, msgType, msgCode, msg, size);
 }
 
 always_inline static bool inline
-__FastQRecv(struct FastQRing *ring, void *msg, size_t *size) {
+__FastQRecv(struct FastQRing *ring, unsigned long *type, unsigned long *code, void *msg, size_t *size) {
 
     unsigned int t = ring->_tail;
     unsigned int h = ring->_head;
@@ -1012,13 +1036,22 @@ __FastQRecv(struct FastQRing *ring, void *msg, size_t *size) {
     char *d = &ring->_ring_data[h*ring->_msg_size];
 
     size_t recv_size;
+    unsigned long msgType;
+    unsigned long msgCode;
+    
     memcpy(&recv_size, d, sizeof(size_t));
+    memcpy(&msgType, d+sizeof(size_t), sizeof(unsigned long));
+    memcpy(&msgCode, d+sizeof(size_t)+sizeof(unsigned long), sizeof(unsigned long));
+    
     if(unlikely(recv_size > *size)) {
         printf("recv size %ld > buff size %ld\n", recv_size, *size);
         assert(recv_size <= *size && "buffer too small");
     }
     *size = recv_size;
-    memcpy(msg, d + sizeof(size_t), recv_size);
+    *type = msgType;
+    *code = msgCode;
+    
+    memcpy(msg, d + sizeof(size_t) + sizeof(unsigned long)*2, recv_size);
 
     mbarrier();
     //统计功能
@@ -1064,6 +1097,7 @@ FastQRecv(unsigned int from, fq_msg_handler_t handler) {
     size_t size = sizeof(addr);
     struct FastQRing *ring = NULL;
     fd_set readset;
+    unsigned long msgType, msgCode;
     
     struct FastQModule *this_module = &_AllModulesRings[from];
 
@@ -1116,11 +1150,11 @@ FastQRecv(unsigned int from, fq_msg_handler_t handler) {
             /* 轮询接收 */
             for(; cnt--;) {
                 size = sizeof(addr);
-                while (!__FastQRecv(ring, addr, &size)) {
+                while (!__FastQRecv(ring, &msgType, &msgCode, addr, &size)) {
                     __relax();
                 }
                 /* 调用应用层 接收函数 */
-                handler((void*)addr, size);
+                handler(ring->src, ring->dst, msgType, msgCode, (void*)addr, size);
             }
 
         }

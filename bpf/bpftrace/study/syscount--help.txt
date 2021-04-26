@@ -1,0 +1,43 @@
+USAGE:
+    bpftrace [options] filename
+    bpftrace [options] -e 'program'
+
+OPTIONS:
+    -B MODE        output buffering mode ('full', 'none')
+    -f FORMAT      output format ('text', 'json')
+    -o file        redirect bpftrace output to file
+    -d             debug info dry run
+    -dd            verbose debug info dry run
+    -b             force BTF (BPF type format) processing
+    -e 'program'   execute this program
+    -h, --help     show this help message
+    -I DIR         add the directory to the include search path
+    --include FILE add an #include file before preprocessing
+    -l [search]    list probes
+    -p PID         enable USDT probes on PID
+    -c 'CMD'       run CMD and enable USDT probes on resulting process
+    --unsafe       allow unsafe builtin functions
+    -v             verbose messages
+    --info         Print information about kernel BPF support
+    -V, --version  bpftrace version
+
+ENVIRONMENT:
+    BPFTRACE_STRLEN             [default: 64] bytes on BPF stack per str()
+    BPFTRACE_NO_CPP_DEMANGLE    [default: 0] disable C++ symbol demangling
+    BPFTRACE_MAP_KEYS_MAX       [default: 4096] max keys in a map
+    BPFTRACE_CAT_BYTES_MAX      [default: 10k] maximum bytes read by cat builtin
+    BPFTRACE_MAX_PROBES         [default: 512] max number of probes
+    BPFTRACE_LOG_SIZE           [default: 409600] log size in bytes
+    BPFTRACE_NO_USER_SYMBOLS    [default: 0] disable user symbol resolution
+    BPFTRACE_CACHE_USER_SYMBOLS [default: auto] enable user symbol cache
+    BPFTRACE_VMLINUX            [default: none] vmlinux path used for kernel symbol resolution
+    BPFTRACE_BTF                [default: none] BTF file
+
+EXAMPLES:
+bpftrace -l '*sleep*'
+    list probes containing "sleep"
+bpftrace -e 'kprobe:do_nanosleep { printf("PID %d sleeping...\n", pid); }'
+    trace processes calling sleep
+bpftrace -e 'tracepoint:raw_syscalls:sys_enter { @[comm] = count(); }'
+    count syscalls by process name
+

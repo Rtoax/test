@@ -1,0 +1,13 @@
+usage: tplist [-h] [-p PID] [-l LIB] [-v] [filter]
+
+Display kernel tracepoints or USDT probes and their formats.
+
+positional arguments:
+  filter             A filter that specifies which probes/tracepoints to print
+
+optional arguments:
+  -h, --help         show this help message and exit
+  -p PID, --pid PID  List USDT probes in the specified process
+  -l LIB, --lib LIB  List USDT probes in the specified library or executable
+  -v                 Increase verbosity level (print variables, arguments,
+                     etc.)

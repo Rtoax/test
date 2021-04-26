@@ -25,6 +25,7 @@
 #ifndef __fAStMQ_H
 #define __fAStMQ_H 1
 
+#include <stdio.h>
 #include <stdbool.h>
 
 

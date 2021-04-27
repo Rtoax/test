@@ -291,7 +291,7 @@ int main()
                                     sizeof(long), global_cpu_lists[(NODE_1-1)%NR_PROCESSOR]);
 
     unsigned long start_node_id = NODE_2;
-    unsigned long end_node_id = NODE_2;
+    unsigned long end_node_id = NODE_4;
 
     for(i=start_node_id; i<=end_node_id; i++) {
         enqueueTask = start_enqueue(i, msgNum, true);

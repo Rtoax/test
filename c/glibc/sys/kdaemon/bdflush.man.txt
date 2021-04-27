@@ -1,62 +1,80 @@
-BDFLUSH(2)                                  Linux Programmer's Manual                                 BDFLUSH(2)
+bdflush(8)                                   System Manager's Manual                                  bdflush(8)
 
 
 
 NAME
-       bdflush - start, flush, or tune buffer-dirty-flush daemon
+       bdflush - 将dirty缓存写回到磁盘的核心守护进程。
 
-SYNOPSIS
-       #include <sys/kdaemon.h>
+总
+       bdflush [opt]
 
-       int bdflush(int func, long *address);
-       int bdflush(int func, long data);
+描
+       bdflush           被用来启动核心守护进程将内存中的dirty缓存写到磁盘上。真正清洁工作是一个核心程序完成的。
+       bdflush实际上只是派生出一个新的进程调用这个永远不会返回的核心程序。
 
-DESCRIPTION
-       Note:  Since Linux 2.6, this system call is deprecated and does nothing.  It is likely to disappear alto‐
-       gether in a future kernel release.  Nowadays, the task performed by bdflush() is handled  by  the  kernel
-       pdflush thread.
+       bdflush    实际上也派生出第二个守护进程，这个进程实际上象一个传统的更新程序，除了那些缓存在变化了一个位前
+       不会被考虑用来进行写操作。当缓存的dirty位被置位时，时钟开始计时。当经过一定的时间间隔后，缓存将
+       会被写回到磁盘上。对于数据缓存和位元数据缓存（比如目录，位图，间接区块等等）来说，时间间隔是不
+       同的。当你在运行bdflush时使用了一些命令行参数的时候，当前一些配置会显示在屏幕上。数据缓存刷新间
+       隔的默认值是30秒，位元数据是5秒。
 
-       bdflush()  starts,  flushes, or tunes the buffer-dirty-flush daemon.  Only a privileged process (one with
-       the CAP_SYS_ADMIN capability) may call bdflush().
+       在正常情况下，两个守护进程使用/etc/rc下的一个
 
-       If func is negative or 0, and no daemon has been started, then bdflush() enters the daemon code and never
-       returns.
+       /sbin/update
 
-       If func is 1, some dirty buffers are written to disk.
+       命令来执行。
+       值得注意的是你需要让这个两个守护进程同时运行，因为每个守护进程都有其作用。同时也要注意这个命令
+       需要在任何主I/O设备运行前执行。需要特别说明的是，在对文件系统使用fsck命令检查前或者将文件系统激
+       活为读写模式前应该调用update这个命令。
 
-       If func is 2 or more and is even (low bit is 0), then address is the address of a long word, and the tun‐
-       ing parameter numbered (func-2)/2 is returned to the caller in that address.
+       当bdflush被一个没有超级权限的用户执行时，它就会调用flush和sync函数，然后退出。千万不要同时运行20
+       个update守护进程……
 
-       If func is 3 or more and is odd (low bit is 1), then data is a long word,  and  the  kernel  sets  tuning
-       parameter numbered (func-3)/2 to that value.
+“命
+       -d   显示核心参数。使用这个选项可以防止守护进程的运行。
 
-       The  set  of parameters, their values, and their valid ranges are defined in the Linux kernel source file
-       fs/buffer.c.
+       -h   打印出使用方法（帮助）。
 
-RETURN VALUE
-       If func is negative or 0 and the daemon successfully starts, bdflush()  never  returns.   Otherwise,  the
-       return value is 0 on success and -1 on failure, with errno set to indicate the error.
+       -s   如果bdflush的默认为以前的update方法，就经常性的调用sync。 默认值：30秒。
 
-ERRORS
-       EBUSY  An attempt was made to enter the daemon code after another process has already entered.
+       -f   经常性的调用flush。默认值：5秒。
 
-       EFAULT address points outside your accessible address space.
+       -0   检测dirty缓存区块时使用LRU算法的最大块。
 
-       EINVAL An  attempt was made to read or write an invalid parameter number, or to write an invalid value to
-              a parameter.
+       -1   bdflush激活时需要写到磁盘上的最大dirty缓存数量。
 
-       EPERM  Caller does not have the CAP_SYS_ADMIN capability.
+       -2   将clean缓存挂到标志着空闲队列的refill_freelist列表上的数字标识。
 
-CONFORMING TO
-       bdflush() is Linux-specific and should not be used in programs intended to be portable.
+       -3   在refill_freelist队列中激活bdflush的dirty区块临界值。
 
-SEE ALSO
-       fsync(2), sync(2), sync(8), update(8)
+       -4   查询空闲簇所使用的缓存百分比。
 
-COLOPHON
-       This page is part of release 3.53 of the Linux man-pages project.  A  description  of  the  project,  and
-       information about reporting bugs, can be found at http://www.kernel.org/doc/man-pages/.
+       -5   数据缓存在刷新前的可更新时间。
+
+       -6   非数据（目录，位图等等）缓存在刷新前可更新时间。
+
+       -7   快速缓存调用平均持续时间。
+
+       -8   LAV比率（用来决定缓存更迭的临界值）
+
+作
+       bdflush                  是由Eric                  Youngdale                  <ericy@gnu.ai.mit.edu>编写.
+       主要目的是提高核心刷新dirty缓存的灵活性，并且增加了缓存集群技术。   其他的作者还有Phil   Bostley   <bost‐
+       ley@cs.colorado.edu> 和 Daniel Quinlan <quinlan@yggdrasil.com>.
+
+缺
+       如果有的话，那一定是在核心代码中。
+
+
+[中
+       billpan <billpan@netease.com>
+
+[中
+       2002/01/10
+
+《
+       http://cmpp.linuxforum.net
 
 
 
-Linux                                              2012-03-05                                         BDFLUSH(2)
+                                                    Aug 1994                                          bdflush(8)

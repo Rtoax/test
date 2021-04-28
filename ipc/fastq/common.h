@@ -50,6 +50,7 @@ typedef struct  {
 #define TEST_MSG_MAGIC 0x123123ff    
     unsigned long msgType;
     unsigned long msgCode;
+    unsigned long msgSubCode;
     unsigned long value;
     int magic;
     uint64_t latency;

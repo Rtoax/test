@@ -34,6 +34,7 @@ uint64_t error_msgs = 0;
 uint64_t send_failed = 0;
 uint64_t msg_type_statistic[MSGCODE_MAX] = {0};
 uint64_t msg_code_statistic[MSGCODE_MAX] = {0};
+uint64_t msg_subcode_statistic[MSGCODE_MAX] = {0};
 uint64_t msg_src_statistic[NODE_NUM] = {0};
 
 
@@ -56,26 +57,32 @@ void *enqueue_task(void*arg){
         pmsg = &ptest_msg[i%TEST_NUM];
         pmsg->msgType = i%MSGCODE_MAX;
         pmsg->msgCode = i%MSGCODE_MAX;
+        pmsg->msgSubCode = i%MSGCODE_MAX;
         pmsg->latency = RDTSC();
         unsigned long addr = (unsigned long)pmsg;
         unsigned long msgType = pmsg->msgType;
         unsigned long msgCode = pmsg->msgCode;
+        unsigned long msgSubCode = pmsg->msgSubCode;
         switch(i%4) {
             case 0:
                 pmsg->msgCode = MSGCODE_1;
-                ret = VOS_FastQSend(srcModuleID, dstModuleId, msgType, msgCode, &addr, sizeof(unsigned long));
+                pmsg->msgSubCode = MSGCODE_1;
+                ret = VOS_FastQSend(srcModuleID, dstModuleId, msgType, msgCode, msgSubCode, &addr, sizeof(unsigned long));
                 break;
             case 1:
                 pmsg->msgCode = MSGCODE_2;
-                ret = VOS_FastQTrySend(srcModuleID, dstModuleId, msgType, msgCode, &addr, sizeof(unsigned long));
+                pmsg->msgSubCode = MSGCODE_2;
+                ret = VOS_FastQTrySend(srcModuleID, dstModuleId, msgType, msgCode, msgSubCode, &addr, sizeof(unsigned long));
                 break;
             case 2:
                 pmsg->msgCode = MSGCODE_3;
-                ret = VOS_FastQSendByName(ModuleName[srcModuleID], ModuleName[dstModuleId], msgType, msgCode, &addr, sizeof(unsigned long));
+                pmsg->msgSubCode = MSGCODE_3;
+                ret = VOS_FastQSendByName(ModuleName[srcModuleID], ModuleName[dstModuleId], msgType, msgCode, msgSubCode, &addr, sizeof(unsigned long));
                 break;
             case 3:
                 pmsg->msgCode = MSGCODE_4;
-                ret = VOS_FastQTrySendByName(ModuleName[srcModuleID], ModuleName[dstModuleId], msgType, msgCode, &addr, sizeof(unsigned long));
+                pmsg->msgSubCode = MSGCODE_4;
+                ret = VOS_FastQTrySendByName(ModuleName[srcModuleID], ModuleName[dstModuleId], msgType, msgCode, msgSubCode, &addr, sizeof(unsigned long));
                 break;
         }
         i = ret?(i+1):i;
@@ -97,7 +104,7 @@ void *enqueue_task(void*arg){
 }
 
 
-void handler_test_msg(unsigned long src, unsigned long dst,unsigned long type, unsigned long code, void* msg, size_t size)
+void handler_test_msg(unsigned long src, unsigned long dst,unsigned long type, unsigned long code, unsigned long subcode, void* msg, size_t size)
 {
     unsigned long addr =  *(unsigned long*)msg;
     test_msgs_t *pmsg;
@@ -116,12 +123,14 @@ void handler_test_msg(unsigned long src, unsigned long dst,unsigned long type, u
     total_msgs++;
     msg_type_statistic[type]++;
     msg_code_statistic[code]++;
+    msg_subcode_statistic[subcode]++;
     msg_src_statistic[src]++;
     
     if(total_msgs % 400000 == 0) {
         printf("dequeue. per msgs \033[1;31m%lf ns\033[m, msgs (total %ld,  err %ld).\n"\
                 "                               Type[%8ld,%8ld,%8ld,%8ld,%8ld]\n"\
                 "                               Code[%8ld,%8ld,%8ld,%8ld,%8ld]\n"\
+                "                            SubCode[%8ld,%8ld,%8ld,%8ld,%8ld]\n"\
                 "                                Src[%8ld,%8ld,%8ld,%8ld,%8ld]\n", 
                 latency_total*1.0/400000/3000000000*1000000000,
                 total_msgs,
@@ -137,6 +146,12 @@ void handler_test_msg(unsigned long src, unsigned long dst,unsigned long type, u
                 msg_code_statistic[MSGCODE_2],
                 msg_code_statistic[MSGCODE_3],
                 msg_code_statistic[MSGCODE_4],
+                
+                msg_subcode_statistic[MSGCODE_0],
+                msg_subcode_statistic[MSGCODE_1],
+                msg_subcode_statistic[MSGCODE_2],
+                msg_subcode_statistic[MSGCODE_3],
+                msg_subcode_statistic[MSGCODE_4],
                 
                 msg_src_statistic[NODE_1],
                 msg_src_statistic[NODE_2],

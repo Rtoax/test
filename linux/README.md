@@ -34,6 +34,7 @@
 * `dma`: 直接内存访问
 * `driver`: 驱动
 * `drm`: DRM 是Linux目前的主流图形显示框架
+* `DTrace`: dtrace
 * `eBPF`: extend BPF
 * `env`: 牛逼的环境变量，例如 LD_PRELOAD
 * `essential`: 基础性内容
@@ -80,6 +81,7 @@
 * `SMP`: SMP-对称多处理 （Symmetrical Multi-Processing）
 * `study`: 学习
 * `syscalls`: 系统调用
+* `sysstat`: System performance tools for the Linux operating system
 * `timer`: 定时器 hrtimer等
 * `timer_list`: 一个模块示例
 * `vDSO`: Virtual Dynamically-lined Shared Object（为加快系统调用的速度）

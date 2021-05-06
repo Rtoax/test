@@ -32,6 +32,10 @@ int main()
         printf("aaaaaaaaaaaaaaa\n");
     }while(0);
 
+	while(0) {
+		printf("while(0)\n");
+	}
+	printf("while(0) done.\n");
 
 	do{sleep(1);}while(1);
 

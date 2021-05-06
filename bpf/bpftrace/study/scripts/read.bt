@@ -1,0 +1,13 @@
+// read.bt file
+ tracepoint:syscalls:sys_enter_read
+ {
+   @start[tid] = nsecs;
+ }
+ 
+ tracepoint:syscalls:sys_exit_read / @start[tid] /
+ {
+   @times = hist(nsecs - @start[tid]);
+   delete(@start[tid]);
+ }
+ 
+// bpftrace read.bt

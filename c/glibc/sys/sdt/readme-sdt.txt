@@ -5,4 +5,5 @@ SDT (Statically Defined Tracing)预定义静态跟踪
 * test/sdt/USDT/
 * test/sdt/github/
 * test/c/glibc/sys/sdt/
+* test/bpf/bpftrace/study/usdt
 * 

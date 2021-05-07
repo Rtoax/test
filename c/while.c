@@ -32,8 +32,9 @@ int main()
         printf("aaaaaaaaaaaaaaa\n");
     }while(0);
 
-	while(0) {
-		printf("while(0)\n");
+	while((unsigned int)0) {
+		if(-1)
+			printf("while(0)\n");
 	}
 	printf("while(0) done.\n");
 

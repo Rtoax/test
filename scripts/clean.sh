@@ -2,7 +2,7 @@
 # 荣涛 
 
 function cleanall {
-	filename=("*.o" "*.d" "*.gch" "*~"  "*.out" "core.*" \
+	filename=("*.o" "*.gch" "*~"  "*.out" "core.*" \
 				"vgcore.*" "*.exe" "*.so" "*.a" "perf.data*"\
 				"trace.dat")
 	for name in ${filename[@]}; do

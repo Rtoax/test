@@ -1,0 +1,132 @@
+DD(1)                                        General Commands Manual                                       DD(1)
+
+
+
+NAME
+       dd - 转换和拷贝文件
+
+摘
+       dd  [--help] [--version] [if=file] [of=file] [ibs=bytes] [obs=bytes] [bs=bytes] [cbs=bytes] [skip=blocks]
+       [seek=blocks] [count=blocks] [conv={ascii, ebcdic, ibm, block,  unblock,  lcase,  ucase,  swab,  noerror,
+       notrunc, sync}]
+
+描
+       当进行非强制的转换的时候，使用指定的输入和输出块大小拷贝文件 （默认是从标准输入到标准输出。）
+
+       它每次从输入读取指定大小的一个块（默认是512字节）。  如果使用 bs=bytes 选项，并且没有转换，除了指定 sync,
+       noerror,   或   notrunc    之外，    那么dd将把全部读到的数据（可以比请求读的少）    写到独立的输出块去。
+       这个输出块的长度和读到的数据                      完全一样，除非指定使用                     sync（
+       转换，那样的话，数据结尾处将追加NUL字符（或空格，见下）。
+
+       其他情况下，输入的时候每次读一个块，然后处理，并将     输出结果收集起来，最后写到指定大小的数据块中去。最
+       终的输出块可能会比指定的大小短一些。
+
+       数字值选项（以字节或块为单位）后面可以跟一个乘数：     k=1024，b=512，w=2，c=1（w和c是GNU扩展语法。最好别
+       使用w，因为在system V中，它表示2，在4.2 BSD中，它 表示4）。两个或更多的数值表达式可以通过“x”乘起来。  GEU
+       fileutils                                                             4.0并且允许在数据块大小的叙述中使用
+       下列乘法后缀（用bs=，cbs=，obs=）：M=1048576，G=1073741824，     同理可得T，P，E，Z，Y。D后缀表示数值是以
+       十进制表示的：kD=1000  MD=1000000  GD=1000000000等等。  （注意，在ls、df、du命令中，M等标记的大小是由环境
+       变量确定的，而在DD中，它的值是固定的。）
+
+选
+       if=file
+              从 file 中读而不是标准输入。
+
+       of=file
+              写到 file 里去而不是标准输出。除非指定 conv=notrunc ，否则， dd 将把  file  截为O字节（或由  seek=
+              选项指定的大小）
+
+       ibs=bytes
+              一次读 bytes 字节。默认是512。
+
+       obs=bytes
+              一次写 bytes 字节。默认是512。
+
+       bs=bytes
+              一次读和写  bytes  字节。这将覆盖  ibs  和  obs  设定的值（并且，设定  bs  不等于同时将 ibs 和 obs
+              设为同一个值，至少在          只使用          sync,          noerror          或           notrunc
+              转换时是这样的。因为bs规定，每个输入块都应作为单独
+              的数据块拷贝到输出，而不把较短的块组合到一起）。
+
+       cbs=bytes
+              为 block 转换和 unblock 转换指定转换块的大小。
+
+       skip=blocks
+              在拷贝之前，跳过输入文件的前 blocks 块，每块大小为 ibs-byte 字节。
+
+       seek=blocks
+              在拷贝之前，跳过输出文件的前 blocks 块，每块大小为 obs-byte 字节。
+
+       count=blocks
+              只拷贝输入文件的前 blocks 块（每块的大小为 ibs-byte 字节），而不是全部内容，直到文件末尾。
+
+       conv=转换"[,"转
+              将文件按 转换 参数指定的方式转换（在“,”两边没有空格）。
+
+              转换方式包括：
+
+              ascii  将EBCDIC转换成ascii。
+
+              ebcdic 将ascii转换成ebcdic。
+
+              ibm    将ascii转换成alternative ebcdic。
+
+              block  每一行输入，无论长短，输出都是      cbs      字节，并且其中的“换行”（NEWLINE，即c中的'0）用
+                     空格替换。如有必要，行尾会填充空格。
+
+              unblock
+                     用“换行”替换每个输入块（ cbs 字节大小）末尾的空格。
+
+              lcase  将大写字母转换成小写。
+
+              ucase  将小写字母转换成大写。
+
+              swab   交换每对输入字节。如果读入的字节数是奇数，最后
+                     一个字节只是简单的复制到输出（因为没有能跟它交换的 字节了）（POSIX  1003.26，PASC翻译1003.2
+                     3号和4号）。
+
+              noerror
+                     发生读错误时，继续进行。
+
+              notrunc
+                     不截断输出文件。
+
+              sync   用0填充到每个输入块的末尾，使其大小为 ibs 字节。
+
+GNU标
+       --help 将用法信息打印到标准输出，并成功退出。
+
+       --version
+              将版本信息打印到标准输出，并成功退出。
+
+       --     结束选项列表。
+
+环
+       LANG, LC_ALL, LC_CTYPE和LC_MESSAGES具有其通常含义。
+
+遵
+       POSIX 1003.2
+
+举
+       磁带机通常不能接受任意大小的数据块，当最后一个数据片    段不能充满整个块时，    dd   将出现I/O错误。用'dd
+       if=myfile      of=/dev/mytape       conv=sync'       就可以使全部内容存到磁带上。当然，这样做，把文件从磁
+       带上读回时回产生一个稍大些的文件，因为其尾部填充了一 些NUL（空字符）。
+
+注
+       本手册页描述了fileutils-4.0软件包中的                           dd                           命令。其他版
+       本的dd会与此稍有不同。有关更正和补充可以发帖到中国linux   论坛-man手册版。报告程序中的错误，请给   fileu‐
+       tils-bugs2gnu.ai.wit.edu 发邮件。
+
+
+[中
+       astonia <email>
+
+[中
+       2000/10/19
+
+[中
+       http://cmpp.linuxforum.net
+
+
+
+GNU fileutils 4.0                                 November 1998                                            DD(1)

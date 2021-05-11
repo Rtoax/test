@@ -1225,6 +1225,17 @@ FastQMsgStatInfo(struct FastQModuleMsgStatInfo *buf, unsigned int buf_mod_size, 
  *  
  *  param[in]   fp    文件指针,当 fp == NULL，默认使用 stderr 
  *  param[in]   module_id 需要显示的模块ID， 等于 0 时显示全部
+ *
+ *  示例：
+ *  Module ID 1 register in file <test.c>'s function <new_dequeue_task> at line 278
+ *  ------------------------------------------
+ *  ID:   1, msgMax    8, msgSize    8
+ *  	(Name:ID)from   ->       to                  enqueue          dequeue          current 
+ *  	     NODE_1:1   ->    NODE_1:1                    11               11                0
+ *  	     NODE_2:2   ->    NODE_1:1                701438           701431               -1
+ *  	     NODE_3:3   ->    NODE_1:1                798511           798506               -1
+ *  	     NODE_4:4   ->    NODE_1:1                719606           719599               -1
+ *  	 Total enqueue          2219566, dequeue          2219547
  */
 always_inline void inline
 FastQDump(FILE*fp, unsigned long module_id) {
@@ -1258,26 +1269,23 @@ FastQDump(FILE*fp, unsigned long module_id) {
         atomic64_init(&module_total_msgs[1]); //总出队数量
         _fastq_fprintf(fp, "------------------------------------------\n"\
                     "ID: %3ld, msgMax %4u, msgSize %4u\n"\
-                    "\t from-> to   %10s %10s"
+                    "\t(Name:ID)from   ->       to        "
                     " %16s %16s %16s "
                     "\n"
                     , i, 
                     _AllModulesRings[i].ring_size, 
                     _AllModulesRings[i].msg_size, 
-                    "head", 
-                    "tail"
-                    , "enqueue", "dequeue", "current"
+                    "enqueue", "dequeue", "current"
                     );
         
         for(j=0; j<=FASTQ_ID_MAX; j++) { 
             if(__atomic_load_n(&_AllModulesRings[i]._ring[j], __ATOMIC_RELAXED)) {
-                _fastq_fprintf(fp, "\t %4ld->%-4ld  %10u %10u"
+                _fastq_fprintf(fp, "\t %10s:%-4ld->%10s:%-4ld  "
                             " %16ld %16ld %16d"
-                            "\n" \
-                            , j, i, 
-                            _AllModulesRings[i]._ring[j]->_head, 
-                            _AllModulesRings[i]._ring[j]->_tail
-                            ,atomic64_read(&_AllModulesRings[i]._ring[j]->nr_enqueue),
+                            "\n" , \
+                            _AllModulesRings[j].name, j, 
+                            _AllModulesRings[i].name, i, 
+                            atomic64_read(&_AllModulesRings[i]._ring[j]->nr_enqueue),
                             atomic64_read(&_AllModulesRings[i]._ring[j]->nr_dequeue),
                             (int)(_AllModulesRings[i]._ring[j]->_tail - _AllModulesRings[i]._ring[j]->_head));
                 atomic64_add(&module_total_msgs[0], atomic64_read(&_AllModulesRings[i]._ring[j]->nr_enqueue));

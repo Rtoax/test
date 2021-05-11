@@ -36,7 +36,13 @@
 
 /*
  * User-settable options (used with setsockopt).
+ *
+ * Nagle 算法：尽可能一次发送更多的字节，避免网络因为太多的小包(协议头比例大)而拥塞。
+ *
+ *  TCP_NODELAY: 禁止 Nagle算法
+ *  TCP_CORK: 开启 Nagle算法
  */
+//
 //需要在每个发送的数据包上降低等待时间的应用程序必须在TCP_NODELAY启用的套接字上运行。
 //可以通过setsockopt套接字API通过以下命令启用它：
 #define	TCP_NODELAY		 1  /* Don't delay send to coalesce packets  */

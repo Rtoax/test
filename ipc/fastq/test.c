@@ -36,6 +36,7 @@ uint64_t msg_type_statistic[MSGCODE_MAX] = {0};
 uint64_t msg_code_statistic[MSGCODE_MAX] = {0};
 uint64_t msg_subcode_statistic[MSGCODE_MAX] = {0};
 uint64_t msg_src_statistic[NODE_NUM] = {0};
+uint64_t api_send_fail_statistic[4] = {0};
 
 
 test_msgs_t *test_msgs[NODE_NUM] = {NULL};
@@ -68,28 +69,32 @@ void *enqueue_task(void*arg){
                 pmsg->msgCode = MSGCODE_1;
                 pmsg->msgSubCode = MSGCODE_1;
                 ret = VOS_FastQSend(srcModuleID, dstModuleId, msgType, msgCode, msgSubCode, &addr, sizeof(unsigned long));
+                api_send_fail_statistic[0] += ret?0:1;
                 break;
             case 1:
                 pmsg->msgCode = MSGCODE_2;
                 pmsg->msgSubCode = MSGCODE_2;
                 ret = VOS_FastQTrySend(srcModuleID, dstModuleId, msgType, msgCode, msgSubCode, &addr, sizeof(unsigned long));
+                api_send_fail_statistic[1] += ret?0:1;
                 break;
             case 2:
                 pmsg->msgCode = MSGCODE_3;
                 pmsg->msgSubCode = MSGCODE_3;
                 ret = VOS_FastQSendByName(ModuleName[srcModuleID], ModuleName[dstModuleId], msgType, msgCode, msgSubCode, &addr, sizeof(unsigned long));
+                api_send_fail_statistic[2] += ret?0:1;
                 break;
             case 3:
                 pmsg->msgCode = MSGCODE_4;
                 pmsg->msgSubCode = MSGCODE_4;
                 ret = VOS_FastQTrySendByName(ModuleName[srcModuleID], ModuleName[dstModuleId], msgType, msgCode, msgSubCode, &addr, sizeof(unsigned long));
+                api_send_fail_statistic[3] += ret?0:1;
                 break;
         }
         i = ret?(i+1):i;
         if(!ret) send_failed++;
 
         if(ret) {
-//            printf("send: %x,(%x) , ret = %d\n", pmsg->magic, TEST_MSG_MAGIC, ret);
+//            printf("send: %x,(%x), latency = %ld , ret = %d\n", pmsg->magic, TEST_MSG_MAGIC, pmsg->latency, ret);
 //            sleep(1);
             send_cnt++;
         }
@@ -108,18 +113,27 @@ void handler_test_msg(unsigned long src, unsigned long dst,unsigned long type, u
 {
     unsigned long addr =  *(unsigned long*)msg;
     test_msgs_t *pmsg;
+    
 
     pmsg = (test_msgs_t *)addr;
     latency_total += RDTSC() - pmsg->latency;
+//    printf("recv: %x,(%x), latency = %ld, %ld, \n", pmsg->magic, TEST_MSG_MAGIC, pmsg->latency, total_msgs);
+    
     pmsg->latency = 0;
-    if(pmsg->magic != TEST_MSG_MAGIC) {
-        error_msgs++;
-    }
-
     if(dst != NODE_1) {
         assert(0 && "Wrong dst moduleID.");
     }
-//    printf("recv: %x,(%x) %ld\n", pmsg->magic, TEST_MSG_MAGIC, total_msgs);
+    
+    if(pmsg->magic != TEST_MSG_MAGIC && pmsg->magic != TEST_MSG_MAGIC*2) {
+        error_msgs++;
+    }
+    if(pmsg->magic == TEST_MSG_MAGIC*2) {
+//        printf("Get Self msg.\n");
+        msg_src_statistic[NODE_1]++;
+        return;
+    }
+
+    
     total_msgs++;
     msg_type_statistic[type]++;
     msg_code_statistic[code]++;
@@ -131,7 +145,8 @@ void handler_test_msg(unsigned long src, unsigned long dst,unsigned long type, u
                 "                               Type[%8ld,%8ld,%8ld,%8ld,%8ld]\n"\
                 "                               Code[%8ld,%8ld,%8ld,%8ld,%8ld]\n"\
                 "                            SubCode[%8ld,%8ld,%8ld,%8ld,%8ld]\n"\
-                "                                Src[%8ld,%8ld,%8ld,%8ld,%8ld]\n", 
+                "                                Src[%8ld,%8ld,%8ld,%8ld,%8ld]\n"\
+                "      FailSend[Tx,TryTx,TxN,TryTxN][%8ld,%8ld,%8ld,%8ld]\n", 
                 latency_total*1.0/400000/3000000000*1000000000,
                 total_msgs,
                 error_msgs, 
@@ -157,8 +172,23 @@ void handler_test_msg(unsigned long src, unsigned long dst,unsigned long type, u
                 msg_src_statistic[NODE_2],
                 msg_src_statistic[NODE_3],
                 msg_src_statistic[NODE_4],
-                msg_src_statistic[NODE_5]);
+                msg_src_statistic[NODE_5],
+
+                api_send_fail_statistic[0],
+                api_send_fail_statistic[1],
+                api_send_fail_statistic[2],
+                api_send_fail_statistic[3]
+                );
         latency_total = 0;
+
+        /* 自己向自己发送消息 */
+        static test_msgs_t msg = {
+            .magic = TEST_MSG_MAGIC*2,
+            };
+        
+        msg.latency = RDTSC();
+        unsigned long addr = (unsigned long)&msg;
+        VOS_FastQSend(NODE_1, NODE_1, 0, 0, 0, &addr, sizeof(unsigned long));
     }
 
 }
@@ -201,7 +231,6 @@ pthread_t new_enqueue_task(unsigned long moduleId, unsigned long dstModuleId, ch
         test_msgs[moduleId] = (test_msgs_t *)malloc(sizeof(test_msgs_t)*TEST_NUM);
         test_msg = test_msgs[moduleId];
         for(i=0;i<TEST_NUM;i++) {
-//            test_msg[i].magic = TEST_MSG_MAGIC + (i%10000==0?1:0); //有比特错误的消息
             test_msg[i].magic = TEST_MSG_MAGIC; 
             test_msg[i].value = 0xff00000000000000 + i+1;
         }
@@ -290,7 +319,7 @@ int main()
     pthread_t dequeueTask;
     pthread_t enqueueTask;
     unsigned long i;
-    size_t msgNum = 64;
+    size_t msgNum = 8;
     struct itimerval sa;
     sa.it_value.tv_sec = 100;
     sa.it_value.tv_usec = 0;
@@ -316,21 +345,21 @@ int main()
 
 
     /* 动态删除建立发送队列 */
-//    while(1) {
-//        sleep(1);
-//
-//        for(i=start_node_id; i<=end_node_id; i++) {
-//            printf(" Delete Q %s\n", ModuleName[i]);
-//            VOS_FastQDeleteModule(i);
-//        }
-//        sleep(1);
-//        for(i=start_node_id; i<=end_node_id; i++) {
-//            printf(" Create Q %s\n", ModuleName[i]);
-//            start_enqueue(i, msgNum, false);
-//        }
-//        
-//        sleep(5);
-//    }
+    while(1) {
+        sleep(1);
+
+        for(i=start_node_id; i<=end_node_id; i++) {
+            printf(" Delete Q %s\n", ModuleName[i]);
+            VOS_FastQDeleteModule(i);
+        }
+        sleep(1);
+        for(i=start_node_id; i<=end_node_id; i++) {
+            printf(" Create Q %s\n", ModuleName[i]);
+            start_enqueue(i, msgNum, false);
+        }
+        
+        sleep(5);
+    }
     
 
     pthread_join(dequeueTask, NULL);

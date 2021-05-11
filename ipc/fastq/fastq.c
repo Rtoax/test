@@ -23,6 +23,7 @@
 *       2021年4月25日 如果注册时未填写 rxset 和 txset，将在发送第一条消失时候添加并创建底层环形队列
 *       2021年4月25日 添加 msgCode,msgType,moduleID
 *       2021年4月28日 添加 msgSubCode 
+*       2021年5月11日 FastQ环回 环形队列（用户向自己发送消息）
 \**********************************************************************************************************************/
 #include <stdint.h>
 #include <assert.h>
@@ -303,17 +304,15 @@ __power_of_2(unsigned int size) {
 }
 
 
-//fprintf(fastq_log_fp, "[%s %d] ", __func__, __LINE__); \
-
-#define fastq_log(fmt...) do{\
+#define fastq_log(fmt...) do{           \
             fprintf(fastq_log_fp, fmt); \
-            fflush(fastq_log_fp); \
+            fflush(fastq_log_fp);       \
         }while(0)
 
 #ifndef _fastq_fprintf
-#define _fastq_fprintf(fp, fmt...) do{   \
-                    fastq_log(fmt);     \
-                    fprintf(fp, fmt);   \
+#define _fastq_fprintf(fp, fmt...) do{      \
+                    fastq_log(fmt);         \
+                    fprintf(fp, fmt);       \
                 }while(0)
 #endif
 
@@ -331,7 +330,7 @@ static  struct {
 
 
 static void  __fastq_log_init() {
-    char fasgq_log_file[256] = {"./fastq.log"};
+    char fasgq_log_file[256] = {"./.fastq.log"};    //这将是个隐藏文件
     fastq_log_fp = fopen(fasgq_log_file, "w");
     fastq_log_fp = fastq_log_fp?fastq_log_fp:stderr;
 }
@@ -425,7 +424,6 @@ __fastq_create_ring(struct FastQModule *pmodule, const unsigned long src, const 
     
     /* fd->ring 的快表 更应该是空的 */
     if (likely(!__atomic_load_n(&_evtfd_to_ring[new_ring->_evt_fd].tlb_ring, __ATOMIC_RELAXED))) {
-        fastq_log("Add _evtfd_to_ring[%d] src(%ld)->dst(%ld) module.\n", new_ring->_evt_fd, src, dst);
         __atomic_store_n(&_evtfd_to_ring[new_ring->_evt_fd].tlb_ring, new_ring, __ATOMIC_RELAXED);
     }
     
@@ -435,7 +433,6 @@ __fastq_create_ring(struct FastQModule *pmodule, const unsigned long src, const 
     event.data.fd = new_ring->_evt_fd;
     event.events = EPOLLIN; //必须采用水平触发
     epoll_ctl(pmodule->epfd, EPOLL_CTL_ADD, event.data.fd, &event);
-    fastq_log("Add eventfd %d to epollfd %d.\n", new_ring->_evt_fd, pmodule->epfd);
     
 #elif defined(_FASTQ_SELECT)
 
@@ -445,7 +442,6 @@ __fastq_create_ring(struct FastQModule *pmodule, const unsigned long src, const 
         pmodule->selector.maxfd = new_ring->_evt_fd;
     }
     pthread_rwlock_unlock(&pmodule->selector.rwlock);
-    fastq_log("Add eventfd %d to select fdset %d.\n", new_ring->_evt_fd, pmodule->epfd);
     
 #endif
 
@@ -471,7 +467,6 @@ __fastq_destroy_ring(struct FastQModule *pmodule, const unsigned long src, const
 #if defined(_FASTQ_EPOLL)
 
     epoll_ctl(pmodule->epfd, EPOLL_CTL_DEL, this_ring->_evt_fd, NULL);
-    fastq_log("Del eventfd %d from epollfd %d.\n", this_ring->_evt_fd, pmodule->epfd);
     
 #elif defined(_FASTQ_SELECT)
 
@@ -483,7 +478,6 @@ __fastq_destroy_ring(struct FastQModule *pmodule, const unsigned long src, const
 #endif
 
     if (likely(__atomic_load_n(&_evtfd_to_ring[this_ring->_evt_fd].tlb_ring, __ATOMIC_RELAXED))) {
-        fastq_log("Clear _evtfd_to_ring[%d]\n", this_ring->_evt_fd);
         __atomic_store_n(&_evtfd_to_ring[this_ring->_evt_fd].tlb_ring, NULL, __ATOMIC_RELAXED);
     }
 
@@ -554,8 +548,6 @@ FastQCreateModule(const unsigned long module_id,
     event.events = EPOLLIN; //必须采用水平触发
     epoll_ctl(this_module->epfd, EPOLL_CTL_ADD, event.data.fd, &event);
     
-    fastq_log("Create FastQ module with epoll, moduleID = %ld.\n", module_id);
-    
 #elif defined(_FASTQ_SELECT)
     
     pthread_rwlock_wrlock(&this_module->selector.rwlock);
@@ -565,8 +557,6 @@ FastQCreateModule(const unsigned long module_id,
         this_module->selector.maxfd = this_module->notify_new_enqueue_evt_fd;
     }
     pthread_rwlock_unlock(&this_module->selector.rwlock);
-    
-    fastq_log("Create FastQ module with select, moduleID = %ld.\n", module_id);
     
 #endif
 
@@ -582,7 +572,6 @@ FastQCreateModule(const unsigned long module_id,
     //当设置了标志位，并且对应的 ring 为空
     if(MOD_ISSET(0, &this_module->rx.set) && 
         !__atomic_load_n(&this_module->_ring[0], __ATOMIC_RELAXED)) {
-        fastq_log("Create temp ring 0 ->%ld\n", module_id);
         /* 当源模块未初始化时又想向目的模块发送消息 */
         __fastq_create_ring(this_module, 0, module_id);
     }
@@ -629,7 +618,7 @@ FastQCreateModule(const unsigned long module_id,
         注册过程：假设模块ID分别为 A=1, B=2, C=3
         
                     rxset       txset           表明
-            A(1)    0110        0000    A可能从B(2)C(3)接收，不接收任何数据
+            A(1)    1100        0000    A可能从B(2)C(3)接收，不接收任何数据
             B(2)    0000        0010    B不接受任何数据，可能向A(1)发送
             C(3)    0000        0010    C不接受任何数据，可能向A(1)发送
          那么创建的 底层数据结构将会是
@@ -652,7 +641,11 @@ FastQCreateModule(const unsigned long module_id,
         
     */
     for(i=1; i<=FASTQ_ID_MAX; i++) {
-        
+
+        /**
+         *  若模块自己给自己发送，创建环形队列将不在这里创建，而是在发送第一条消息时创建
+         *  2021年5月11日 荣涛
+         */
         if(i==module_id) continue;
 
         struct FastQModule *peer_module = &_AllModulesRings[i];
@@ -661,7 +654,6 @@ FastQCreateModule(const unsigned long module_id,
             continue;
         }
 
-        fastq_log("select a ring to create. i = %d\n", i);
         //任意一个模块标记了可能发送或者接收的模块，都将创建队列
         if(MOD_ISSET(i, &this_module->rx.set) || 
            MOD_ISSET(module_id, &peer_module->tx.set)) {
@@ -673,7 +665,6 @@ FastQCreateModule(const unsigned long module_id,
         }
         if(!__atomic_load_n(&peer_module->_ring[module_id], __ATOMIC_RELAXED)) {
 
-            fastq_log("create peer ring. %ld -> %d \n", module_id, i);
             if(MOD_ISSET(i, &this_module->tx.set) || 
                MOD_ISSET(module_id, &peer_module->rx.set)) {
                
@@ -768,7 +759,6 @@ FastQAddSet(const unsigned long moduleID, const mod_set *rxset, const mod_set *t
 always_inline bool inline
 FastQDeleteModule(const unsigned long moduleID) {
     if((moduleID <= 0 || moduleID > FASTQ_ID_MAX) ) {
-        fastq_log("Try to delete not exist MODULE.\n");
         return false;
     }
     int i;
@@ -798,7 +788,6 @@ FastQDeleteModule(const unsigned long moduleID) {
         pthread_rwlock_wrlock(&this_module->rx.rwlock);
         if(MOD_ISSET(i, &this_module->rx.set)) {
             MOD_CLR(i, &this_module->rx.set);
-            fastq_log("delete ring %d -> %ld\n", i, moduleID);
             __fastq_destroy_ring(this_module, i, moduleID);
         }
         pthread_rwlock_unlock(&this_module->rx.rwlock);
@@ -807,7 +796,6 @@ FastQDeleteModule(const unsigned long moduleID) {
         pthread_rwlock_wrlock(&this_module->tx.rwlock);
         if(MOD_ISSET(i, &this_module->tx.set)) {
             MOD_CLR(i, &this_module->tx.set);
-            fastq_log("delete ring %ld -> %d\n", moduleID, i);
             __fastq_destroy_ring( peer_module, moduleID, i);
         }
         pthread_rwlock_unlock(&this_module->tx.rwlock);
@@ -816,7 +804,6 @@ FastQDeleteModule(const unsigned long moduleID) {
     //当设置了标志位，并且对应的 ring 为空
     if(MOD_ISSET(0, &this_module->rx.set) && __atomic_load_n(&this_module->_ring[0], __ATOMIC_RELAXED)) {
         /* 当源模块未初始化时又想向目的模块发送消息 */
-        fastq_log("delete ring 0 -> %ld\n", moduleID);
         __fastq_destroy_ring(this_module, 0, moduleID);
     }
 
@@ -850,13 +837,11 @@ always_inline bool inline
 FastQAttachName(const unsigned long moduleID, const char *name) {
     
     if(unlikely(moduleID <= 0 || moduleID > FASTQ_ID_MAX) ) {
-        fastq_log("Try to delete not exist MODULE.\n");
-        assert(0);
+        assert(0 && "Invalid moduleID.");
         return false;
     }
     if(unlikely(!name)) {
-        fastq_log("Invalid MODULE name.\n");
-        assert(0);
+        assert(0 && "Invalid MODULE name.");
         return false;
     }
     struct FastQModule *this_module = &_AllModulesRings[moduleID];
@@ -871,16 +856,13 @@ FastQAttachName(const unsigned long moduleID, const char *name) {
         fastq_log("ERROR: MODULE name already attached error(id = %ld).\n", moduleID);
         return false;
     }
-
     
     mrbarrier();
     //保存名字并添加至 字典
-//    strncpy(this_module->name, name, NAME_LEN);
     this_module->name = FastQStrdup(name);
     mwbarrier();
     
     dict_register_module(this_module->name, moduleID);
-
 
     __atomic_store_n(&this_module->name_attached, true, __ATOMIC_RELEASE);
 
@@ -1087,8 +1069,7 @@ FastQRecv(unsigned int from, fq_msg_handler_t handler) {
     assert(handler && "NULL pointer error.");
 
     if(unlikely(from <= 0 || from > FASTQ_ID_MAX) ) {
-        fastq_log("Try to recv from not exist MODULE.\n");
-        assert(0);
+        assert(0 && "Try to recv from not exist MODULE.\n");
         return false;
     }
 
@@ -1124,7 +1105,7 @@ FastQRecv(unsigned int from, fq_msg_handler_t handler) {
         nfds = select(max_fd+1, &readset, NULL, NULL, NULL);
 #endif 
         /* 如果队列被动态删除了， epoll 和 select 将返回 -1,此时应该退出 while(1) 循环 */
-        loop_flags = nfds;
+        loop_flags = (nfds==-1)?0:1;
 
         if(!loop_flags) {   /* 这里可能由于销毁了接收队列，epoll_wait将返回失败 */
             break;
@@ -1163,6 +1144,13 @@ FastQRecv(unsigned int from, fq_msg_handler_t handler) {
                 while (!__FastQRecv(ring, &msgType, &msgCode, &msgSubCode, addr, &size)) {
                     __relax();
                 }
+                /**
+                 *  动态删除模块时，可能导致 src/dst 失效
+                 */
+                if(unlikely(ring->src > FASTQ_ID_MAX) || unlikely(ring->dst > FASTQ_ID_MAX)) {
+                    break;
+                }
+                
                 /* 调用应用层 接收函数 */
                 handler(ring->src, ring->dst, msgType, msgCode, msgSubCode, (void*)addr, size);
             }
@@ -1201,7 +1189,6 @@ FastQMsgStatInfo(struct FastQModuleMsgStatInfo *buf, unsigned int buf_mod_size, 
     *num = 0;
 
     for(dstID=1; dstID<=FASTQ_ID_MAX; dstID++) {
-//        printf("------------------ %d -> reg %d\n",dstID, _AllModulesRings[dstID].already_register);
         if(!__atomic_load_n(&_AllModulesRings[dstID].already_register, __ATOMIC_ACQUIRE)) {
             continue;
         }
@@ -1257,7 +1244,7 @@ FastQDump(FILE*fp, unsigned long module_id) {
     }
     
     
-    for(i=1; i<=max_module; i++) {
+    for(; i<=max_module; i++) {
         if(!__atomic_load_n(&_AllModulesRings[i].already_register, __ATOMIC_RELAXED)) {
             continue;
         }
@@ -1285,16 +1272,14 @@ FastQDump(FILE*fp, unsigned long module_id) {
         for(j=0; j<=FASTQ_ID_MAX; j++) { 
             if(__atomic_load_n(&_AllModulesRings[i]._ring[j], __ATOMIC_RELAXED)) {
                 _fastq_fprintf(fp, "\t %4ld->%-4ld  %10u %10u"
-                            " %16ld %16ld %16ld"
+                            " %16ld %16ld %16d"
                             "\n" \
                             , j, i, 
                             _AllModulesRings[i]._ring[j]->_head, 
                             _AllModulesRings[i]._ring[j]->_tail
                             ,atomic64_read(&_AllModulesRings[i]._ring[j]->nr_enqueue),
                             atomic64_read(&_AllModulesRings[i]._ring[j]->nr_dequeue),
-                            atomic64_read(&_AllModulesRings[i]._ring[j]->nr_enqueue)
-                                -atomic64_read(&_AllModulesRings[i]._ring[j]->nr_dequeue)
-                            );
+                            (int)(_AllModulesRings[i]._ring[j]->_tail - _AllModulesRings[i]._ring[j]->_head));
                 atomic64_add(&module_total_msgs[0], atomic64_read(&_AllModulesRings[i]._ring[j]->nr_enqueue));
                 atomic64_add(&module_total_msgs[1], atomic64_read(&_AllModulesRings[i]._ring[j]->nr_dequeue));
             }
@@ -1317,7 +1302,6 @@ FastQMsgNum(unsigned int ID,
     if(!__atomic_load_n(&_AllModulesRings[ID].already_register, __ATOMIC_RELAXED)) {
         return false;
     }
-//    printf("FastQMsgNum .\n");
     
     int i;
     *nr_dequeues = *nr_enqueues = *nr_currents = 0;

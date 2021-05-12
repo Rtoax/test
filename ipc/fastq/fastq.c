@@ -955,8 +955,8 @@ FastQSendByName(const char* from, const char* to, unsigned long msgType, unsigne
     assert(from && "NULL string.");
     assert(to && "NULL string.");
     
-    unsigned long from_id = dict_find_module_id_byname(from);
-    unsigned long to_id = dict_find_module_id_byname(to);
+    unsigned long from_id = dict_find_module_id_byname((char *)from);
+    unsigned long to_id = dict_find_module_id_byname((char *)to);
     
     if(unlikely(!__atomic_load_n(&_AllModulesRings[from_id].already_register, __ATOMIC_RELAXED))) {
         return false;
@@ -1001,8 +1001,8 @@ FastQTrySendByName(const char* from, const char* to, unsigned long msgType, unsi
 
     assert(from && "NULL string.");
     assert(to && "NULL string.");
-    unsigned long from_id = dict_find_module_id_byname(from);
-    unsigned long to_id = dict_find_module_id_byname(to);
+    unsigned long from_id = dict_find_module_id_byname((char *)from);
+    unsigned long to_id = dict_find_module_id_byname((char *)to);
     if(unlikely(!__atomic_load_n(&_AllModulesRings[from_id].already_register, __ATOMIC_RELAXED))) {
         return false;
     } if(unlikely(!__atomic_load_n(&_AllModulesRings[to_id].already_register, __ATOMIC_RELAXED))) {
@@ -1163,7 +1163,7 @@ FastQRecv(unsigned int from, fq_msg_handler_t handler) {
 always_inline  bool inline
 FastQRecvByName(const char *from, fq_msg_handler_t handler) { 
     assert(from && "NULL string.");
-    unsigned long from_id = dict_find_module_id_byname(from);
+    unsigned long from_id = dict_find_module_id_byname((char *)from);
     if(unlikely(!__atomic_load_n(&_AllModulesRings[from_id].already_register, __ATOMIC_RELAXED))) {
         fastq_log("No such module %s.\n", from);
         return false;

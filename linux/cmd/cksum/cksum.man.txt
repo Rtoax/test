@@ -1,0 +1,48 @@
+CKSUM(1)                                                                                                General Commands Manual                                                                                               CKSUM(1)
+
+
+
+NAME(名
+       cksum - 一个文件的检查和以及字节数
+
+SYNOPSIS(总
+       ../src/cksum [OPTION]... [FILE]...
+
+DESCRIPTION(描
+       输出CRC(循环冗余校验码)检查和以及每个FILE的字节数.
+
+       --help 显示帮助并退出
+
+       --version
+              输出版本信息并退出
+
+AUTHOR(作
+       Q. Frank Xia.
+
+REPORTING BUGS (报
+       报告bugs,请发到<bug-textutils@gnu.org>.
+
+COPYRIGHT(版
+       Copyright © 1999 Free Software Foundation, Inc.
+       这是自由软件;参看复制条件的源文件.不承担任何责任;更不用说商业性或针对特定目的的适用性.
+
+SEE ALSO (另
+       cksum 的完整文档是以Texinfo手册的方式维护的.如果你正确地安装了 info 和 cksum 程序,那么使用命令
+
+              info cksum
+
+       应该会让你访问到整个手册.
+
+
+[中
+       riser <boomer@ccidnet.com>
+
+[中
+       2001/08/08
+
+《
+       http://cmpp.linuxforum.net
+
+
+
+GNU textutils 2.0a                                                                                            1999年12月                                                                                                      CKSUM(1)

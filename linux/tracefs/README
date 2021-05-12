@@ -1,0 +1,68 @@
+tracing mini-HOWTO:
+
+# echo 0 > tracing_on : quick way to disable tracing
+# echo 1 > tracing_on : quick way to re-enable tracing
+
+ Important files:
+  trace			- The static contents of the buffer
+			  To clear the buffer write into this file: echo > trace
+  trace_pipe		- A consuming read to see the contents of the buffer
+  current_tracer	- function and latency tracers
+  available_tracers	- list of configured tracers for current_tracer
+  buffer_size_kb	- view and modify size of per cpu buffer
+  buffer_total_size_kb  - view total size of all cpu buffers
+
+  trace_clock		-change the clock used to order events
+       local:   Per cpu clock but may not be synced across CPUs
+      global:   Synced across CPUs but slows tracing down.
+     counter:   Not a clock, but just an increment
+      uptime:   Jiffy counter from time of boot
+        perf:   Same clock that perf events use
+     x86-tsc:   TSC cycle counter
+
+  trace_marker		- Writes into this file writes into the kernel buffer
+  tracing_cpumask	- Limit which CPUs to trace
+  instances		- Make sub-buffers with: mkdir instances/foo
+			  Remove sub-buffer with rmdir
+  trace_options		- Set format or modify how tracing happens
+			  Disable an option by adding a suffix 'no' to the option name
+  saved_cmdlines_size	- echo command number in here to store comm-pid list
+
+  available_filter_functions - list of functions that can be filtered on
+  set_ftrace_filter	- echo function name in here to only trace these functions
+            accepts: func_full_name, *func_end, func_begin*, *func_middle*
+            modules: Can select a group via module
+             Format: :mod:<module-name>
+             example: echo :mod:ext3 > set_ftrace_filter
+            triggers: a command to perform when function is hit
+              Format: <function>:<trigger>[:count]
+             trigger: traceon, traceoff
+                      enable_event:<system>:<event>
+                      disable_event:<system>:<event>
+                      stacktrace
+                      snapshot
+             example: echo do_fault:traceoff > set_ftrace_filter
+                      echo do_trap:traceoff:3 > set_ftrace_filter
+             The first one will disable tracing every time do_fault is hit
+             The second will disable tracing at most 3 times when do_trap is hit
+               The first time do trap is hit and it disables tracing, the counter
+               will decrement to 2. If tracing is already disabled, the counter
+               will not decrement. It only decrements when the trigger did work
+             To remove trigger without count:
+               echo '!<function>:<trigger> > set_ftrace_filter
+             To remove trigger with a count:
+               echo '!<function>:<trigger>:0 > set_ftrace_filter
+  set_ftrace_notrace	- echo function name in here to never trace.
+            accepts: func_full_name, *func_end, func_begin*, *func_middle*
+            modules: Can select a group via module command :mod:
+            Does not accept triggers
+  set_ftrace_pid	- Write pid(s) to only function trace those pids (function)
+  set_graph_function	- Trace the nested calls of a function (function_graph)
+  max_graph_depth	- Trace a limited depth of nested calls (0 is unlimited)
+
+  snapshot		- Like 'trace' but shows the content of the static snapshot buffer
+			  Read the contents for more information
+  stack_trace		- Shows the max stack trace when active
+  stack_max_size	- Shows current max stack size that was traced
+			  Write into this file to reset the max size (trigger a new trace)
+  stack_trace_filter	- Like set_ftrace_filter but limits what stack_trace traces

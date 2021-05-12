@@ -84,6 +84,7 @@
 * `sysstat`: System performance tools for the Linux operating system
 * `timer`: 定时器 hrtimer等
 * `timer_list`: 一个模块示例
+* `tracefs`: /sys/kernel/debug/tracing
 * `vDSO`: Virtual Dynamically-lined Shared Object（为加快系统调用的速度）
 * `vfio`: Virtual Function I/O（现代化的设备直通方案）
 * `vfs`: 虚拟文件系统

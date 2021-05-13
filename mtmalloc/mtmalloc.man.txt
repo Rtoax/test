@@ -1,0 +1,89 @@
+https://docs.oracle.com/cd/E19455-01/806-0627/6j9vhfn2i/index.html
+
+mtmalloc(3MALLOC)
+NAME | SYNOPSIS | DESCRIPTION | RETURN VALUES | ERRORS | ATTRIBUTES | SEE ALSO | WARNINGS | NOTES
+
+NAME
+	mtmalloc, mallocctl- MT hot memory allocator
+
+SYNOPSIS
+	#include <mtmalloc.h>
+	cc -o a.out -lthread -lmtmalloc
+	void *malloc(size_t size);
+	void *calloc(size_t nelem, size_t elsize);
+	void *realloc(void *ptr, size_t size);
+	void free(void *ptr);
+	void mallocctl(int cmd, long value);
+
+DESCRIPTION
+	malloc() and free() provide a simple general-purpose memory allocation package that is suitable for use in high performance multithreaded applications. The suggested use of this library is in multithreaded applications; it can be used for single threaded applications, but there is no advantage in doing so. This library cannot be dynamically loaded via dlopen() during runtime because there must be only one manager of the process heap.
+
+	malloc() returns a pointer to a block of at least size bytes suitably aligned for any use.
+
+	The argument to free() is a pointer to a block previously allocated by malloc() , calloc() or realloc() . After free() is performed this space is available for further allocation. If ptr is a null pointer, no action occurs.
+
+	Undefined results will occur if the space assigned by malloc() is overrun or if a random number is handed to free() . A freed pointer that is passed to free() will send a SIGABRT signal to the calling process. This behavior is controlled by mallocctl() .
+
+	calloc() allocates a zero-initialized space for an array of nelem elements of size elsize .
+
+	realloc() changes the size of the block pointed to by ptr to size bytes and returns a pointer to the (possibly moved) block. The contents will be unchanged up to the lesser of the new and old sizes. If ptr is NULL, realloc() behaves like malloc() for the specified size. If size is 0 and ptr is not a null pointer, the object pointed to is freed.
+
+	After possible pointer coercion, each allocation routine returns a pointer to a space that is suitably aligned for storage of any type of object.
+
+	malloc() , realloc() and calloc() will fail if there is not enough available memory.
+
+	mallocctl() controls the behavior of the malloc library. The options fall into two general classes, debugging options and performance options.
+
+MTDOUBLEFREE
+	Allows double free of a pointer. Setting value to 1 means yes and 0 means no. The default behavior of double free results in a core dump.
+
+MTDEBUGPATTERN
+	Writes misaligned data into the buffer after free() . When the buffer is reallocated, the contents are verified to ensure that there was no access to the buffer after the free . If the buffer has been dirtied, a SIGABRT signal is delivered to the process. Setting value to 1 means yes and 0 means no. The default behavior is to not write misaligned data. The pattern used is 0xdeadbeef . Use of this option results in a performance penalty.
+
+MTINITBUFFER
+	Writes misaligned data into the newly allocated buffer. This option is useful for detecting some accesses before initialization. Setting value to 1 means yes and 0 means no. The default behavior is to not write misaligned data to the newly allocated buffer. The pattern used is 0xbaddcafe . Use of this option results in a performance penalty.
+
+MTCHUNKSIZE
+	This option changes the size of allocated memory when a pool has exhausted all available memory in the buffer. Increasing this value allocates more memory for the application. A substantial performance gain can occur because the library makes fewer calls to the OS for more memory. Acceptable number value s are between 9 and 256; the default value is 9 . This value is multiplied by 8192.
+
+RETURN VALUES
+	If there is no available memory, malloc() , realloc() , and calloc() return a null pointer. When realloc() returns NULL, the block pointed to by ptr is left intact. If size , nelem , or elsize is 0 , a unique pointer to the arena is returned.
+
+	ERRORS
+		If malloc() , calloc() or realloc() return unsuccessfully, errno will be set to indicate the following:
+
+	ENOMEM
+		size bytes of memory exceeds the physical limits of your system, and cannot be allocated.
+
+	EAGAIN
+		There is not enough memory available at this time to allocate size bytes of memory; but the application could try again later.
+
+ATTRIBUTES
+	See attributes(5) for descriptions of the following attributes:
+
+ ATTRIBUTE TYPE	 ATTRIBUTE VALUE
+ MT-Level	 Safe
+
+SEE ALSO
+	brk(2) , getrlimit(2) , bsdmalloc(3MALLOC) , dlopen(3DL) , malloc(3C) , malloc(3MALLOC) , 		mapmalloc(3MALLOC) , watchmalloc(3MALLOC) , attributes(5) , signal(3HEAD)
+
+WARNINGS
+	Undefined results will occur if the size requested for a block of memory exceeds the maximum size of a process's heap. This information may be obtained using getrlimit() .
+
+NOTES
+	Comparative Features of malloc(3C) , bsdmalloc(3MALLOC) , malloc(3MALLOC) , and mtmalloc(3MALLOC) .
+
+	The bsdmalloc(3MALLOC) routines afford better performance, but are space-inefficient.
+
+	The malloc(3MALLOC) routines are space-efficient, but have slower performance.
+
+The standard, fully SCD-compliant malloc routines are a trade-off between performance and space-efficiency.
+
+The mtmalloc routines provide fast, concurrent malloc implementation that is space-inefficient.
+
+free() does not set errno .
+
+SunOS 5.8  Last Revised 5 May 1998
+NAME | SYNOPSIS | DESCRIPTION | RETURN VALUES | ERRORS | ATTRIBUTES | SEE ALSO | WARNINGS | NOTES
+
+© 2010, Oracle Corporation and/or its affiliates

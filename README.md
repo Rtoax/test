@@ -121,6 +121,7 @@
 * `memwatch`: 内存泄漏检测和越界检测的轻量库
 * `mimalloc`: 微软的内存分配器
 * `mqtt`: 客户端服务端架构的发布/订阅模式的消息传输协议
+* `mtmalloc`: MT hot memory allocator
 * `Nanolog`: 高性能纳秒尺度C++日志工具
 * `netmap`: 高性能收发原始数据包框架
 * `network`: 计算机网络

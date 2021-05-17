@@ -1,0 +1,27 @@
+#!/usr/bin/env bpftrace
+/*
+ *	荣涛 2021年5月17日
+ */
+struct glibc_pthread {
+	void *__padding[24];
+	struct list_head list;
+	pid_t pid;
+};
+
+BEGIN
+{
+	printf("Uprobe pthread... Hit Ctrl-C to end.\n");
+	printf("%-6s %-16s %-6s\n", "PID", "COMM", "TID");
+}
+
+uprobe:/usr/lib64/libpthread-2.17.so:pthread_join,
+uprobe:/usr/lib64/libpthread-2.17.so:pthread_cancel
+{ 
+	$s = (struct glibc_pthread *)arg0;
+	printf("%-6d %-16s %-6d %d\n", pid, comm, tid, $s->pid); 
+}
+
+END
+{
+	printf("exit.\n");
+}

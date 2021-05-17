@@ -7,5 +7,7 @@
 *** test/linux-5.6.5/tools/testing/selftests/vm  linux-5.6.5内核自测测试例
 
 
+挂载大页面
 ----------------------------------
-*** 
+mkdir /mnt/hugetlbfs
+mount -t hugetlbfs none /mnt/hugetlbfs -o pagesize=2048K

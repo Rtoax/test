@@ -16,10 +16,29 @@ BEGIN
 
 uprobe:/usr/lib64/libpthread-2.17.so:pthread_join,
 uprobe:/usr/lib64/libpthread-2.17.so:pthread_cancel
+/comm == "a.out"/
 { 
 	$s = (struct glibc_pthread *)arg0;
 	printf("%-6d %-16s %-6d %d\n", pid, comm, tid, $s->pid); 
 }
+
+uprobe:/lib64/ld-linux-x86-64.so.2:strcmp
+/comm == "a.out"/
+{
+//	printf("%-6d %-16s %s(%s ,%s)\n",
+//			pid, comm, "strcmp", str(arg0), str(arg1));
+//	@[ustack] = count();
+}
+
+
+uprobe:/lib64/ld-linux-x86-64.so.2:_dl_check_map_versions
+/comm == "a.out"/
+{
+	printf("%-6d %-16s %s(link map 0x%016lx, verbose %d, trace_mode %d)\n", 
+			pid, comm, "_dl_check_map_versions", arg0, arg1, arg2);
+//	@[ustack] = count();
+}
+
 
 END
 {

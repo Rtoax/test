@@ -2,6 +2,7 @@
 #include <fcntl.h>
 
 //fallocate - manipulate(操作) file space
+// 系统调用: 让应用程序预分配一些可能连续的空间。提高之后的写性能
 int fallocate(int fd, int mode, off_t offset, off_t len);
 
 

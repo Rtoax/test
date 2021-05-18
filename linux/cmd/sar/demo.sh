@@ -11,3 +11,10 @@
 
 # 报告所有 CPU 统计信息
 sar -P ALL 1
+
+# 文件熊他那个统计信息
+sar -v 1
+# dentunusd: 目录项缓存未用计数
+# file-nr:	
+# inode-nr:	
+# pty-nr:	

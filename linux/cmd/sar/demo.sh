@@ -18,3 +18,6 @@ sar -v 1
 # file-nr:	
 # inode-nr:	
 # pty-nr:	
+
+# -d 磁盘统计信息
+sar -d 1

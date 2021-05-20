@@ -78,7 +78,7 @@ int create_hardware_perf(int grp_fd, enum perf_hw_id hw_ids, uint64_t *ioc_id)
     pea.exclude_kernel = 1;
     pea.exclude_hv = 1;
     pea.read_format = PERF_FORMAT_GROUP | PERF_FORMAT_ID;
-    int fd = syscall(__NR_perf_event_open, &pea, 0, -1, grp_fd>2?grp_fd:-1, 0);
+    int fd = syscall(__NR_perf_event_open, &pea, getpid(), -1, grp_fd>2?grp_fd:-1, PERF_FLAG_FD_CLOEXEC);
     ioctl(fd, PERF_EVENT_IOC_ID, ioc_id);
 
     return fd;
@@ -102,7 +102,7 @@ int create_software_perf(int grp_fd, enum perf_sw_ids sw_ids, uint64_t *ioc_id)
     pea.exclude_kernel = 1;
     pea.exclude_hv = 1;
     pea.read_format = PERF_FORMAT_GROUP | PERF_FORMAT_ID;
-    int fd = syscall(__NR_perf_event_open, &pea, 0, -1, grp_fd>2?grp_fd:-1 /*!!!*/, 0);
+    int fd = syscall(__NR_perf_event_open, &pea, getpid(), -1, grp_fd>2?grp_fd:-1 /*!!!*/, PERF_FLAG_FD_CLOEXEC);
     ioctl(fd, PERF_EVENT_IOC_ID, ioc_id);
 
     return fd;
@@ -132,7 +132,7 @@ int main(int argc, char* argv[])
     ioctl(group_fd, PERF_EVENT_IOC_RESET, PERF_IOC_FLAG_GROUP);
     ioctl(group_fd, PERF_EVENT_IOC_ENABLE, PERF_IOC_FLAG_GROUP);
 
-    do_something(1);
+    do_something(-1);
     
     ioctl(group_fd, PERF_EVENT_IOC_DISABLE, PERF_IOC_FLAG_GROUP);
 

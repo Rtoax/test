@@ -1,0 +1,3 @@
+277
+
+/sys/kernel/debug/tracing/events/syscalls/sys_enter_nanosleep/id

@@ -29,7 +29,7 @@ static void send_fd(int socket, int *fds, int n)  // send fd by socket
 
     cmsg = CMSG_FIRSTHDR(&msg);
     cmsg->cmsg_level = SOL_SOCKET;
-    cmsg->cmsg_type = SCM_RIGHTS;
+    cmsg->cmsg_type = SCM_RIGHTS;   /* Transfer file descriptors.  */
     cmsg->cmsg_len = CMSG_LEN(n * sizeof(int));
 
     memcpy ((int *) CMSG_DATA(cmsg), fds, n * sizeof (int));

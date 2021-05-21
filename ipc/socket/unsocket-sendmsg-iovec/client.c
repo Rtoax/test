@@ -7,6 +7,8 @@
 #include <sys/wait.h>
 #include <sys/socket.h>
 
+#include "common.h"
+
 #define handle_error(msg) do { perror(msg); exit(EXIT_FAILURE); } while(0)
 
 static void send_fd(int socket, int *fds, int n)  // send fd by socket
@@ -25,7 +27,7 @@ static void send_fd(int socket, int *fds, int n)  // send fd by socket
 
     cmsg = CMSG_FIRSTHDR(&msg);
     cmsg->cmsg_level = SOL_SOCKET;
-    cmsg->cmsg_type = SCM_RIGHTS;
+    cmsg->cmsg_type = SCM_RIGHTS;   /* Transfer file descriptors.  */
     cmsg->cmsg_len = CMSG_LEN(n * sizeof(int));
 
     memcpy ((int *) CMSG_DATA(cmsg), fds, n * sizeof (int));
@@ -50,7 +52,7 @@ int main(int argc, char *argv[])
 
     memset(&addr, 0, sizeof(struct sockaddr_un));
     addr.sun_family = AF_UNIX;
-    strncpy(addr.sun_path, "/tmp/fd-pass.socket", sizeof(addr.sun_path)-1);
+    strncpy(addr.sun_path, UNSOCKET_PATH, sizeof(addr.sun_path)-1);
 
     fds[0] = open(argv[1], O_RDONLY);
     if (fds[0] < 0)
@@ -68,6 +70,13 @@ int main(int argc, char *argv[])
         handle_error ("Failed to connect to socket");
 
     send_fd (sfd, fds, 2);
+
+    if (close(fds[0]) == -1)
+        handle_error ("Failed to close fd0");
+
+    if (close(fds[1]) == -1)
+        handle_error ("Failed to close fd1");
+
 
     exit(EXIT_SUCCESS);
 }

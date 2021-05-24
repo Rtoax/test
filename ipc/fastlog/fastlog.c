@@ -15,6 +15,7 @@
 #include <syscall.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <assert.h>
 #include <stdarg.h>
 
 #include <fastlog.h>
@@ -33,16 +34,21 @@
 struct fastlog_operation;
 
 struct fastlog {
-    int cpu;
+    
     int level;
+    int enable;
+    
     struct fastlog_operation *fastlog_op;
 
     void *private_data;
 }__cachelinealigned;
 
 
+
 struct fastlog_operation {
     int (*open)(struct fastlog *fl, int level);
+    int (*enable)(struct fastlog *fl);
+    int (*disable)(struct fastlog *fl);
     int (*log)(struct fastlog *fl, int level, char *fmt, ...);
     int (*close)(struct fastlog *fl);
 };
@@ -76,7 +82,43 @@ static void __attribute__((constructor(105))) __fastlog_init()
 }
 
 
-struct fastlog_operation file {
-    
+static inline int log_file_open(struct fastlog *fl, int level) 
+{
+
+    return 0;
+}
+
+
+static inline int log_file_enable(struct fastlog *fl)
+{
+
+    return 0;
+}
+
+static inline int log_file_disable(struct fastlog *fl)
+{
+
+    return 0;
+}
+
+static inline int log_file_log(struct fastlog *fl, int level, char *fmt, ...)
+{
+
+    return 0;
+}
+
+static inline int log_file_close(struct fastlog *fl)
+{
+
+    return 0;
+}
+
+
+static struct fastlog_operation log_file_ops = {
+    .open = log_file_open,
+    .enable = log_file_enable,
+    .disable = log_file_disable,
+    .log = log_file_log,
+    .close = log_file_close,
 };
 

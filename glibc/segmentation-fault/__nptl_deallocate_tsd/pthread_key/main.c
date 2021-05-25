@@ -6,12 +6,19 @@ pthread_key_t key;
 pthread_t thid1;
 pthread_t thid2;
 
+#ifndef MALLOC_KEY
+#define MALLOC_KEY  0
+#endif
+
 void* thread2(void* arg)
 {
     printf("thread:%lu is running\n", pthread_self());
-    
+#if MALLOC_KEY    
     int *key_va = malloc(sizeof(int)) ;
     *key_va = 2;
+#else
+    int key_va = 2;
+#endif
     pthread_setspecific(key, (void*)key_va);
     
     printf("thread:%lu return %d\n", pthread_self(), (int)pthread_getspecific(key));
@@ -21,9 +28,14 @@ void* thread2(void* arg)
 void* thread1(void* arg)
 {
     printf("thread:%lu is running\n", pthread_self());
-    
+
+#if MALLOC_KEY    
     int *key_va = malloc(sizeof(int)) ;
     *key_va = 1;
+#else
+    int key_va = 1;
+#endif
+    
     pthread_setspecific(key, (void*)key_va);
 
     pthread_create(&thid2, NULL, thread2, NULL);
@@ -50,9 +62,12 @@ int main()
     pthread_join(thid1, NULL);
     pthread_join(thid2, NULL);
 
+#if MALLOC_KEY    
     int *key_va = malloc(sizeof(int)) ;
     *key_va = 2;
-    
+#else
+    int key_va = 2;
+#endif
     pthread_setspecific(key, (void*)key_va);
     
     printf("thread:%lu return %d\n", pthread_self(), (int)pthread_getspecific(key));

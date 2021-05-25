@@ -1,7 +1,10 @@
 
+FLAGS=$(shell pkg-config --cflags --libs sane-backends) -pthread -ggdb -g
+
 all:
-	g++ -g -std=c++11 -o test.out main.cc $(shell pkg-config --cflags --libs sane-backends) -ggdb
-	gcc main.c -g -ggdb -o test.c.out $(shell pkg-config --cflags --libs sane-backends) -pthread
+	g++ -g -std=c++11 -o test.out main.cc ${FLAGS}
+	gcc main.c  -o test.tcmalloc.out ${FLAGS} -ltcmalloc_debug
+	gcc main.c  -o test.c.out ${FLAGS}
 
 clean:
 	rm -f test.out test.c.out

@@ -15,6 +15,9 @@ void* test_leak_task_fn(void* unused)
     for (i=0; i<2; i++) {
         str = malloc(64);
     }
+
+
+	sleep(20);
     free(str);
 
     pthread_exit(NULL);

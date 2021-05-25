@@ -1,0 +1,20 @@
+usage: shmsnoop [-h] [-T] [-p PID] [-t TID] [-d DURATION] [-n NAME]
+
+Trace shm*() syscalls
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -T, --timestamp       include timestamp on output
+  -p PID, --pid PID     trace this PID only
+  -t TID, --tid TID     trace this TID only
+  -d DURATION, --duration DURATION
+                        total duration of trace in seconds
+  -n NAME, --name NAME  only print process names containing this name
+
+examples:
+    ./shmsnoop           # trace all shm*() syscalls
+    ./shmsnoop -T        # include timestamps
+    ./shmsnoop -p 181    # only trace PID 181
+    ./shmsnoop -t 123    # only trace TID 123
+    ./shmsnoop -d 10     # trace for 10 seconds only
+    ./shmsnoop -n main   # only print process names containing "main"

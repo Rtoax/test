@@ -1,0 +1,6 @@
+#!/usr/bin/bpftrace
+
+software:page-faults:1
+{
+	@[ustack, comm] = count();
+}

@@ -15,3 +15,8 @@ stackcount -P  ktime_get
 stackcount -f -P -D 10 ktime_get  > out.stack.txt
 wc out.stack.txt
 flamegraph.pl --hash --bgcolors=grey < out.stack.txt > out.stack.svg
+
+# 
+stackcount -PU t:syscalls:sys_enter_brk
+
+# 

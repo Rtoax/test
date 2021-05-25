@@ -1,0 +1,68 @@
+SWAPON(8)                                   Linux Programmer's Manual                                  SWAPON(8)
+
+
+
+NAME
+       swapon, swapoff - 使用/关闭用于分页和交换的文件和设备
+
+
+总
+       /sbin/swapon [-h -V]
+       /sbin/swapon -a [-v]
+       /sbin/swapon [-v] [-p priority]  specialfile ...
+       /sbin/swapon [-s]
+       /sbin/swapoff [-h -V]
+       /sbin/swapoff -a
+       /sbin/swapoff specialfile ...
+
+
+描
+       Swapon 指出 用于 分页和交换 的 设备.  一般 在 系统 多用户运行级 的 初始化文件 /etc/rc 中 调用 swapon , 使
+       所有的 交换设备 生效, 因此 分页和交换 活动 可以 在 多个 设备和文件 之中 进行.
+
+       常用的形式有:
+
+       -h     显示帮助
+
+       -V     显示版本
+
+       -s     显示交换设备的使用情况.这个选项需要 /proc/swaps (小于 2.1.25 的 内核 可能没有).
+
+       -a     使 /etc/fstab 中, 所有 标记了 'sw' 的 交换设备 生效.
+
+       -p priority
+              指定 swapon 的 优先级. 这个 选项 要求 swapon 在 1.3.2 或 更高 的 内核 上 编译 和  使用.   priority
+              介于  0  和  32767  之间.  关于 交换优先级 的 完整 描述 请 参看 swapon(2).  在 /etc/fstab 文件 中,
+              交换设备 的 选项域 里 加上 pri=value, 用 swapon -a 可以 使其 生效.
+
+       Swapoff 禁止 在 指定的 设备和文件 上 做 交换, 如果 指定了 -a 选项, /etc/fstab  中  所有的  交换设备  皆被
+       关闭.
+
+注
+       别在 包含 空洞(hole) 的 文件 上 使用 swapon .
+
+参
+       swapon(2), swapoff(2), fstab(5), init(8), mkswap(8), rc(8), mount(8)
+
+文
+       /dev/hd??  标准分页设备
+       /dev/sd??  标准 (SCSI) 分页设备
+       /etc/fstab ascii 格式的 文件系统 描述表
+
+历
+       swapon 命令 源于 4.0BSD.
+
+
+[中
+       徐
+
+[中
+       2001/11/18
+
+《
+       http://cmpp.linuxforum.net
+
+
+
+
+Linux 1.x                                       25 September 1995                                      SWAPON(8)

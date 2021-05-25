@@ -19,7 +19,17 @@
 
 pthread_key_t key;
 
-__thread int data __attribute__((tls_model("local-exec"))) = 0;
+__thread int *data __attribute__((tls_model("local-exec"))) = NULL;
+
+void init_data()
+{
+    data = malloc(sizeof(int)*32);
+}
+void destroy_data()
+{
+    free(data);
+}
+
 
 struct log_struct {
     FILE  * fp;
@@ -39,13 +49,15 @@ void* task_routine(void* parameters)
 {
     struct thread_arg * arg = (struct thread_arg*)parameters;
     
+	init_data();
+    
     int i = arg->i;
-    while(i>=0) {
-        data++;
-        i--;
-    }
+    while(i--)
+        data[0]++;
 
-    printf("%ld: data = %d(%p)\n", pthread_self(), data, &data);
+    printf("%ld: data[0] = %d(%p)\n", pthread_self(), data[0], &data);
+
+    destroy_data();
     pthread_exit(arg);
 }
 
@@ -56,13 +68,13 @@ int main ()
     int i;
 	pthread_t tids[4096];
     int nr_threads = 8;
+ 
+    init_data();
     
     for(i=0; i<nr_threads;i++) {
         struct thread_arg * arg = malloc(sizeof(struct thread_arg));
-        arg->i = i;
+        arg->i = i+1;
 	    pthread_create(&tids[i], NULL, &task_routine, (void*)arg);
-
-        arg = NULL;
     }
 
     for(i=0; i<nr_threads;i++) {
@@ -73,10 +85,10 @@ int main ()
         free(p);
     }
 
-    system("more /proc/self/maps");
-
     printf("threads exit.\n");
-    printf("%ld: data = %d(%p)\n", pthread_self(), data, &data);
+    printf("%ld: data[0] = %d(%p)\n", pthread_self(), data[0], &data);
+    destroy_data();
+    
 	return 0;
 }
 

@@ -90,7 +90,7 @@
 * `vfs`: 虚拟文件系统
 * `watchdog`: 看门狗(/dev/watchdog;softlockup;hardlockup)
 * `watchpoints`: 观测点
-
+* `Xen`: 虚拟化 Xen
 
 
 

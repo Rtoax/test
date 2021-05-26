@@ -1,0 +1,35 @@
+#!/usr/bin/bpftrace
+
+#include <linux/fs.h>
+
+/**
+ * 荣涛2021年5月26日
+ */
+
+BEGIN
+{
+	//from uapi/linux/stat.h
+	@type[0xc000] = "socket";
+	@type[0xa000] = "link";
+	@type[0x8000] = "regular";
+	@type[0x6000] = "block";
+	@type[0x4000] = "directory";
+	@type[0x2000] = "character";
+	@type[0x1000] = "fifo";
+	@type[0] = "other";
+}
+
+kprobe:vfs_read,
+kprobe:vfs_readv,
+kprobe:vfs_write,
+kprobe:vfs_writev
+{
+	$file = (struct file*) arg0;
+	$mode = $file->f_inode->i_mode;
+	@[@type[$mode & 0xf000], func, comm] = count();
+}
+
+END
+{
+	clear(@type);
+}

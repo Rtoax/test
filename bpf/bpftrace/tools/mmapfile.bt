@@ -1,0 +1,12 @@
+#!/usr/bin/bpftrace
+
+#include <linux/mm.h>
+
+kprobe:do_mmap
+{
+	$file = (struct file*)arg0;
+	$name = $file->f_path.dentry;
+	$dir1 = $name->d_parent;
+	$dir2 = $dir1->d_parent;
+	@[str($dir2->d_name.name), str($dir1->d_name.name), str($name->d_name.name)] = count();
+}

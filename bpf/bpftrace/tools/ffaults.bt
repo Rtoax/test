@@ -1,0 +1,11 @@
+#!/usr/bin/bpftrace
+
+#include <linux/mm.h>
+
+
+kprobe:handle_mm_fault
+{
+	$vma = (struct vm_area_struct *)arg0;
+	$file = $vma->vm_file->f_path.dentry->d_name.name;
+	@[str($file)] = count();
+}

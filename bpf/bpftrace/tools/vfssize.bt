@@ -1,0 +1,44 @@
+#!/usr/bin/env bpftrace
+/*
+ * 2021年5月26日 荣涛
+ */
+
+#include <linux/fs.h>
+
+BEGIN
+{
+	printf("Tracing key VFS calls... Hit Ctrl-C to end.\n");
+
+}
+
+kprobe:vfs_read,
+kprobe:vfs_readv,
+kprobe:vfs_write,
+kprobe:vfs_writev
+{
+	@file[tid] = arg0;
+}
+
+
+kretprobe:vfs_read,
+kretprobe:vfs_readv,
+kretprobe:vfs_write,
+kretprobe:vfs_writev
+/@file[tid]/
+{
+	if(retval >= 0) {
+		$file = (struct file *)@file[tid];
+		$name = $file->f_path.dentry->d_name.name;
+		if ((($file->f_inode->i_mode >> 12) & 15) == DT_FIFO) {
+			@[comm, "FIFO"] = hist(retval);
+		} else {
+			@[comm, str($name)] = hist(retval);
+		}
+	}
+	delete(@file[tid]);
+}
+
+END
+{
+	clear(@file);
+}

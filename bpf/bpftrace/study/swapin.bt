@@ -1,0 +1,13 @@
+#!/usr/bin/bpftrace
+
+kprobe:swap_readpage
+{
+	@[comm, pid] = count();
+}
+
+interval:s:1
+{
+	time();
+	print(@);
+	clear(@);
+}

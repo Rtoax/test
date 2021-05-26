@@ -1,0 +1,26 @@
+usage: drsnoop [-h] [-T] [-U] [-p PID] [-t TID] [-u UID] [-d DURATION]
+               [-n NAME] [-v]
+
+Trace direct reclaim
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -T, --timestamp       include timestamp on output
+  -U, --print-uid       print UID column
+  -p PID, --pid PID     trace this PID only
+  -t TID, --tid TID     trace this TID only
+  -u UID, --uid UID     trace this UID only
+  -d DURATION, --duration DURATION
+                        total duration of trace in seconds
+  -n NAME, --name NAME  only print process names containing this name
+  -v, --verbose         show system memory state
+
+examples:
+    ./drsnoop           # trace all direct reclaim
+    ./drsnoop -T        # include timestamps
+    ./drsnoop -U        # include UID
+    ./drsnoop -P 181    # only trace PID 181
+    ./drsnoop -t 123    # only trace TID 123
+    ./drsnoop -u 1000   # only trace UID 1000
+    ./drsnoop -d 10     # trace for 10 seconds only
+    ./drsnoop -n main   # only print process names containing "main"

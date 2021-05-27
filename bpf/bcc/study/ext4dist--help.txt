@@ -1,0 +1,19 @@
+usage: ext4dist [-h] [-T] [-m] [-p PID] [interval] [count]
+
+Summarize ext4 operation latency
+
+positional arguments:
+  interval            output interval, in seconds
+  count               number of outputs
+
+optional arguments:
+  -h, --help          show this help message and exit
+  -T, --notimestamp   don't include timestamp on interval output
+  -m, --milliseconds  output in milliseconds
+  -p PID, --pid PID   trace this PID only
+
+examples:
+    ./ext4dist            # show operation latency as a histogram
+    ./ext4dist -p 181     # trace PID 181 only
+    ./ext4dist 1 10       # print 1 second summaries, 10 times
+    ./ext4dist -m 5       # 5s summaries, milliseconds

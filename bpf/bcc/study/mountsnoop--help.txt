@@ -1,0 +1,6 @@
+usage: mountsnoop [-h]
+
+trace mount() and umount() syscalls
+
+optional arguments:
+  -h, --help  show this help message and exit

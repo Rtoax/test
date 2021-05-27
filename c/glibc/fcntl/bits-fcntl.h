@@ -1,3 +1,6 @@
+/* Copyright (c) Colorado School of Mines, .*/
+/* All rights reserved.                       */
+
 /* O_*, F_*, FD_* bit values for Linux/x86.
    Copyright (C) 2001-2012 Free Software Foundation, Inc.
    This file is part of the GNU C Library.

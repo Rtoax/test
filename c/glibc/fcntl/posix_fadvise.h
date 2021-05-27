@@ -1,3 +1,6 @@
+/* Copyright (c) Colorado School of Mines, .*/
+/* All rights reserved.                       */
+
 #include <fcntl.h>
 
 #ifndef FADVISE_H_INCLUDED

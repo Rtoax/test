@@ -1,3 +1,6 @@
+/* Copyright (c) Colorado School of Mines, .*/
+/* All rights reserved.                       */
+
 #include <unistd.h>
 #include <sys/types.h>
 #include <fcntl.h>

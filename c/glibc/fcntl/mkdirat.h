@@ -1,3 +1,6 @@
+/* Copyright (c) Colorado School of Mines, .*/
+/* All rights reserved.                       */
+
 #include <fcntl.h> /* Definition of AT_* constants */
 #include <sys/stat.h>
 

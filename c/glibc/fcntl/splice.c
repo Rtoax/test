@@ -1,3 +1,6 @@
+/* Copyright (c) Colorado School of Mines, .*/
+/* All rights reserved.                       */
+
 //使用splice实现的回显服务器  
 #include <stdio.h>  
 #include <stdlib.h>  

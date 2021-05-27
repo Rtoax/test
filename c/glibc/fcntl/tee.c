@@ -1,3 +1,6 @@
+/* Copyright (c) Colorado School of Mines, .*/
+/* All rights reserved.                       */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>

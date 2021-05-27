@@ -1,3 +1,6 @@
+/* Copyright (c) Colorado School of Mines, .*/
+/* All rights reserved.                       */
+
 /* Copyright (C) Rong Tao @Sylincom Beijing, 2019年 06月 14日 星期五 09:05:11 CST. */
 /* O_*, F_*, FD_* bit values for Linux.
    Copyright (C) 2001-2012 Free Software Foundation, Inc.

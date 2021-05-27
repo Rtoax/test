@@ -1,3 +1,6 @@
+/* Copyright (c) Colorado School of Mines, .*/
+/* All rights reserved.                       */
+
 #define _GNU_SOURCE         /* See feature_test_macros(7) */
 #include <fcntl.h>
 

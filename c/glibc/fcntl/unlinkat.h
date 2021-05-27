@@ -1,3 +1,6 @@
+/* Copyright (c) Colorado School of Mines, .*/
+/* All rights reserved.                       */
+
 //unlinkat - remove a directory entry relative to a directory file descriptor
 
 #include <fcntl.h> /* Definition of AT_* constants */

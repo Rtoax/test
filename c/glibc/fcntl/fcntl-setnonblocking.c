@@ -1,3 +1,6 @@
+/* Copyright (c) Colorado School of Mines, .*/
+/* All rights reserved.                       */
+
 #include <fcntl.h>
 
 /*将文件描述符设置成非阻塞的 */

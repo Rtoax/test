@@ -1,3 +1,6 @@
+/* Copyright (c) Colorado School of Mines, .*/
+/* All rights reserved.                       */
+
 // SPDX-License-Identifier: GPL-2.0
 #define _GNU_SOURCE
 #include <fcntl.h>

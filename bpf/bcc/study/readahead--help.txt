@@ -1,0 +1,11 @@
+usage: readahead [-h] [-d DURATION]
+
+Monitor performance of read ahead cache
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -d DURATION, --duration DURATION
+                        total duration to monitor for, in seconds
+
+examples:
+    ./readahead -d 20       # monitor for 10 seconds and generate stats 

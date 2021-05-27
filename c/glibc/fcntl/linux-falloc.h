@@ -1,3 +1,6 @@
+/* Copyright (c) Colorado School of Mines, .*/
+/* All rights reserved.                       */
+
 #ifndef _FALLOC_H_
 #define _FALLOC_H_
 

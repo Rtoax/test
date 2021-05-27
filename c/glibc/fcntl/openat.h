@@ -1,3 +1,6 @@
+/* Copyright (c) Colorado School of Mines, .*/
+/* All rights reserved.                       */
+
 //NAME
 //openat - open a file relative to a directory file descriptor
 

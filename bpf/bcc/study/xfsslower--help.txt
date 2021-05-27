@@ -1,0 +1,18 @@
+usage: xfsslower [-h] [-j] [-p PID] [min_ms]
+
+Trace common XFS file operations slower than a threshold
+
+positional arguments:
+  min_ms             minimum I/O duration to trace, in ms (default 10)
+
+optional arguments:
+  -h, --help         show this help message and exit
+  -j, --csv          just print fields: comma-separated values
+  -p PID, --pid PID  trace this PID only
+
+examples:
+    ./xfsslower             # trace operations slower than 10 ms (default)
+    ./xfsslower 1           # trace operations slower than 1 ms
+    ./xfsslower -j 1        # ... 1 ms, parsable output (csv)
+    ./xfsslower 0           # trace all operations (warning: verbose)
+    ./xfsslower -p 185      # trace PID 185 only

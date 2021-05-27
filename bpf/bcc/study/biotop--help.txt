@@ -1,0 +1,19 @@
+usage: biotop [-h] [-C] [-r MAXROWS] [interval] [count]
+
+Block device (disk) I/O by process
+
+positional arguments:
+  interval              output interval, in seconds
+  count                 number of outputs
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -C, --noclear         don't clear the screen
+  -r MAXROWS, --maxrows MAXROWS
+                        maximum rows to print, default 20
+
+examples:
+    ./biotop            # block device I/O top, 1 second refresh
+    ./biotop -C         # don't clear the screen
+    ./biotop 5          # 5 second summaries
+    ./biotop 5 10       # 5 second summaries, 10 times only

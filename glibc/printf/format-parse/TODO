@@ -1,5 +1,7 @@
 2021年5月26日 解析的不对	荣涛
 
+见: test/c/glibc/printf
+
 1.%-f 2.%-lf
 	0 is PA_DOUBLE
 	1 is PA_DOUBLE

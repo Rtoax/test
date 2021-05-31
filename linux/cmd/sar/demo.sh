@@ -25,3 +25,5 @@ sar -d 1
 # 页统计信息
 sar -B 1
 
+# 
+sar -n SOCK,TCP,ETCP,DEV 1

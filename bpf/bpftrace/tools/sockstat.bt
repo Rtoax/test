@@ -1,0 +1,25 @@
+#!/usr/bin/bpftrace
+
+// 荣涛 2021年5月31日
+
+BEGIN
+{
+	printf("Tracing sock statistics, Output every 1 second.\n");
+}
+
+tracepoint:syscalls:sys_enter_accept*,
+tracepoint:syscalls:sys_enter_connect,
+tracepoint:syscalls:sys_enter_bind,
+tracepoint:syscalls:sys_enter_socket*,
+kprobe:sock_recvmsg,
+kprobe:sock_sendmsg
+{
+	@[probe] = count();
+}
+
+interval:s:1
+{
+	time();
+	print(@);
+	clear(@);
+}

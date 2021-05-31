@@ -1,0 +1,21 @@
+#!/usr/bin/bpftrace
+
+// 荣涛 2021年5月31日
+
+#include <net/sock.h>
+
+kprobe:sock_recvmsg
+{
+	$sock = (struct socket *) arg0;
+	$dport = $sock->sk->__sk_common.skc_dport;
+	$dport = ($dport >> 8) | (($dport << 8) & 0xff00);
+	@io[comm, pid, "read", $sock->sk->__sk_common.skc_prot->name, $dport] = count();
+}
+
+kprobe:sock_sendmsg
+{
+	$sock = (struct socket *) arg0;
+	$dport = $sock->sk->__sk_common.skc_dport;
+	$dport = ($dport >> 8) | (($dport << 8) & 0xff00);
+	@io[comm, pid, "write", $sock->sk->__sk_common.skc_prot->name, $dport] = count();
+}

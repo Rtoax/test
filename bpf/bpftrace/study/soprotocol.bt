@@ -1,0 +1,29 @@
+#!/usr/bin/bpftrace
+
+// 荣涛 2021年5月31日
+
+#include <net/sock.h>
+
+BEGIN
+{
+	printf("Tracing socket connect/accepts. Ctrl-C end.\n");
+	// from include /uapi/linux/in.h
+	@prot2str[IPPROTO_IP] = "IPPROTO_IP";
+	@prot2str[IPPROTO_ICMP] = "IPPROTO_ICMP";
+	@prot2str[IPPROTO_TCP] = "IPPROTO_TCP";
+	@prot2str[IPPROTO_UDP] = "IPPROTO_UDP";
+}
+
+kprobe:security_socket_accept,
+kprobe:security_socket_connect
+{
+	$sock = (struct socket*) arg0;
+	$protocol = $sock->sk->sk_protocol & 0xff;
+	@connect[comm, $protocol, @prot2str[$protocol], $sock->sk->__sk_common.skc_prot->name] = count();
+}
+
+END
+{
+	clear(@prot2str);
+}
+

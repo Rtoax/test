@@ -1,0 +1,25 @@
+#!/usr/bin/bpftrace
+
+// 荣涛 2021年6月1日 儿童节快乐
+//
+//	2021年6月1日12:53:23
+//./tcpconnect-tp.bt:20-24: ERROR: tracepoint not found: sock:inet_sock_set_state
+
+#include <net/tcp_states.h>
+#include <linux/socket.h>
+
+BEGIN
+{
+	printf("Tracing tcp connections. Hit Ctrl-C to end.\n");
+	printf("%-8s %-8s %-16s ", "TIME", "PID", "COMM");
+	printf("%-39s %-6s %-39s %-6s\n", "SADDR", "SPORT", "DADDR", "DPORT");
+}
+
+tracepoint:sock:inet_sock_set_state
+/args->oldstate == TCP_CLOSE && args->newstate == TCP_SYN_SEND/
+{
+    time("%H:%M:%S ");
+    printf("%-8d %-16s %-3d", pid, comm, args->family == AF_INET ? 4:6);
+    printf("%-39s %-6d %-39s %-6d\n", 
+    		ntop(args->family, args->saddr), args->sport, ntop(args->family, args->daddr), args->dport);
+}

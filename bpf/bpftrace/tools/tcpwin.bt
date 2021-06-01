@@ -1,0 +1,46 @@
+#!/usr/bin/bpftrace
+
+// 荣涛 2021年6月1日 儿童节快乐
+//
+// 绘制拥塞控制步骤(参见《BPF之巅》)
+//
+// 1.生成数据
+//		./tcpwin.bt > /work/workspace/tcpwin01.txt
+//
+// 2.统计不同 sock 结构体内存地址的出现频率
+// 		awk -F, '$1 == "rcv" { a[$2]++ } END { for (s in a) {print s, a[s]} }' /work/workspace/tcpw
+// 		in01.txt 0xffff8af574343e00 1
+// 		0xffff8af574347440 1
+// 		0xffff8af5743426c0 1
+// 		0xffff8af574344d80 134228
+// 		0xffff8af574342e80 1
+// 		0xffff8af5743464c0 1
+// 		0xffff8af574340000 1
+//	可见 0xffff8af574344d80 出现频率最高，大部分TCP接收事件都和改地址有关
+//
+// 3.从输出中截取和该地址相关的事件信息，带表头信息，并存入 csv文件
+//		awk -F, '$2 == "0xffff8af574344d80" || NR == 2' /work/workspace/tcpwin01.txt > /work/workspace/tcpwin01.csv
+//
+// 4.使用 excel 或者其他绘图工具绘制 拥塞控制图
+//
+// 可使用iperf进行测试
+//	iperf3 -s --bind 10.170.6.59
+//	iperf3 -c 10.170.6.59 --bind 10.170.6.66
+
+#include <net/sock.h>
+#include <linux/tcp.h>
+
+BEGIN
+{
+	printf("event,sock,time_us,snd_cwnd,snd_ssthresh,sk_sndbuf,");
+	printf("sk_wmem_queued\n");
+}
+
+kprobe:tcp_rcv_established
+{
+	$sock = (struct sock*)arg0;
+	$tcps = (struct tcp_sock*)arg0; // see tcp_sk()p
+	printf("rcv,0x%llx,%lld,%d,%d,%d,%d\n", 
+		arg0, elapsed/1000,
+		$tcps->snd_cwnd, $tcps->snd_ssthresh, $sock->sk_sndbuf,$sock->sk_wmem_queued);
+}

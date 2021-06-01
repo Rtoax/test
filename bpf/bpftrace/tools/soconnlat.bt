@@ -1,0 +1,45 @@
+#!/usr/bin/bpftrace
+
+// 荣涛 2021年6月1日 儿童节快乐
+
+#include <asm-generic/errno.h>
+#include <linux/in.h>
+
+BEGIN
+{
+	printf("Tracing IP connect() latency with ustacks. Hit Ctrl-C to end.\n");
+}
+
+tracepoint:syscalls:sys_enter_connect
+/args->uservaddr->sa_family == AF_INET || args->uservaddr->sa_family == AF_INET6/
+{
+	@conn_start[tid] = nsecs;
+	@conn_stack[tid] = ustack();
+}
+
+tracepoint:syscalls:sys_exit_connect
+/@conn_start[tid]  && args->ret != -EINPROGRESS/
+{
+	$dur_us = (nsecs - @conn_start[tid]) / 1000;
+	@us[@conn_stack[tid], comm] = hist($dur_us);
+	delete(@conn_start[tid]);
+	delete(@conn_stack[tid]);
+}
+
+tracepoint:syscalls:sys_exit_poll*,
+tracepoint:syscalls:sys_exit_epoll*,
+tracepoint:syscalls:sys_exit_select*,
+tracepoint:syscalls:sys_exit_pselect*
+/@conn_start[tid] && args->ret > 0/
+{
+	$dur_us = (nsecs - @conn_start[tid]) / 1000;
+	@us[@conn_stack[tid], comm] = hist($dur_us);
+	delete(@conn_start[tid]);
+	delete(@conn_stack[tid]);
+}
+
+END
+{
+	clear(@conn_start);
+	clear(@conn_stack);
+}

@@ -1,0 +1,38 @@
+#!/usr/bin/bpftrace
+
+// 荣涛 2021年6月1日 儿童节快乐
+
+// sysctl -w net.ipv4.tcp_rmem='4096 32768 10485760'
+// ./sormem.bt
+
+
+// sysctl -w net.ipv4.tcp_rmem='4096 32768 10000'
+// ./sormem.bt
+
+
+#include <net/sock.h>
+
+
+BEGIN
+{
+	printf("Tracing socket receive buffer size. Hit Ctrl-C to end.\n");
+}
+
+kprobe:sock_recvmsg
+{
+	$sock = ((struct socket*)arg0)->sk;
+	@rmem_alloc = hist($sock->sk_backlog.rmem_alloc.counter);
+	@rmem_limit = hist($sock->sk_rcvbuf & 0xffffffff);
+}
+
+tracepoint:sock:sock_rcvqueue_full
+{
+	printf("%s rmem_alloc %d > rcv buf %d, skb size %d\n", 
+				probe, args->rmem_alloc, args->sk_rcvbuf, args->truesize);
+}
+
+tracepoint:sock:sock_exceed_buf_limit
+{
+	printf("%s rmem_alloc %d, allocated %d\n", 
+				probe, args->rmem_alloc, args->allocated);
+}

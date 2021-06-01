@@ -1,0 +1,33 @@
+#!/usr/bin/bpftrace
+
+// 荣涛 2021年6月1日 儿童节快乐
+
+#include <net/sock.h>
+#include <linux/fs.h>
+
+kprobe:sock_recvmsg,
+kprobe:sock_sendmsg
+{
+	@socket[tid] = arg0;
+}
+
+kretprobe:sock_recvmsg
+{
+	if(retval < 0x7fffffff) {
+		@read_bytes[comm] = hist(retval);
+	}
+	delete(@socket[tid]);
+}
+
+kretprobe:sock_sendmsg
+{
+	if(retval < 0x7fffffff) {
+		@write_bytes[comm] = hist(retval);
+	}
+	delete(@socket[tid]);
+}
+
+END
+{
+	clear(@socket);
+}

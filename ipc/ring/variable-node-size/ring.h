@@ -3,7 +3,7 @@
  *  
  *  作者：荣涛
  *  日期：
- *      2021年6月1日 创建
+ *      2021年6月1日 创建 并完成初始版本
  *  
  */
 #ifndef ____RING_H
@@ -12,6 +12,7 @@
 #include <assert.h>
 #include <malloc.h>
 #include <string.h>
+#include <math.h>
 #include <stdbool.h>
 
 #ifndef likely
@@ -34,26 +35,23 @@ static void  inline _unused mwbarrier()  { asm volatile("sfence":::"memory"); }
 static void  inline _unused __relax()  { asm volatile ("pause":::"memory"); }
 
 struct __ring_node {
-//    int _prev_data_size;
-    int _data_size;
+    unsigned int _valide:1;
+    unsigned int _reserve:7;
+    unsigned int _data_size:8;  //最大数据大小 256
     char _data[];
-};
+}__attribute__((packed));
 
 struct __ring {
-    unsigned int _nodes_size;   //总大小
-//    unsigned int _nodes_size_remaining;    //剩下的
+    size_t _nodes_size;   //总大小
     
-    volatile unsigned int  _head;
-    volatile unsigned int  _tail;
+    volatile size_t  _head;
+    volatile size_t  _tail;
 
     char _nodes[];
 } __cachelinealigned;
 
 
-
-
-
-static unsigned int _unused __power_of_2(unsigned int size) 
+static size_t _unused __power_of_2(unsigned int size) 
 {
     unsigned int i;
     for (i=0; (1U << i) < size; i++);
@@ -63,90 +61,144 @@ static unsigned int _unused __power_of_2(unsigned int size)
 
 static struct __ring* _unused __ring_create(size_t size)
 {
-    unsigned int nodes_size = __power_of_2(size);
-    unsigned int total_size = nodes_size + sizeof(struct __ring);
+    size_t nodes_size = __power_of_2(size);
+    size_t total_size = nodes_size + sizeof(struct __ring);
 
     printf("nodes_size = %d, total_size = %d\n", nodes_size, total_size);
 
-    struct __ring *new_ring = malloc(total_size);
+    struct __ring *new_ring = (struct __ring *)malloc(total_size);
     
     assert(new_ring && "OOM error");
 
     memset(new_ring, 0x00, total_size);
     
     new_ring->_nodes_size = nodes_size;
-//    new_ring->_nodes_size_remaining = nodes_size;
-    new_ring->_head = 0;
-    new_ring->_tail = 0;
+    new_ring->_head = size/2;
+    new_ring->_tail = size/2;
 
 
     return new_ring;
 }
 
 
-static inline bool  __ring_enqueue(struct __ring *ring, const void *msg, const size_t size) 
+/*
+----- 空闲
+##### 已使用
+***** 即将填充
+%%%%% 空闲但不使用
+*/
+static inline bool _unused __ring_enqueue(struct __ring *ring, const void *msg, const size_t size) 
 {
     assert(ring);
     assert(msg);
+    assert(size < ring->_nodes_size);
     
     const size_t node_size = size + sizeof(struct __ring_node);
 
-    unsigned int h = ring->_head;
-//    bool reverse = (ring->_tail + size) > ring->_nodes_size ? true:false;
-    unsigned int curr_t = ring->_tail;
-    unsigned int t = (curr_t + size) & (ring->_nodes_size-1);
-    
-//    printf("h = %d, t = %d\n", h, t);
-    
-    if (t - h < size) {
-        printf("full.\n");
-        return false;
+    size_t head = ring->_head;
+    size_t tail = ring->_tail;
+    size_t next_tail = (tail + node_size) & (ring->_nodes_size-1);
+
+    /* tail指针将翻转
+        
+         next_tail   head    tail  
+            **-------##########%%%%%%%%%%%
+     */
+    bool beyond = (next_tail < tail);
+    if(unlikely(beyond)) {
+//        printf("beyond.\n");
+        struct __ring_node *tmp = (struct __ring_node *)&ring->_nodes[tail];
+        tmp->_data_size = ring->_nodes_size - tail;
+        tmp->_valide    = 0;
+        tail = 0;
+        next_tail = node_size;
+        if(next_tail >= head) {
+//            printf("full1. (%d,%d)\n", ring->_head, ring->_tail);
+            return false;
+        }
+    } else {
+        /*
+                    head    tail  next_tail
+            ---------##########*****------
+         */
+        if(ring->_nodes_size - tail < node_size) {
+//            printf("full3. (%d,%d)\n", ring->_head, ring->_tail);
+            return false;
+        }
+        /*
+             tail  head      
+            ###***---#################%%%%
+               next_tail
+         */
+        if(tail < head && next_tail > head) {
+//            printf("full4. (%d,%d)\n", ring->_head, ring->_tail);
+            return false;
+        }
     }
+    
+    struct __ring_node *node = (struct __ring_node *)&ring->_nodes[tail];
 
-    struct __ring_node *node = (struct __ring_node *)&ring->_nodes[curr_t];
-
-    node->_data_size  = size;
+    node->_data_size    = size;
+    node->_valide       = 1;
     memcpy(node->_data, msg, size);
     
     mwbarrier();
     
-    printf("insert: head = %d, tail = %d, size = %ld\n", ring->_head, curr_t, node->_data_size);
+//    printf("insert: head = %d, tail = %d, size = %ld, node = %p\n", ring->_head, tail, node->_data_size, node);
     
-    ring->_tail = (curr_t + node_size) & (ring->_nodes_size-1);
+    ring->_tail = tail + node_size;
     
     return true;
 }
 
 
-static bool inline __ring_dequeue(struct __ring *ring, void *msg, size_t *size) 
+static bool inline _unused __ring_dequeue( struct __ring *const ring, void *msg, size_t *size) 
 {
     assert(ring);
     assert(msg);
     assert(size);
+
+    size_t tail = ring->_tail;
+    size_t head = ring->_head;
+
+try_again:
+
     
-    unsigned int t = ring->_tail;
-    unsigned int h = ring->_head;
-    
-//    printf("h = %d, t = %d\n", h, t);
-    
-    if (h == t) {
-        printf("empty.\n");
+    if (head == tail) {
+//        printf("empty.\n");
         return false;
     }
 
-    struct __ring_node *node = (struct __ring_node *)&ring->_nodes[h];
-
+    struct __ring_node *node = (struct __ring_node *)&ring->_nodes[head];
+    
+    /* 结尾的 不可用包 %%%
+       
+        next_tail   head    tail  
+           xxxxxxxxxxxxxxxxxxxxxxxx%%%
+    */
+    if(!node->_valide) {
+//        printf("invalide node.\n");
+        mbarrier();
+        ring->_head = 0;
+        head = 0;
+        goto try_again;
+    }
+    
     *size = node->_data_size;
     
-    const size_t node_size = *size + sizeof(struct __ring_node);
-    
-    memcpy(msg, node->_data, node->_data_size);
+    const size_t node_size = (*size) + sizeof(struct __ring_node);
+
+    memcpy(msg, node->_data, *size);
 
     mbarrier();
     
-    printf("delete: head = %d, tail = %d, size = %ld(%ld)\n", ring->_head, ring->_tail, node->_data_size, *size);
+
+    bool beyond = !!((head + node_size) > ring->_nodes_size);
+
+    ring->_head = beyond?0:(head + node_size) & (ring->_nodes_size-1);
     
-    ring->_head = (h + node_size) & (ring->_nodes_size-1);
+//    printf("delete: head = %d, tail = %d, size = %ld, node = %p\n", ring->_head, tail, node->_data_size, node);
+    
     return true;
 }
 

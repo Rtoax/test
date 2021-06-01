@@ -17,12 +17,6 @@
 #include <stdbool.h>
 
 
-enum FASTLOG_TYPE {
-    FASTLOG_FILE,
-    FASTLOG_MEM,
-    FASTLOG_TYPE_MAX,
-};
-
 static inline int __sched_getcpu() { 
     return sched_getcpu(); 
 }

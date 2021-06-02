@@ -1,0 +1,25 @@
+#!/usr/bin/bpftrace
+
+// 荣涛 2021年6月2日
+// 跟踪 IPv4 显示拥塞通知消息
+
+#include <linux/skbuff.h>
+#include <linux/ip.h>
+
+BEGIN
+{
+	printf("Tracing inbound IPv4 ECN  Congestion Encountered.\n");
+	printf("Hit Ctrl-C to end.\n");
+}
+
+kprobe:ip_rcv
+{
+	$skb = (struct sk_buff*)arg0;
+	//get IPv4 header; see skb_network_header();
+	$iph = (struct iphdr *)($skb->head + $skb->network_header);
+	//see INET_ECN_MASK
+	if(($iph->tos & 3) == 3) {
+		time("%H:%M:%S ");
+		printf("ECN CE from: %s\n", ntop($iph->saddr));
+	}
+}

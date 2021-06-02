@@ -1,0 +1,36 @@
+#!/usr/bin/bpftrace
+
+// 荣涛 2021年6月2日
+// 可使用iperf测试
+// iperf3 -s --bind 10.170.6.59 
+// iperf3 -c 10.170.6.59 --bind 10.170.6.66 -u
+// 结果为：
+// Attaching 3 probes...
+// TIME     PID    COMM             IP RADDR            PPORT
+// 08:26:13 224405 iperf3           4 10.170.6.59      5201
+
+
+#include <net/sock.h>
+
+BEGIN
+{
+	printf("%-8s %-6s %-16s %-2s %-16s %-5s\n", "TIME", "PID", "COMM", "IP", "RADDR", "PPORT");
+}
+
+kprobe:ip4_datagram_connect,
+kprobe:ip6_datagram_connect
+{
+	$sa = (struct sockaddr *)arg1;
+	if ($sa->sa_family == AF_INET || $sa->sa_family == AF_INET6) {
+		time("%H:%M:%S ");
+		if($sa->sa_family == AF_INET) {
+			$s = (struct sockaddr_in*)arg1;
+			$port = ($s->sin_port >> 8) | (($s->sin_port<<8) & 0xff00);
+			printf("%-6d %-16s 4  %-16s %-5d\n", pid, comm, ntop(AF_INET, $s->sin_addr.s_addr), $port);
+		} else {
+			$s6 = (struct sockaddr_in6*)arg1;
+			$port = ($s6->sin6_port >> 8) | (($s6->sin6_port<<8) & 0xff00);
+			printf("%-6d %-16s 6  %-16s %-5d\n", pid, comm, ntop(AF_INET6, $s6->sin6_addr.in6_u.u6_addr8), $port);
+		}
+	}
+}

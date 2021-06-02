@@ -1,0 +1,22 @@
+#!/usr/bin/bpftrace
+
+// 荣涛 2021年6月2日
+// 跟踪不常见的 skb 丢弃事件
+// 运行
+//	bpftrace  --unsafe skbdrop.bt
+
+BEGIN
+{
+	printf("Tracing unusual skb drop stacks. Hit ctrl-c to end.\n");
+	system("nstat > /dev/null");
+}
+
+tracepoint:skb:kfree_skb
+{
+	@[kstack(8)] = count();
+}
+
+END
+{
+	system("nstat; nstat -rs > /dev/null");
+}

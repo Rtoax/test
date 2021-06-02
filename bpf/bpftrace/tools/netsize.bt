@@ -1,0 +1,35 @@
+#!/usr/bin/bpftrace
+
+// 荣涛 2021年6月2日
+// see also iptraf-ng 命令行工具(yum instal iptraf-ng)
+// 	
+
+
+BEGIN
+{
+	printf("Tracing net device send/recv. Hit ctrl-c to end.\n");
+}
+
+tracepoint:net:netif_receive_skb
+{
+	//内核协议栈中的包大小
+	@recv_bytes = hist(args->len);
+}
+
+tracepoint:net:net_dev_queue
+{
+	//内核协议栈中的包大小
+	@send_bytes = hist(args->len);
+}
+
+tracepoint:net:napi_gro_receive_entry
+{
+	//网卡上的包大小
+	@nic_recv_bytes = hist(args->len);
+}
+
+tracepoint:net:net_dev_xmit
+{
+	//网卡上的包大小
+	@nic_send_bytes = hist(args->len);
+}

@@ -1,0 +1,44 @@
+#!/usr/bin/bpftrace
+
+// 荣涛 2021年6月2日
+// sk_buff 声明周期 (跟踪 slab)
+
+BEGIN
+{
+	printf("Tracing sk_buff life. Hit ctrl-c to end.\n");
+}
+
+//void *kmem_cache_alloc(struct kmem_cache *cachep, gfp_t flags)
+//void *kmem_cache_alloc_node(struct kmem_cache *cachep, gfp_t flags, int nodeid)
+kprobe:kmem_cache_alloc,
+kprobe:kmem_cache_alloc_node
+{
+	$cache = arg0;
+	if($cache == *kaddr("skbuff_fclone_cache") ||
+	   $cache == *kaddr("skbuff_head_cache"))
+	{
+		@is_skb_alloc[tid] = 1;
+	}
+}
+
+kretprobe:kmem_cache_alloc,
+kretprobe:kmem_cache_alloc_node
+/@is_skb_alloc[tid]/
+{
+	delete(@is_skb_alloc[tid]);
+	@skb_birth[retval] = nsecs;
+}
+
+kprobe:kmem_cache_free
+/@skb_birth[arg1]/
+{
+	@skb_residency_nsecs = hist(nsecs - @skb_birth[arg1]);
+	delete(@skb_birth[arg1]);
+}
+
+
+END
+{
+	clear(@is_skb_alloc);
+	clear(@skb_birth);
+}

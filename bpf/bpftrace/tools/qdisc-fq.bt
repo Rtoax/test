@@ -1,0 +1,41 @@
+#!/usr/bin/bpftrace
+
+// 荣涛 2021年6月2日
+// 展示公平队列(Fair Queue, FQ) qdisc所消耗的时间
+// 加载 FQ 内核调度器模块
+	//modprobe sch_fq
+
+/**
+	此外还有其他调度器
+	BPF 工具			qdisc	入队函数		出队函数
+	qdisc-cbq.bt	基于类的队列			cbp_enqueue()	cbq_dequeue()
+	qdisc-cbs.bt	基于信用的整形器		cbs_enqueue()	cbs_dequeue()
+	qdisc-codel.bt	延迟可控的主动队列管理器	codel_qdisc_enqueue()	codel_qdisc_dequeue
+	qdisc-fq_codel.bt	延迟可控的公平队列	fq_codel_enqueue()	fq_codel_dequeue()
+	qdisc-red.bt	随机早期检测	red_enqueue()	red_dequeue()
+	qdisc-tbf.bt	令牌桶过滤器	tbf_enqueue()	tbf_dequeue()
+*/
+
+BEGIN
+{
+	printf("Tracing qdisc fq latency. Hit ctrl-C to end.\n");
+}
+
+//fq_enqueue(struct sk_buff *skb, struct Qdisc *sch, struct sk_buff **to_free)
+kprobe:fq_enqueue
+{
+	@start[arg0] = nsecs;
+}
+
+//static struct sk_buff *fq_dequeue(struct Qdisc *sch)
+kretprobe:fq_dequeue
+/@start[retval]/
+{
+	@us = hist((nsecs - @start[retval]) / 1000);
+	delete(@start[retval]);
+}
+
+END
+{
+	clear(@start);
+}

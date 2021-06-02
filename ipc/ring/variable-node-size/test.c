@@ -24,6 +24,11 @@ void *enqueue(void*arg)
         i ++;
         size_t size = sizeof(struct msg) + i%100;
         struct msg *m = (struct msg *)malloc(size);
+        if(!m) {
+            printf("malloc error.\n");
+            sleep(1);
+            continue;
+        }
         m->magic = MSG_MAGIC;
         while(!__ring_enqueue(ring, m, size)) {
             __relax();

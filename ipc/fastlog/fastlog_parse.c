@@ -1,88 +1,76 @@
-#include <stdio.h>
-#include <printf.h>
+#include <fastlog.h>
+#include <regex.h>
 
-static void fmt_parse(const char *fmt)
+
+
+
+/* 从 "%d %s %f %llf" 到 `struct fastlog_print_args`的转化 */
+int __fastlog_parse_format(const char *fmt, struct args_type *args)
 {
-    int i;
-    int argtypes[1024] = {0};
+    int iarg;
+    int __argtype[_FASTLOG_MAX_NR_ARGS];
+    args->nargs = parse_printf_format(fmt, _FASTLOG_MAX_NR_ARGS, __argtype);
     
-    size_t ret = parse_printf_format(fmt, 1024, argtypes);
+    for(iarg=0; iarg<args->nargs; iarg++) {
+        
+        switch(__argtype[iarg]) {
 
-    printf("===========================\n");
-    printf("%s\n", fmt);
-    for(i=0;i<ret;i++) {
-        switch(argtypes[i]) {
-
-#define _CASE(i, v, intro) \
-        case v:              \
-            printf("\t%d is %s\n", i, intro);    \
+#define _CASE(i, v_from, v_to)                  \
+        case v_from:                            \
+            args->argtype[i] = v_to;      \
             break;  
 
-        _CASE(i, PA_INT, "int");
-        _CASE(i, PA_INT|PA_FLAG_LONG, "long int");
-        _CASE(i, PA_INT|PA_FLAG_SHORT, "short int");
-        _CASE(i, PA_INT|PA_FLAG_LONG_LONG, "long long int");
+        _CASE(iarg, PA_INT, FAT_INT);
+        _CASE(iarg, PA_INT|PA_FLAG_LONG, FAT_LONG_INT);
+        _CASE(iarg, PA_INT|PA_FLAG_SHORT, FAT_SHORT);
+        _CASE(iarg, PA_INT|PA_FLAG_LONG_LONG, FAT_LONG_LONG_INT);
 
-        _CASE(i, PA_CHAR, "char");
-        _CASE(i, PA_WCHAR, "wchar");
-        _CASE(i, PA_STRING, "string");
-        _CASE(i, PA_WSTRING, "wstring");
-        _CASE(i, PA_POINTER, "pointer");
-        _CASE(i, PA_FLOAT, "float");
-        _CASE(i, PA_DOUBLE, "double");
-        _CASE(i, PA_DOUBLE|PA_FLAG_LONG_DOUBLE, "long double");
-        _CASE(i, PA_LAST, "LAST");
-
+        _CASE(iarg, PA_CHAR, FAT_CHAR);
+        _CASE(iarg, PA_WCHAR, FAT_SHORT);   //wchar_t -> short
+        _CASE(iarg, PA_STRING, FAT_STRING);
+        _CASE(iarg, PA_POINTER, FAT_POINTER);
+        _CASE(iarg, PA_FLOAT, FAT_FLOAT);
+        _CASE(iarg, PA_DOUBLE, FAT_DOUBLE);
+        _CASE(iarg, PA_DOUBLE|PA_FLAG_LONG_DOUBLE, FAT_LONG_DOUBLE);
+        
+#undef _CASE
 
         default:
-            printf("\t%d unknown(%d).\n", i, argtypes[i]);
+            printf("\t%d unknown(%d).\n", iarg, __argtype[iarg]);
+            assert(0 && "Not support wstring type.");
             break;
         }
+
+        
     }
+    
+    return args->nargs;
 }
 
+int __fastlog_print_parse_buffer(char *buffer, struct args_type *args)
+{
+    int iarg;
+    uint64_t log_rdtsc;
+    
+    struct arg_hdr *arghdr = buffer;
 
-const char *test_fmts[] = {
+    int log_id = arghdr->log_id;
+    log_rdtsc = arghdr->log_rdtsc;
+    
+    buffer = arghdr->log_args_buff;
+    
+    
+    for(iarg=0; iarg < args->nargs; iarg++) {
 
-"1.%d 2.%u 3.%x",
-"1.%2d 2.%2u 3.%2x",
-"1.%-d 2.%-u 3.%-x",
-"1.%-2d 2.%-2u 3.%-2x",
+//        printf("parse: %d->%d(%s)\n", iarg, args->argtype[iarg], FASTLOG_FAT_TYPE2SIZENAME[args->argtype[iarg]].name);
+        
+        switch(args->argtype[iarg]) {
 
-"1.%ld 2.%lu 3.%lx",
-"1.%2ld 2.%2lu 3.%2lx",
-"1.%-ld 2.%-lu 3.%-lx",
-"1.%-2ld 2.%-2lu 3.%-2lx %lld %-lld %2lld %-2lld",
+            //恢复数据
 
-"1.%s 2.%S 3.%c 4.%C",
-"1.%-s 2.%-S 3.%-c 4.%-C",
-"1.%10s 2.%10S 3.%c 4.%C",
-"1.%-10s 2.%-10S 3.%c 4.%C",
-"%*.s","%.*s","%*.*s",
-
-"1.%f 2.%lf %llf",
-"1.%-f 2.%-lf",
-"1.%2f 2.%2lf",
-"1.%.2f 2.%.2lf %llf %-llf %2llf %-2llf",
-
-"%10.2f %2.lf %-2.lf %-.10lf",
-
-"%p %x %0x %#02x %#02lx",
-
-"%*.d","%.*d","%*.*d",
-"%*.d  %.*d  %*.*d",
-
-NULL,
-};
-
-//int main()
-//{
-//    int i = 0;
-//
-//    while(test_fmts[i]) {
-//        fmt_parse(test_fmts[i++]);
-//    }
-//}
-
+        }
+    }
+    
+}
 
 

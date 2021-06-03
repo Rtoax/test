@@ -21,13 +21,16 @@ void *task_routine(void*param)
     struct task_arg * arg = (struct task_arg *)param;
     
     set_thread_cpu_affinity(arg->cpu);
-    
+    int a = 10;
 //    FAST_LOG(FASTLOG_WARNING, "TEST", "[%s] CPU %d(%ld)\n", "hello", __fastlog_sched_getcpu(), __fastlog_getcpu());
 //    FAST_LOG(FASTLOG_WARNING, "TEST", "%f %lf %llf\n", 3.14, 3.14, 3.14L);
 //    FAST_LOG(FASTLOG_WARNING, "TEST", "%2.3f %2.3lf %2.3llf\n", 3.14, 3.14, 3.14L);
 //    FAST_LOG(FASTLOG_WARNING, "TEST", "%d %ld %lld %d %ld %lld\n", 1, 2, 3L, 1, 2, 3L);
-    FAST_LOG(FASTLOG_WARNING, "TEST", "Hello world\n");
-    FAST_LOG(FASTLOG_WARNING, "TEST", "%f %lf %llf %p %s\n", 3.14, 3.14, 3.14L, arg, "Hello");
+    while(a--) {
+        FAST_LOG(FASTLOG_WARNING, "TEST", "Hello world\n");
+        FAST_LOG(FASTLOG_WARNING, "TEST", "%f %lf %llf %p %s\n", 3.14, 3.14, 3.14L, arg, "Hello");
+    }
+    
     pthread_exit(arg);
 }
 
@@ -37,9 +40,7 @@ int main()
     int icpu, itask;
 
     pthread_t threads[64];
-    int nthread = 1;
-
-    fastlog_init();
+    int nthread = 4;
 
     for(itask=0; itask<nthread; itask++) {
         

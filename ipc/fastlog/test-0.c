@@ -26,9 +26,8 @@ void *task_routine(void*param)
 //    FAST_LOG(FASTLOG_WARNING, "TEST", "%f %lf %llf\n", 3.14, 3.14, 3.14L);
 //    FAST_LOG(FASTLOG_WARNING, "TEST", "%2.3f %2.3lf %2.3llf\n", 3.14, 3.14, 3.14L);
 //    FAST_LOG(FASTLOG_WARNING, "TEST", "%d %ld %lld %d %ld %lld\n", 1, 2, 3L, 1, 2, 3L);
-//    FAST_LOG(FASTLOG_WARNING, "TEST", "Hello world\n");
+    FAST_LOG(FASTLOG_WARNING, "TEST", "Hello world\n");
     FAST_LOG(FASTLOG_WARNING, "TEST", "%f %lf %llf %p %s\n", 3.14, 3.14, 3.14L, arg, "Hello");
-//    FAST_LOG(FASTLOG_WARNING, "TEST", "Hello from %ld\n", pthread_self());
     pthread_exit(arg);
 }
 
@@ -39,6 +38,8 @@ int main()
 
     pthread_t threads[64];
     int nthread = 1;
+
+    fastlog_init();
 
     for(itask=0; itask<nthread; itask++) {
         

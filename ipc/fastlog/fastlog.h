@@ -31,6 +31,8 @@ static const char* FASTLOG_LEVEL_NAME[] = {"CRIT", "ERROR", "WARNING", "NOTICE",
 #define FAST_LOG(level, name, format, ...) __FAST_LOG(level, name, format, ##__VA_ARGS__)
 
 
+int 
+fastlog_init();
 
 
 

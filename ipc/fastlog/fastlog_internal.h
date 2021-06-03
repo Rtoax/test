@@ -25,6 +25,7 @@
 #include <syscall.h>
 #include <stdbool.h>
 #include <sched.h>
+#include <errno.h>
 #include <ctype.h>
 #include <stdio.h>
 #include <string.h>
@@ -48,11 +49,11 @@
 #endif
 
 #ifndef _FASTLOG_MAX_NR_ARGS
-#define _FASTLOG_MAX_NR_ARGS    16
+#define _FASTLOG_MAX_NR_ARGS    15
 #endif
 
-#if _FASTLOG_MAX_NR_ARGS < 16
-#error "_FASTLOG_MAX_NR_ARGS must bigger than 8, -D_FASTLOG_MAX_NR_ARGS=8"
+#if _FASTLOG_MAX_NR_ARGS < 15
+#error "_FASTLOG_MAX_NR_ARGS must bigger than 15, -D_FASTLOG_MAX_NR_ARGS=15"
 #endif
 
 /* 参数类型 */
@@ -142,10 +143,30 @@ static const struct {
 };
 
 
-struct fastlog_print_arg_compress {
-    int type:6;
-    int reserve:2;
-}__attribute__((packed));
+//struct fastlog_print_arg_compress {
+//    int type:6;
+//    int reserve:2;
+//}__attribute__((packed));
+
+
+//struct fastlog_format_string {
+//    int length:8;
+//    char format[];
+//}__attribute__((packed));
+//
+//struct fastlog_log_metadata {
+//    int log_id; 
+//    const char *filename;
+//    uint32_t linenumber;
+//    enum FASTLOG_LEVEL loglevel;
+//};
+//struct fastlog_format_metadata {
+//    uint8_t loglevel;
+//    uint32_t linenumber;
+//    uint16_t filenamelength;
+//    char filename[];
+//} __attribute__((packed));
+
 
 /**
  *  例
@@ -157,114 +178,91 @@ struct fastlog_print_arg_compress {
  *  argtype[3] = FAT_DOUBLE
  *  
  */
-struct fastlog_print_args {
-    int nargs:7;
+struct args_type {
+    int nargs:8;
     uint8_t argtype[_FASTLOG_MAX_NR_ARGS];  //one of enum format_arg_type
 };
 
-struct fastlog_print_arg_hdr {
+struct arg_hdr {
     int log_id; //所属ID
     int log_data_size;
+    uint64_t log_rdtsc;
+    char log_args_buff[];   //存入 参数
 };
 
 
 #define __FAST_LOG(level, name, format, ...) do {                                                   \
     /* initial LOG ID */                                                                            \
     static int __thread log_id = 0;                                                                 \
-    static char __thread buffer[256];                                                               \
-    static struct fastlog_print_args __thread print_args = {0,0,{0}};                               \
+    static char __thread args_buffer[256];                                                          \
+    static struct args_type __thread args = {0,0,{0}};                                              \
     if(unlikely(!log_id)) {                                                                         \
         if(!__builtin_constant_p(level)) assert(0 && "level must be one of enum FASTLOG_LEVEL");    \
         if(!__builtin_constant_p(name)) assert(0 && "name must be const variable");                 \
         if(!__builtin_constant_p(format)) assert(0 && "Just support static string.");               \
         log_id = __fastlog_get_unused_id(level, name, __FILE__, __func__, __LINE__, format);        \
-        __fastlog_fmt_to_print_args(format, &print_args);                                           \
+        __fastlog_parse_format(format, &args);                                                      \
     }                                                                                               \
     if (false) { __fastlog_check_format(format, ##__VA_ARGS__); }                                   \
-    __fastlog_print_buffer(log_id, buffer, &print_args, ##__VA_ARGS__);\
-    __fastlog_print_parse_buffer(buffer, &print_args);\
+    __fastlog_print_buffer(log_id, args_buffer, &args, ##__VA_ARGS__);\
+    __fastlog_print_parse_buffer(args_buffer, &args);\
 }while(0)
 
 
 
 /* 编译阶段检测 printf 格式 */
-static void 
-__attribute__((format (printf, 1, 2)))
-__fastlog_check_format(const char *fmt, ...)  {}
-
-
-static inline int __fastlog_get_unused_id(int level, const char *name, char *file, char *func, int line, const char *format)
+static void __attribute__((format (printf, 1, 2)))
+__fastlog_check_format(const char *fmt, ...)
 {
-//    printf("get unused log id.\n");
-    // TODO
-    // 1. 生成 logid;
-    // 2. 组件 logid 对应的元数据(数据结构)
-    // 3. 保存元数据
-
-    return 1; 
 }
 
-/* 从 "%d %s %f %llf" 到 `struct fastlog_print_args`的转化 */
-static inline int __fastlog_fmt_to_print_args(const char *fmt, struct fastlog_print_args *print_args)
-{
-    int iarg;
-    int __argtype[_FASTLOG_MAX_NR_ARGS];
-    print_args->nargs = parse_printf_format(fmt, _FASTLOG_MAX_NR_ARGS, __argtype);
-    
-    for(iarg=0; iarg<print_args->nargs; iarg++) {
-        
-        switch(__argtype[iarg]) {
-
-#define _CASE(i, v_from, v_to)                  \
-        case v_from:                            \
-            print_args->argtype[i] = v_to;      \
-            break;  
-
-        _CASE(iarg, PA_INT, FAT_INT);
-        _CASE(iarg, PA_INT|PA_FLAG_LONG, FAT_LONG_INT);
-        _CASE(iarg, PA_INT|PA_FLAG_SHORT, FAT_SHORT);
-        _CASE(iarg, PA_INT|PA_FLAG_LONG_LONG, FAT_LONG_LONG_INT);
-
-        _CASE(iarg, PA_CHAR, FAT_CHAR);
-        _CASE(iarg, PA_WCHAR, FAT_SHORT);   //wchar_t -> short
-        _CASE(iarg, PA_STRING, FAT_STRING);
-        _CASE(iarg, PA_POINTER, FAT_POINTER);
-        _CASE(iarg, PA_FLOAT, FAT_FLOAT);
-        _CASE(iarg, PA_DOUBLE, FAT_DOUBLE);
-        _CASE(iarg, PA_DOUBLE|PA_FLAG_LONG_DOUBLE, FAT_LONG_DOUBLE);
-        
-#undef _CASE
-
-        default:
-            printf("\t%d unknown(%d).\n", iarg, __argtype[iarg]);
-            assert(0 && "Not support wstring type.");
-            break;
-        }
-
-        
-    }
-    
-    return print_args->nargs;
+/* 获取 当前 CPU */
+static inline int 
+__fastlog_sched_getcpu() 
+{ 
+    return sched_getcpu(); 
 }
+
+/* 同上 */
+static inline unsigned 
+__fastlog_getcpu()
+{
+    unsigned cpu, node;
+    int ret = syscall(__NR_getcpu, &cpu, &node);
+    return cpu;
+}
+
+static inline __attribute__((always_inline)) uint64_t 
+__fastlog_rdtsc()
+{
+    uint32_t lo, hi;
+    __asm__ __volatile__("rdtsc" : "=a" (lo), "=d" (hi));
+    return (((uint64_t)hi << 32) | lo);
+}
+
+
+int __fastlog_get_unused_id(int level, const char *name, char *file, char *func, int line, const char *format);
+int __fastlog_parse_format(const char *fmt, struct args_type *args);
+
 
 /* 通过 */
-static inline int __fastlog_print_buffer(int log_id, char *buffer, struct fastlog_print_args *print_args, ...)
+static inline int __fastlog_print_buffer(int log_id, char *buffer, struct args_type *args, ...)
 {
     int size = 0;
     int iarg;
     va_list va;
-    va_start(va, print_args);
+    va_start(va, args);
 
-    struct fastlog_print_arg_hdr *arg_hdr = buffer;
-    buffer += sizeof(struct fastlog_print_arg_hdr);
+    struct arg_hdr *arghdr = buffer;
+    buffer = arghdr->log_args_buff;
     
-    arg_hdr->log_id = log_id;
+    arghdr->log_id = log_id;
 
-    for(iarg=0; iarg<print_args->nargs; iarg++) {
+    for(iarg=0; iarg<args->nargs; iarg++) {
 
-        printf("%d->%d(%s)\n", iarg, print_args->argtype[iarg], FASTLOG_FAT_TYPE2SIZENAME[print_args->argtype[iarg]].name);
+//        printf("%d->%d(%s)\n", iarg, args->argtype[iarg], FASTLOG_FAT_TYPE2SIZENAME[args->argtype[iarg]].name);
         
-        switch(print_args->argtype[iarg]) {
+        switch(args->argtype[iarg]) {
 
 #define _CASE(fat_type, type)                       \
         case fat_type: {                            \
@@ -324,7 +322,7 @@ static inline int __fastlog_print_buffer(int log_id, char *buffer, struct fastlo
         _CASE(FAT_LONG_DOUBLE, long double);
         
         default:
-            printf("\t%d unknown(%d).\n", iarg, print_args->argtype[iarg]);
+            printf("\t%d unknown(%d).\n", iarg, args->argtype[iarg]);
             assert(0 && "Not support type." && __FILE__ && __LINE__);
             break;
 #undef _CASE
@@ -336,25 +334,26 @@ static inline int __fastlog_print_buffer(int log_id, char *buffer, struct fastlo
 
     va_end(va);
 
-    arg_hdr->log_data_size = size;
+    arghdr->log_data_size = size;
+    arghdr->log_rdtsc = __fastlog_rdtsc();
 
-    printf("size = %d\n", size);
+//    printf("size = %d\n", size);
     return size;
 }
 
 
-static inline int __fastlog_print_parse_buffer(char *buffer, struct fastlog_print_args *print_args)
+static inline int __fastlog_print_parse_buffer(char *buffer, struct args_type *args)
 {
     int iarg;
-    struct fastlog_print_arg_hdr *arg_hdr = buffer;
-    buffer += sizeof(struct fastlog_print_arg_hdr);
+    struct arg_hdr *arghdr = buffer;
+    buffer = arghdr->log_args_buff;
     
     
-    for(iarg=0; iarg<print_args->nargs; iarg++) {
+    for(iarg=0; iarg<args->nargs; iarg++) {
 
-        printf("%d->%d(%s)\n", iarg, print_args->argtype[iarg], FASTLOG_FAT_TYPE2SIZENAME[print_args->argtype[iarg]].name);
+//        printf("%d->%d(%s)\n", iarg, args->argtype[iarg], FASTLOG_FAT_TYPE2SIZENAME[args->argtype[iarg]].name);
         
-        switch(print_args->argtype[iarg]) {
+        switch(args->argtype[iarg]) {
 
             //恢复数据
 
@@ -364,20 +363,6 @@ static inline int __fastlog_print_parse_buffer(char *buffer, struct fastlog_prin
 }
 
 
-
-/* 获取 当前 CPU */
-static inline int __fastlog_sched_getcpu() 
-{ 
-    return sched_getcpu(); 
-}
-
-/* 同上 */
-static inline unsigned __fastlog_getcpu()
-{
-    unsigned cpu, node;
-    int ret = syscall(__NR_getcpu, &cpu, &node);
-    return cpu;
-}
 
 
 

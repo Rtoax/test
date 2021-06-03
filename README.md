@@ -97,8 +97,9 @@
 * `libconfigini`:  配置文件加载读取输出
 * `libcurl`: C-url库
 * `libevent`: Libevent库
-* `libpcap`: LIBPCAP by [The Tcpdump Group](https://www.tcpdump.org)
 * `libmemif`: Shared Memory Packet Interface (memif) Library
+* `libpcap`: LIBPCAP by [The Tcpdump Group](https://www.tcpdump.org)
+* `libseccomp`: Enhanced seccomp library
 * `libumem`: 对应用程序进行内存管理(替换程序中的malloc接口)
 * `libunwind`: 栈回溯
 * `liburing`: 异步IO库

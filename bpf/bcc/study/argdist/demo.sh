@@ -20,3 +20,7 @@ argdist -H 'p::tcp_sendmsg(struct sock *sk, struct msghdr *msg, size_t size):u32
 
 # Count the libc write() call for PID 181 by file descriptor:
 argdist -p 181 -C 'p:c:write(int fd):int:fd' 
+
+# 按错误代码统计失败的套集资connect 调用
+argdist -C 't:syscalls:sys_exit_connect():int:args->ret:args->ret<0'
+

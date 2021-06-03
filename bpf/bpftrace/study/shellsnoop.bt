@@ -1,0 +1,33 @@
+#!/usr/bin/bpftrace
+
+// 荣涛 2021年6月3日
+// 镜像一个 shell 会话的输出
+//
+// 在一个中断输入: 
+//	while :; do sleep 1; echo hello $$; done
+//	hello 39445
+//	...
+//
+// 然后使用本工具
+// shellsnoop.bt 
+//	hello 39445
+//	...
+
+BEGIN
+/$1 == 0/
+{
+	printf("USAGE: shellsnoop.bt PID. ctrl-C to end.\n");	
+	exit();
+}
+
+tracepoint:sched:sched_process_fork
+/args->parent_pid == $1 || @descendent[args->parent_pid]/
+{
+	@descendent[args->child_pid] = 1;
+}
+
+tracepoint:syscalls:sys_enter_write
+/(pid == $1 || @descendent[pid]) && (args->fd == 1 || args->fd == 2)/
+{
+	printf("%s", str(args->buf, args->count));
+}

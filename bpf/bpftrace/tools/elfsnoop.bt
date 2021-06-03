@@ -1,0 +1,32 @@
+#!/usr/bin/bpftrace
+
+// 荣涛 2021年6月3日
+
+#include <linux/binfmts.h>
+#include <linux/fs.h>
+#include <linux/mount.h>
+
+BEGIN
+{
+	printf("Tracing ELF loads. ctrl-C to end.\n");
+	printf("%8s %-6s %-18s %-18s %-10s %-10s RET.\n", 
+			"TIME", "PID", "Interpreter", "File", "Mount", "Inode");
+}
+
+kprobe:load_elf_binary
+{
+	@arg0[tid] = arg0;
+}
+
+kretprobe:load_elf_binary
+/@arg0[tid]/
+{
+	$bin = (struct linux_binprm *)@arg0[tid];
+	time("%H:%M:%S ");
+	printf("%-6d %-18s %-18s %-10s %-10d %3d\n",
+		pid,
+		str($bin->interp), str($bin->filename),  
+		str($bin->file->f_path.mnt->mnt_root->d_name.name),
+		$bin->file->f_inode->i_ino, retval);
+	delete(@arg0[tid]);
+}

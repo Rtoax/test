@@ -1,0 +1,32 @@
+#!/usr/bin/bpftrace
+
+// 荣涛 2021年6月3日
+// 
+// 目前代码有问题
+//[root@localhost study]# ./ttysnoop.bt pts1
+//./ttysnoop.bt:17:2-7: ERROR: $1 used numerically but given "pts1". Try using str($1).
+//}
+// ~
+//./ttysnoop.bt:40:47-53: ERROR: $1 used numerically but given "pts1". Try using str($1).
+
+
+#include <linux/fs.h>
+
+BEGIN
+{
+	if($1 == 0) {
+		printf("USAGE: ttysnoop.bt pts_device # eg, pts14.\n");
+		exit();
+	}
+	printf("Tracing tty write. Ctrl-C to end.\n");
+}
+
+
+kprobe:tty_write
+{
+	$file = (struct file *)arg0;
+	//+3 skips "pts"
+	if(str($file->f_path.dentry->d_name.name) == str($1 + 3)) {
+		printf("%s", str(arg1, arg2));
+	}
+}

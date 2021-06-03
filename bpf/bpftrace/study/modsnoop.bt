@@ -1,0 +1,20 @@
+#!/usr/bin/bpftrace
+
+// 荣涛 2021年6月3日
+
+#include <linux/module.h>
+
+
+BEGIN
+{
+	printf("Tracing kernel module loads. ctrl-C to end.\n");
+}
+
+//较低版本内核这个 probe 不存在
+kprobe:do_init_module
+{
+	$mod = (struct module *)arg0;
+	time("%H:%M:%S ");
+	printf("module init: %s, by %s (PID %d, user %s, UID %d)\n",
+		$mod->name, comm, pid, username, uid);
+}

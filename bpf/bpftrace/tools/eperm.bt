@@ -1,0 +1,21 @@
+#!/usr/bin/bpftrace
+
+// 荣涛 2021年6月3日
+// 追踪 不允许的操作 和 拒绝access
+
+BEGIN
+{
+	printf("Tracing EACCESS and EPERM loads. ctrl-C to end.\n");
+}
+
+tracepoint:raw_syscalls:sys_exit
+/args->ret == -1/
+{
+	@EACCESS[comm, ksym(*(kaddr("sys_call_table") + args->id * 8))] = count();
+}
+
+tracepoint:raw_syscalls:sys_exit
+/args->ret == -13/
+{
+	@EPERM[comm, ksym(*(kaddr("sys_call_table") + args->id * 8))] = count();
+}

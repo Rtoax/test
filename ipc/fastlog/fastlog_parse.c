@@ -47,6 +47,14 @@ int __fastlog_parse_format(const char *fmt, struct args_type *args)
     return args->nargs;
 }
 
+static void write_buffer(char *buf, size_t size)
+{
+    char buffer[1024];
+    memcpy(buffer, buf, size);
+    //TODO
+    //这样做的吞吐量低于 NanoLog
+}
+
 int __fastlog_print_parse_buffer(char *buffer, struct args_type *args)
 {
     int iarg;
@@ -58,7 +66,7 @@ int __fastlog_print_parse_buffer(char *buffer, struct args_type *args)
     log_rdtsc = arghdr->log_rdtsc;
     
     buffer = arghdr->log_args_buff;
-    
+
     
     for(iarg=0; iarg < args->nargs; iarg++) {
 
@@ -67,10 +75,18 @@ int __fastlog_print_parse_buffer(char *buffer, struct args_type *args)
         switch(args->argtype[iarg]) {
 
             //恢复数据
+            
 
         }
     }
-    
+    write_buffer(buffer, arghdr->log_args_size);
+
+    //这里与 test-0 中的 如下 LOG 相对应
+    // FAST_LOG(FASTLOG_WARNING, "TEST", "I have an integer %d", total_dequeue);
+    unsigned long *total = (unsigned long *)arghdr->log_args_buff;
+    printf("total = %ld\n", *total);
+
+    return 0;
 }
 
 

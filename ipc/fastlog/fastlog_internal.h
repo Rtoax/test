@@ -193,9 +193,10 @@ struct arg_hdr {
     }                                                                                               \
     if (false) { __fastlog_check_format(format, ##__VA_ARGS__); }                                   \
     __fastlog_print_buffer(log_id, args_buffer, &args, ##__VA_ARGS__);\
-    __fastlog_print_parse_buffer(args_buffer, &args);\
-    printf("[printf] "format, ##__VA_ARGS__);\
+    __fastlog_print_parse_buffer(args_buffer, &args);/* 此处应替换为对应的 保存参数的接口 */\
 }while(0)
+    //TODO
+        //    printf("[printf] "format, ##__VA_ARGS__);\
 
 
 

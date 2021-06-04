@@ -1,5 +1,5 @@
-usage: capable.py [-h] [-v] [-p PID] [-K] [-U] [-x] [--cgroupmap CGROUPMAP]
-                  [--mntnsmap MNTNSMAP] [--unique]
+usage: capable [-h] [-v] [-p PID] [-K] [-U] [-x] [--cgroupmap CGROUPMAP]
+               [--mntnsmap MNTNSMAP] [--unique]
 
 Trace security capability checks
 

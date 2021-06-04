@@ -58,6 +58,8 @@ BEGIN
 	@cap[37] = "CAP_AUDIT_READ";
 }
 
+//int cap_capable(const struct cred *cred, struct user_namespace *targ_ns,
+//		int cap, unsigned int opts)
 kprobe:cap_capable
 {
 	$cap = arg2;

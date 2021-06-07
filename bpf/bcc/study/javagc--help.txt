@@ -1,0 +1,25 @@
+usage: ugc [-h] [-l {java,node,python,ruby}] [-v] [-m] [-M MINIMUM]
+           [-F FILTER]
+           pid
+
+Summarize garbage collection events in high-level languages.
+
+positional arguments:
+  pid                   process id to attach to
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -l {java,node,python,ruby}, --language {java,node,python,ruby}
+                        language to trace
+  -v, --verbose         verbose mode: print the BPF program (for debugging
+                        purposes)
+  -m, --milliseconds    report times in milliseconds (default is microseconds)
+  -M MINIMUM, --minimum MINIMUM
+                        display only GCs longer than this many milliseconds
+  -F FILTER, --filter FILTER
+                        display only GCs whose description contains this text
+
+examples:
+    ./ugc -l java 185        # trace Java GCs in process 185
+    ./ugc -l ruby 1344 -m    # trace Ruby GCs reporting in ms
+    ./ugc -M 10 -l java 185  # trace only Java GCs longer than 10ms

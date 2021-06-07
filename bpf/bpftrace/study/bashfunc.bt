@@ -1,0 +1,14 @@
+#!/usr/bin/bpftrace
+
+# 2021年6月7日 荣涛
+
+uprobe:/bin/bash:find_function_def
+{
+	@currfunc[tid] = arg0;
+}
+
+uprobe:/bin/bash:restore_funcarray_state
+{
+	printf("function: %s\n", str(@currfunc[tid]));
+	delete(@currfunc[tid]);
+}

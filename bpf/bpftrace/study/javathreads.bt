@@ -1,0 +1,21 @@
+#!/usr/bin/bpftrace 
+#
+
+BEGIN
+{
+	printf("%-20s %6s/%-5s -- $s\n", "TIME", "PID", "TID", "THREAD");
+}
+
+//替换为 JVM.so 对应的路径
+usdt:/.../libjvm.so:thread_start
+{
+	time("%H:%M:%S ");
+	printf("%6d/%-5d => $s\n", pid, tid, str(arg0, arg1));
+}
+
+usdt:/.../libjvm.so:thread_stop
+{
+	time("%H:%M:%S ");
+	printf("%6d/%-5d => $s\n", pid, tid, str(arg0, arg1));
+}
+

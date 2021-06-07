@@ -1,0 +1,29 @@
+usage: ustat [-h] [-l {java,node,perl,php,python,ruby,tcl}] [-C]
+             [-S {cload,excp,gc,method,objnew,thread}] [-r MAXROWS] [-d]
+             [interval] [count]
+
+Activity stats from high-level languages.
+
+positional arguments:
+  interval              output interval, in seconds
+  count                 number of outputs
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -l {java,node,perl,php,python,ruby,tcl}, --language {java,node,perl,php,python,ruby,tcl}
+                        language to trace (default: all languages)
+  -C, --noclear         don't clear the screen
+  -S {cload,excp,gc,method,objnew,thread}, --sort {cload,excp,gc,method,objnew,thread}
+                        sort by this field (descending order)
+  -r MAXROWS, --maxrows MAXROWS
+                        maximum rows to print, default 20
+  -d, --debug           Print the resulting BPF program (for debugging
+                        purposes)
+
+examples:
+  ./ustat              # stats for all languages, 1 second refresh
+  ./ustat -C           # don't clear the screen
+  ./ustat -l java      # Java processes only
+  ./ustat 5            # 5 second summaries
+  ./ustat 5 10         # 5 second summaries, 10 times only
+        

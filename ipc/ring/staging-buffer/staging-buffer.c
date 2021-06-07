@@ -1,28 +1,90 @@
 #include <assert.h>
+#include <stdlib.h>
 #include "staging-buffer.h"
 
-/**
- * Allocates thread-local structures if they weren't already allocated.
- * This is used by the generated C++ code to ensure it has space to
- * log uncompressed messages to and by the user if they wish to
- * preallocate the data structures on thread creation.
- */
-void
-ensureStagingBufferAllocated(struct StagingBuffer *buff) 
-{
-//    if (stagingBuffer == nullptr) {
-//        std::unique_lock<std::mutex> guard(bufferMutex);
-//        uint32_t bufferId = nextBufferId++;
-//
-//        // Unlocked for the expensive StagingBuffer allocation
-//        guard.unlock();
-//        stagingBuffer = new StagingBuffer(bufferId);
-//        guard.lock();
-//
-//        threadBuffers.push_back(stagingBuffer);
-//    }
-}
+#define STAGING_BUFFER_SIZE 4096
 
+struct StagingBuffer {
+
+    // Position within storage[] where the producer may place new data
+    char *producerPos;
+
+    // Marks the end of valid data for the consumer. Set by the producer
+    // on a roll-over
+    char *endOfRecordedSpace;
+
+    // Lower bound on the number of bytes the producer can allocate w/o
+    // rolling over the producerPos or stalling behind the consumer
+    uint64_t minFreeSpace;
+
+    // Number of cycles producer was blocked while waiting for space to
+    // free up in the StagingBuffer for an allocation.
+    uint64_t cyclesProducerBlocked;
+
+    // Number of times the producer was blocked while waiting for space
+    // to free up in the StagingBuffer for an allocation
+    uint32_t numTimesProducerBlocked;
+
+    // Number of alloc()'s performed
+    uint64_t numAllocations;
+
+    // Distribution of the number of times Producer was blocked
+    // allocating space in 10ns increments. The last slot includes
+    // all times greater than the last increment.
+    uint32_t cyclesProducerBlockedDist[20];
+
+    // An extra cache-line to separate the variables that are primarily
+    // updated/read by the producer (above) from the ones by the
+    // consumer(below)
+    char cacheLineSpacer[2*64];
+
+    // Position within the storage buffer where the consumer will consume
+    // the next bytes from. This value is only updated by the consumer.
+    char* volatile consumerPos;
+
+    // Indicates that the thread owning this StagingBuffer has been
+    // destructed (i.e. no more messages will be logged to it) and thus
+    // should be cleaned up once the buffer has been emptied by the
+    // compression thread.
+    bool shouldDeallocate;
+
+    // Uniquely identifies this StagingBuffer for this execution. It's
+    // similar to ThreadId, but is only assigned to threads that NANO_LOG).
+    uint32_t id;
+
+    // Backing store used to implement the circular queue
+    char storage[STAGING_BUFFER_SIZE];
+};
+
+
+struct StagingBuffer *
+create_buff()
+{
+    size_t i;
+    struct StagingBuffer *staging_buf = NULL;
+    
+    staging_buf = malloc(sizeof(struct StagingBuffer));
+    assert(staging_buf && "malloc error");
+
+    staging_buf->endOfRecordedSpace = staging_buf->storage + STAGING_BUFFER_SIZE;
+    staging_buf->minFreeSpace = 0;
+
+    staging_buf->cyclesProducerBlocked = 0;
+    staging_buf->numTimesProducerBlocked = 0;
+    staging_buf->numAllocations = 0;
+
+    staging_buf->consumerPos = staging_buf->storage;
+    staging_buf->shouldDeallocate = false;
+    staging_buf->id = 1;//bufferId;
+    staging_buf->producerPos = staging_buf->storage;
+
+
+    for (i = 0; i < 20; ++i)
+    {
+        staging_buf->cyclesProducerBlockedDist[i] = 0;
+    }
+    return staging_buf;
+}
 
 
 /**
@@ -146,7 +208,7 @@ finishReservation(struct StagingBuffer *buff, size_t nbytes)
 *      Pointer to the consumable space
 */
 char *
-peek(struct StagingBuffer *buff, uint64_t *bytesAvailable)
+peek_buffer(struct StagingBuffer *buff, uint64_t *bytesAvailable)
 {
     // Save a consistent copy of producerPos
     char *cachedProducerPos = buff->producerPos;
@@ -175,7 +237,7 @@ peek(struct StagingBuffer *buff, uint64_t *bytesAvailable)
  *      Number of bytes to return back to the producer
  */
 void
-consume(struct StagingBuffer *buff, uint64_t nbytes)
+consume_done(struct StagingBuffer *buff, uint64_t nbytes)
 {
     asm volatile("lfence":::"memory"); // Make sure consumer reads finish before bump
     buff->consumerPos += nbytes;

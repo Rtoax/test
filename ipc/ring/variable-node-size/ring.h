@@ -27,6 +27,8 @@
 #define _unused             __attribute__((unused))
 #endif
 
+//#define RING_DEBUG
+
 #ifdef RING_DEBUG
 #define DEBUG_LOG(fmt...) do{\
         fprintf(stderr, "[%s:%d] ", __func__, __LINE__);\
@@ -53,20 +55,20 @@ struct __ring_node {
 
 struct __ring {
     size_t _nodes_size;   //总大小
-    pthread_spinlock_t spinlock;
+//    pthread_spinlock_t spinlock;
 
-//    int _pad1[32];
+    char _pad1[64];
     volatile int  _head;
-//    int _pad2[32];
+    char _pad2[64];
     volatile int  _tail;
-//    int _pad3[32];
+    char _pad3[64];
 
     char _nodes[];
 } __attribute__((aligned(64)));
 
 
 
-static size_t _unused __power_of_2(unsigned int size) 
+static size_t inline _unused __power_of_2(unsigned int size) 
 {
     unsigned int i;
     for (i=0; (1U << i) < size; i++);
@@ -89,7 +91,7 @@ static struct __ring* _unused __ring_create(size_t size)
     new_ring->_head = 0;
     new_ring->_tail = 0;
 
-    pthread_spin_init(&new_ring->spinlock, PTHREAD_PROCESS_PRIVATE);
+//    pthread_spin_init(&new_ring->spinlock, PTHREAD_PROCESS_PRIVATE);
 
     return new_ring;
 }
@@ -107,7 +109,7 @@ static inline bool _unused __ring_enqueue(struct __ring *ring, const void *msg, 
     assert(msg);
     assert(size < ring->_nodes_size);
 
-    pthread_spin_lock(&ring->spinlock);
+//    pthread_spin_lock(&ring->spinlock);
     
     const size_t node_size = size + sizeof(struct __ring_node);
 
@@ -124,13 +126,15 @@ static inline bool _unused __ring_enqueue(struct __ring *ring, const void *msg, 
     if(unlikely(beyond)) {
         DEBUG_LOG("beyond.\n");
         struct __ring_node *tmp = (struct __ring_node *)&ring->_nodes[tail];
+
+        mwbarrier();
         tmp->_data_size = ring->_nodes_size - tail;
         tmp->_valide    = 0;
         tail = 0;
         next_tail = node_size;
         if(next_tail >= head) {
             DEBUG_LOG("full1. (%d,%d)\n", ring->_head, ring->_tail);
-            pthread_spin_unlock(&ring->spinlock);
+//            pthread_spin_unlock(&ring->spinlock);
             return false;
         }
     } else {
@@ -140,7 +144,7 @@ static inline bool _unused __ring_enqueue(struct __ring *ring, const void *msg, 
          */
         if(ring->_nodes_size - tail < node_size) {
             DEBUG_LOG("full3. (%d,%d)\n", ring->_head, ring->_tail);
-            pthread_spin_unlock(&ring->spinlock);
+//            pthread_spin_unlock(&ring->spinlock);
             return false;
         }
         /*
@@ -150,7 +154,7 @@ static inline bool _unused __ring_enqueue(struct __ring *ring, const void *msg, 
          */
         if(tail < head && next_tail > head) {
             DEBUG_LOG("full4. (%d,%d)\n", ring->_head, ring->_tail);
-            pthread_spin_unlock(&ring->spinlock);
+//            pthread_spin_unlock(&ring->spinlock);
             return false;
         }
     }
@@ -167,7 +171,7 @@ static inline bool _unused __ring_enqueue(struct __ring *ring, const void *msg, 
     
     ring->_tail = tail + node_size;
     
-    pthread_spin_unlock(&ring->spinlock);
+//    pthread_spin_unlock(&ring->spinlock);
     return true;
 }
 
@@ -178,7 +182,7 @@ static bool inline _unused __ring_dequeue( struct __ring *const ring, void *msg,
     assert(msg);
     assert(size);
     
-    pthread_spin_lock(&ring->spinlock);
+//    pthread_spin_lock(&ring->spinlock);
 
     size_t tail = ring->_tail;
     size_t head = ring->_head;
@@ -188,7 +192,7 @@ try_again:
     
     if (head == tail) {
         DEBUG_LOG("empty.\n");
-        pthread_spin_unlock(&ring->spinlock);
+//        pthread_spin_unlock(&ring->spinlock);
         return false;
     }
 
@@ -220,7 +224,7 @@ try_again:
     
     DEBUG_LOG("delete: head = %d, tail = %d, size = %ld, node = %p\n", ring->_head, tail, node->_data_size, node);
     
-    pthread_spin_unlock(&ring->spinlock);
+//    pthread_spin_unlock(&ring->spinlock);
     return true;
 }
 

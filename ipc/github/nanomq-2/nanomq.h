@@ -18,6 +18,11 @@
 #define always_inline __attribute__ ((__always_inline__))
 #endif
 
+#ifdef always_inline
+#undef always_inline 
+#define always_inline 
+#endif
+
 
 // POD for header data
 struct nmq_header;

@@ -1,0 +1,25 @@
+#!/usr/bin/bpftrace
+
+// 荣涛 2021年6月8日
+
+BEGIN
+{
+	if($1 == 0) {
+		printf("USAGE: threaded.bt PID");
+		exit();
+	}
+	printf("Sampling PID %d threads at 99 Hz. Ctrl-C to end\n", $1);
+}
+
+profile:hz:99
+/pid == $1/
+{
+	@[comm, tid] = count();
+}
+
+interval:s:1
+{
+	time();
+	print(@);
+	clear(@);
+}

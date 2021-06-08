@@ -30,9 +30,9 @@ for file in ${test_files[@]}
 do 
 	echo "Compile $file -> ${file%.*}.out"
 #	gcc $file $LIBS -o ${file%.*}.epoll.stat.out -w $* -D_FASTQ_EPOLL=1 -D_FASTQ_STATS=1
-	gcc $file $LIBS -o ${file%.*}.epoll.out -w $* -D_FASTQ_EPOLL=1 
+	gcc $file $LIBS -o ${file%.*}.epoll.out -w $* -D_FASTQ_EPOLL=1 -g -ggdb
 #	gcc $file $LIBS -o ${file%.*}.select.stat.out -w $* -D_FASTQ_SELECT=1  -D_FASTQ_STATS=1
-	gcc $file $LIBS -o ${file%.*}.select.out -w $* -D_FASTQ_SELECT=1
+	gcc $file $LIBS -o ${file%.*}.select.out -w $* -D_FASTQ_SELECT=1 -g -ggdb
 done
 
 

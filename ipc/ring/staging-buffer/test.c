@@ -49,8 +49,8 @@ void *dequeue(void*arg)
         
         msg = (struct test_msg*)peek_buffer(staging_buf, &size);
 
-        if(!msg) {
-            printf("peek error.\n");
+        if(!msg || size == 0) {
+//            printf("peek error.\n");
             continue;
         }
         
@@ -62,10 +62,11 @@ void *dequeue(void*arg)
             N_consume ++;
             p += __size;
             remain -= __size;
+            consume_done(staging_buf, __size);
             msg = (struct test_msg*)p;
         }
         
-        consume_done(staging_buf, size);
+//        consume_done(staging_buf, size);
         
 //        usleep(20000);
         

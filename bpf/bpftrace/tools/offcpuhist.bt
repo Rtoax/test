@@ -1,0 +1,33 @@
+#!/usr/bin/bpftrace
+
+// 荣涛 2021年6月8日
+// 类似于 BCC  的 offcpufime
+// 摘自 BPF之巅 
+
+#include <linux/sched.h>
+
+BEGIN
+{
+	printf("Tracing nanosecond time in off-CPU stacks. Ctrl-C to end\n");
+}
+
+kprobe:finish_task_switch
+{
+	//record previous thread sleep time
+	$prev = (struct task_struct *)arg0;
+	if($1 == 0 || $prev->tgid == $1) {
+		@start[$prev->pid] = nsecs;
+	}
+
+	//get the current thread start time
+	$last = @start[tid];
+	if ($last != 0) {
+		@[kstack, ustack, comm, tid] = hist(nsecs - $last);
+		delete(@start[tid]);
+	}
+}
+
+END
+{
+	clear(@start);
+}

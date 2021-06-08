@@ -1,8 +1,22 @@
+#ifndef __STAGING_BUFFER_H
+#define __STAGING_BUFFER_H 1
+
+#ifndef __fAStLOG_H
+#error "You can't include <fastlog_staging_buffer.h> directly, #include <fastlog.h> instead."
+#endif
+
+#include <stdint.h>
+#include <stdbool.h>
+#include <stdio.h>
 #include <assert.h>
 #include <stdlib.h>
-#include "staging-buffer.h"
+#include <sys/types.h>
 
-#define STAGING_BUFFER_SIZE 4096
+
+struct StagingBuffer;
+
+
+#define STAGING_BUFFER_SIZE 8192
 
 struct StagingBuffer {
 
@@ -57,11 +71,28 @@ struct StagingBuffer {
 };
 
 
-struct StagingBuffer *
-create_buff()
+//inline struct StagingBuffer *
+//create_buff();
+
+//inline char *
+//reserveProducerSpace(struct StagingBuffer *buff, size_t nbytes);
+//inline void
+//finishReservation(struct StagingBuffer *buff, size_t nbytes);
+//
+//inline char *
+//peek_buffer(struct StagingBuffer *buff, uint64_t *bytesAvailable);
+//
+//inline void
+//consume_done(struct StagingBuffer *buff, uint64_t nbytes);
+
+
+inline static struct StagingBuffer *
+create_buff(uint32_t bufferId)
 {
     size_t i;
     struct StagingBuffer *staging_buf = NULL;
+
+//    printf("create staging buffer, buffer id = %d\n", bufferId);
     
     staging_buf = malloc(sizeof(struct StagingBuffer));
     assert(staging_buf && "malloc error");
@@ -75,7 +106,7 @@ create_buff()
 
     staging_buf->consumerPos = staging_buf->storage;
     staging_buf->shouldDeallocate = false;
-    staging_buf->id = 1;//bufferId;
+    staging_buf->id = bufferId;
     staging_buf->producerPos = staging_buf->storage;
 
 
@@ -107,7 +138,7 @@ create_buff()
 *      A pointer into storage[] that can be written to by the producer for
 *      at least nbytes.
 */
-char *
+inline static char *
 reserveSpaceInternal(struct StagingBuffer *buff, size_t nbytes, bool blocking) {
     const char *endOfBuffer = buff->storage + STAGING_BUFFER_SIZE;
 
@@ -169,7 +200,7 @@ reserveSpaceInternal(struct StagingBuffer *buff, size_t nbytes, bool blocking) {
  * \return
  *      Pointer to at least nbytes of contiguous space
  */
-char *
+inline static char *
 reserveProducerSpace(struct StagingBuffer *buff, size_t nbytes) 
 {
     ++buff->numAllocations;
@@ -182,7 +213,7 @@ reserveProducerSpace(struct StagingBuffer *buff, size_t nbytes)
     return reserveSpaceInternal(buff, nbytes, true);
 }
 
-void
+inline static void
 finishReservation(struct StagingBuffer *buff, size_t nbytes) 
 {
     assert(nbytes < buff->minFreeSpace);
@@ -207,7 +238,7 @@ finishReservation(struct StagingBuffer *buff, size_t nbytes)
 * \return
 *      Pointer to the consumable space
 */
-char *
+inline static char *
 peek_buffer(struct StagingBuffer *buff, uint64_t *bytesAvailable)
 {
     // Save a consistent copy of producerPos
@@ -236,10 +267,13 @@ peek_buffer(struct StagingBuffer *buff, uint64_t *bytesAvailable)
  * \param nbytes
  *      Number of bytes to return back to the producer
  */
-void
+inline static void
 consume_done(struct StagingBuffer *buff, uint64_t nbytes)
 {
     asm volatile("lfence":::"memory"); // Make sure consumer reads finish before bump
     buff->consumerPos += nbytes;
 }
+
+
+#endif /*<__STAGING_BUFFER_H>*/
 

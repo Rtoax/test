@@ -13,6 +13,8 @@
 #error "You can't include <fastlog_internal.h> directly, #include <fastlog.h> instead."
 #endif
 
+#include <fastlog_staging_buffer.h>
+
 #if !defined(__x86_64__) && defined(__i386__)
 #error "Just support x86"
 #endif
@@ -108,18 +110,20 @@ enum format_arg_type_size {
     SIZEOF_FAT_LONG_LONG_INT  =   sizeof(long long int),
     SIZEOF_FAT_CHAR   =   sizeof(char),
     SIZEOF_FAT_UCHAR  =   sizeof(unsigned char),
-    SIZEOF_FAT_STRING =   -1,
+    SIZEOF_FAT_STRING =   0,
     SIZEOF_FAT_POINTER    =   sizeof(void*),
     SIZEOF_FAT_FLOAT  =   sizeof(float),
     SIZEOF_FAT_DOUBLE =   sizeof(double),
     SIZEOF_FAT_LONG_DOUBLE    =   sizeof(long double),
 };
 
+#define SIZEOF_FAT(t) SIZEOF_##t
+
 static const struct {
     size_t size;
     char *name;
 } FASTLOG_FAT_TYPE2SIZENAME[FAT_MAX_FORMAT_TYPE] = {
-#define _TYPE_SIZE(T)   [T] = {SIZEOF_##T, #T}
+#define _TYPE_SIZE(T)   [T] = {SIZEOF_FAT(T), #T}
     _TYPE_SIZE(FAT_INT8),
     _TYPE_SIZE(FAT_INT16),
     _TYPE_SIZE(FAT_INT32),
@@ -145,18 +149,35 @@ static const struct {
 #undef _TYPE_SIZE    
 };
 
+/**
+ *  元数据头信息
+ */
+struct fastlog_log_metadata_file_header {
+#define FATSLOG_METADATA_HEADER_MAGIC_NUMBER    0x1234abcd
+    int magic;
+    uint64_t start_rdtsc;
+    /*
+    时间戳，LOG数，统计信息
+    */
+};
 
+/**
+ *  单条元数据信息
+ */
 struct fastlog_log_metadata {
     int log_id;
-    int log_level:4;
-    int log_line:16;        // __LINE__ 宏最大 65535 行
-    int metadata_size:12;   //此数据结构 所占大小
-    char *src_file;
-    char *src_private_name;
+    unsigned int log_level:4;
+    unsigned int log_line:16;   // __LINE__ 宏最大 65535 行
+    int metadata_size:12;       //此数据结构 所占大小
+    char *src_file; 
+//    char *src_private_name;
     char *print_format;
 }__attribute__((packed));
 
 /**
+ *  单条LOG args类型信息
+ *
+ *  格式如下：
  *  例
  *  printf("%d %s %f %llf", ...); 
  *  >>将被解析为>> 
@@ -167,38 +188,106 @@ struct fastlog_log_metadata {
  *  argtype[3] = FAT_LONG_DOUBLE
  */
 struct args_type {
-    int nargs:8;    //argtype 的使用个数
+    unsigned int nargs:7;        //argtype 的使用个数
+    unsigned int has_string:1;   //只有存在 字符串时，参数总大小才不固定
+    unsigned int pre_size:8;     //参数总size：如果 没有字符串`has_string=0`时该字段生效
     uint8_t argtype[_FASTLOG_MAX_NR_ARGS];  // enum format_arg_type 之一
+#define ARGS_TYPE_INITIALIZER     {0,0,0,0,{0}}  
 };
 
+/**
+ *  单条LOG信息
+ */
 struct arg_hdr {
     int log_id; //所属ID
     int log_args_size;
     uint64_t log_rdtsc;
     char log_args_buff[];   //存入 参数
-};
+}__attribute__((packed));
 
 
-#define __FAST_LOG(arg_size, level, name, format, ...) do {                                         \
+#define __FAST_LOG(level, name, format, ...) do {                                         \
     /* initial LOG ID */                                                                            \
     static int __thread log_id = 0;                                                                 \
-    static char __thread args_buffer[arg_size];                                                     \
-    static struct args_type __thread args = {0,0,{0}};                                              \
+    static struct args_type __thread args = ARGS_TYPE_INITIALIZER;                                  \
     if(unlikely(!log_id)) {                                                                         \
         if(!__builtin_constant_p(level)) assert(0 && "level must be one of enum FASTLOG_LEVEL");    \
         if(!__builtin_constant_p(name)) assert(0 && "name must be const variable");                 \
         if(!__builtin_constant_p(format)) assert(0 && "Just support static string.");               \
-        log_id = __fastlog_get_unused_logid(level, name, __FILE__, __func__, __LINE__, format);        \
+        log_id = __fastlog_get_unused_logid(level, name, __FILE__, __func__, __LINE__, format);     \
         __fastlog_parse_format(format, &args);                                                      \
+                                                                                                    \
+        /* 确保缓冲区不为空  */                                                                             \
+        if (unlikely(stagingBuffer == NULL))                                                        \
+            ensureStagingBufferAllocated();                                                         \
     }                                                                                               \
     if (false) { __fastlog_check_format(format, ##__VA_ARGS__); }                                   \
-    __fastlog_print_buffer(log_id, args_buffer, &args, ##__VA_ARGS__);\
-    __fastlog_print_parse_buffer(args_buffer, &args);/* 此处应替换为对应的 保存参数的接口 */\
+    __fastlog_print_buffer(log_id, &args, ##__VA_ARGS__);                                           \
 }while(0)
-    //TODO
-        //    printf("[printf] "format, ##__VA_ARGS__);\
 
 
+
+typedef struct {
+    volatile int64_t cnt;
+} fastlog_atomic64_t;
+
+
+static inline int _unused 
+fastlog_atomic64_cmpset(volatile uint64_t *dst, uint64_t exp, uint64_t src)
+{
+	uint8_t res;
+
+	asm volatile(
+			"lock ; "
+			"cmpxchgq %[src], %[dst];"
+			"sete %[res];"
+			: [res] "=a" (res),     /* output */
+			  [dst] "=m" (*dst)
+			: [src] "r" (src),      /* input */
+			  "a" (exp),
+			  "m" (*dst)
+			: "memory");            /* no-clobber list */
+
+	return res;
+}
+
+static inline void _unused
+fastlog_atomic64_init(fastlog_atomic64_t *v)
+{
+	fastlog_atomic64_cmpset((volatile uint64_t *)&v->cnt, v->cnt, 0);
+}
+
+static inline int64_t _unused
+fastlog_atomic64_read(fastlog_atomic64_t *v)
+{
+    return v->cnt;
+}
+
+static inline void _unused
+fastlog_atomic64_add(fastlog_atomic64_t *v, int64_t inc) {
+	asm volatile(
+			"lock ; "
+			"addq %[inc], %[cnt]"
+			: [cnt] "=m" (v->cnt)   /* output */
+			: [inc] "ir" (inc),     /* input */
+			  "m" (v->cnt)
+			);
+}
+
+static inline void _unused
+fastlog_atomic64_inc(fastlog_atomic64_t *v) {
+	asm volatile(
+			"lock ; "
+			"incq %[cnt]"
+			: [cnt] "=m" (v->cnt)   /* output */
+			: "m" (v->cnt)          /* input */
+			);
+}
+
+
+extern __thread struct StagingBuffer *stagingBuffer;
+extern struct StagingBuffer *threadBuffers[1024];
+extern fastlog_atomic64_t  stagingBufferId;
 
 /* 编译阶段检测 printf 格式 */
 static void __attribute__((format (printf, 1, 2)))
@@ -236,20 +325,105 @@ __fastlog_rdtsc()
 
 int __fastlog_get_unused_logid(int level, const char *name, char *file, char *func, int line, const char *format);
 int __fastlog_parse_format(const char *fmt, struct args_type *args);
-int __fastlog_print_parse_buffer(char *buffer, struct args_type *args);
+int __fastlog_print_parse_buffer(struct args_type *args);
 
+
+static inline void
+ensureStagingBufferAllocated()
+{
+    if (stagingBuffer == NULL) {
+        stagingBuffer = create_buff(fastlog_atomic64_read(&stagingBufferId));
+        threadBuffers[fastlog_atomic64_read(&stagingBufferId)] = stagingBuffer;
+        fastlog_atomic64_inc(&stagingBufferId);
+    }
+    
+}
 
 
 /* 通过 */
-static inline int __fastlog_print_buffer(int log_id, char *buffer, struct args_type *args, ...)
+static inline int __fastlog_print_buffer(int log_id, struct args_type *args, ...)
 {
-    int size = 0;
     int iarg;
-    va_list va;
+    va_list va, va2;
     va_start(va, args);
+    va_start(va2, args);
+    
+    struct arg_hdr *arghdr = NULL;
+    char *args_data = NULL;
+    unsigned int args_data_bytes = args->pre_size;
 
-    struct arg_hdr *arghdr = buffer;
-    buffer = arghdr->log_args_buff;
+    //如果有字符串，需要求取字符串长度
+    if(unlikely(args->has_string == 1)) {
+//        printf("args->has_string = %d, pre_size = %d\n", args->has_string, args->pre_size);
+        
+        for(iarg=0; iarg<args->nargs; iarg++) {
+            switch(args->argtype[iarg]) {
+
+#define _CASE(fat_type, type)                       \
+        case fat_type: {                            \
+            type _val = va_arg(va, type);           \
+            break;                                  \
+        }
+#define _CASE_STRING(fat_type, type)                \
+        case fat_type: {                            \
+            type _val = va_arg(va, type);           \
+            /*printf("STR:%s\n", _val); */          \
+            if(FAT_STRING == fat_type) {            \
+                args_data_bytes += strlen(_val);    \
+            }                                       \
+            break;                                  \
+        }
+            _CASE(FAT_INT8, int8_t);
+            _CASE(FAT_INT16, int16_t);
+            _CASE(FAT_INT32, int32_t);
+            _CASE(FAT_INT64, int64_t);
+            
+            _CASE(FAT_UINT8, uint8_t);
+            _CASE(FAT_UINT16, uint16_t);
+            _CASE(FAT_UINT32, uint32_t);
+            _CASE(FAT_UINT64, uint64_t);
+            
+            _CASE(FAT_INT, int);
+            _CASE(FAT_SHORT, short);
+            _CASE(FAT_SHORT_INT, short int);
+
+            _CASE(FAT_LONG, long);
+            _CASE(FAT_LONG_INT, long int);
+            _CASE(FAT_LONG_LONG, long long);
+            _CASE(FAT_LONG_LONG_INT, long long int);
+
+            _CASE(FAT_CHAR, char);
+            _CASE(FAT_UCHAR, unsigned char);
+            
+            _CASE_STRING(FAT_STRING, char *);
+
+            _CASE(FAT_POINTER, void*);
+            
+            _CASE(FAT_FLOAT, double);
+            _CASE(FAT_DOUBLE, double);
+            _CASE(FAT_LONG_DOUBLE, long double);
+            
+            default:
+                printf("\t%d unknown(%d).\n", iarg, args->argtype[iarg]);
+                assert(0 && "Not support type." && __FILE__ && __LINE__);
+                break;
+#undef _CASE
+#undef _CASE_STRING
+            }
+        }
+    }
+    
+
+try_reserve_again:
+    /**
+     *  stagingBuffer 在`ensureStagingBufferAllocated`确保不为空
+     */
+    arghdr = reserveProducerSpace(stagingBuffer, args_data_bytes + sizeof(struct arg_hdr));
+
+    if(!arghdr) {
+        goto try_reserve_again;
+    }
+    args_data = arghdr->log_args_buff;
     
     arghdr->log_id = log_id;
 
@@ -261,28 +435,25 @@ static inline int __fastlog_print_buffer(int log_id, char *buffer, struct args_t
 
 #define _CASE(fat_type, type)                       \
         case fat_type: {                            \
-            type _val = va_arg(va, type);           \
-            memcpy(buffer, &_val, sizeof(type));    \
-            buffer += sizeof(type);                 \
-            size += sizeof(type);                   \
+            type _val = va_arg(va2, type);          \
+            memcpy(args_data, &_val, sizeof(type)); \
+            args_data += sizeof(type);              \
             break;                                  \
         }
 #define _CASE_STRING(fat_type, type)                \
         case fat_type: {                            \
-            type _val = va_arg(va, type);           \
+            type _val = va_arg(va2, type);          \
             int len = strlen(_val);                 \
-            memcpy(buffer, _val, len);              \
-            buffer += len;                          \
-            size += len;                            \
+            memcpy(args_data, _val, len);           \
+            args_data += len;                       \
             break;                                  \
         }
 #define _CASE_POINTER(fat_type, type)                   \
         case fat_type: {                                \
-            type _val = va_arg(va, type);               \
+            type _val = va_arg(va2, type);              \
             unsigned long __v = (unsigned long)_val;    \
-            memcpy(buffer, &__v, sizeof(type));         \
-            buffer += sizeof(type);                     \
-            size += sizeof(type);                       \
+            memcpy(args_data, &__v, sizeof(type));      \
+            args_data += sizeof(type);                  \
             break;                                      \
         }
 
@@ -328,12 +499,16 @@ static inline int __fastlog_print_buffer(int log_id, char *buffer, struct args_t
     }
 
     va_end(va);
+    va_end(va2);
 
-    arghdr->log_args_size = size;
+    arghdr->log_args_size = args_data_bytes;
     arghdr->log_rdtsc = __fastlog_rdtsc();
 
-//    printf("size = %d\n", size);
-    return size;
+    //确认消费
+    finishReservation(stagingBuffer, args_data_bytes + sizeof(struct arg_hdr));
+
+//    printf("args_data_bytes = %d\n", args_data_bytes);
+    return args_data_bytes;
 }
 
 

@@ -1,6 +1,3 @@
-
-
-
 #include <fastlog.h>
 #include <fastlog_cycles.h>
 

@@ -21,6 +21,6 @@ BEGIN
 uprobe:/usr/lib64/libpthread.so.0:pthread_create
 //uprobe:/lib/x86_64-linux-gnu/libpthread.so.0:pthread_create
 {
-	printf("%-10u %-6d %-16s %s\n", elapsed / 1000000, pid, comm,
-	    usym(arg2));
+	printf("%-10u %-6d %-16s %s %s\n", elapsed / 1000000, pid, comm,
+	    usym(arg2), ustack);
 }

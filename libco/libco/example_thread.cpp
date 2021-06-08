@@ -29,6 +29,7 @@
 
 int loop_fn(void *arg)
 {
+    sleep(1);
     printf("loop. %ld\n", *(pthread_t *)arg);
 	return 0;
 }
@@ -47,6 +48,11 @@ int main(int argc,char *argv[])
 	{
 		pthread_create( tid + i,NULL,routine_func,tid + i);
 	}
+	for(int i=0;i<cnt;i++)
+	{
+        pthread_join(tid[i], NULL);
+        printf("pthread_join(%ld, ...) done.\n", tid[i]);
+    }
 	for(;;)
 	{
 		sleep(1);

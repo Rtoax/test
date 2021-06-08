@@ -18,11 +18,11 @@
 
 #ifndef __CO_CLOSURE_H__
 #define __CO_CLOSURE_H__
-struct stCoClosure_t 
-{
+
+struct stCoClosure_t {
 public:
-	virtual void exec() = 0;
-	virtual ~stCoClosure_t(){}
+    virtual void exec() = 0;
+    virtual ~stCoClosure_t(){}
 };
 
 //1.base 

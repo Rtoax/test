@@ -47,8 +47,8 @@ void __fastlog_cycles_init()
     printf("__cycles_per_sec = %ld\n", __cycles_per_sec);
 }
 
-static inline uint64_t 
-__get_cycles_per_sec()
+uint64_t 
+__fastlog_get_cycles_per_sec()
 {
     return __cycles_per_sec;
 }
@@ -61,7 +61,7 @@ double
 __fastlog_cycles_to_seconds(int64_t cycles, double cyclesPerSec)
 {
     if (cyclesPerSec == 0)
-        cyclesPerSec = __get_cycles_per_sec();
+        cyclesPerSec = __fastlog_get_cycles_per_sec();
     return (double)(cycles)/cyclesPerSec;
 }
 
@@ -76,7 +76,7 @@ uint64_t
 __fastlog_cycles_to_nanoseconds(uint64_t cycles, double cyclesPerSec)
 {
     if (cyclesPerSec == 0)
-        cyclesPerSec = __get_cycles_per_sec();
+        cyclesPerSec = __fastlog_get_cycles_per_sec();
     return (uint64_t) (1e09*(double)(cycles)/cyclesPerSec + 0.5);
 }
 
@@ -84,7 +84,7 @@ uint64_t
 __fastlog_cycles_from_seconds(double seconds, double cyclesPerSec)
 {
     if (cyclesPerSec == 0)
-        cyclesPerSec = __get_cycles_per_sec();
+        cyclesPerSec = __fastlog_get_cycles_per_sec();
     return (uint64_t) (seconds*cyclesPerSec + 0.5);
 }
 
@@ -93,14 +93,14 @@ uint64_t
 __fastlog_cycles_from_nanoseconds(uint64_t ns, double cyclesPerSec)
 {
     if (cyclesPerSec == 0)
-        cyclesPerSec = __get_cycles_per_sec();
+        cyclesPerSec = __fastlog_get_cycles_per_sec();
     return (uint64_t) ((double)(ns)*cyclesPerSec/1e09 + 0.5);
 }
 
 void
 __fastlog_sleep(uint64_t us)
 {
-    uint64_t stop = __fastlog_rdtsc() + __fastlog_cycles_from_nanoseconds(1000*us, __get_cycles_per_sec());
+    uint64_t stop = __fastlog_rdtsc() + __fastlog_cycles_from_nanoseconds(1000*us, __fastlog_get_cycles_per_sec());
     while (__fastlog_rdtsc() < stop);
 }
 

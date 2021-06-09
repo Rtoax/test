@@ -12,4 +12,5 @@ FastLog 开发日志
 * 2021年6月2日 
 * 2021年6月3日 rdtsc部分；log_id获取；
 * 2021年6月8日 添加 stagingBuffer 功能，移植自 NanoLog
+* 2021年6月9日 添加 日志 解析 main() 程序
 

@@ -5,3 +5,4 @@ all:
 
 clean:
 	rm -f core.* *.out
+	rm fastlog.log* fastlog.metadata* -f

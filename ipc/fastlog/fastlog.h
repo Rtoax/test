@@ -26,15 +26,12 @@ enum FASTLOG_LEVEL
 
 static const char* FASTLOG_LEVEL_NAME[] = {"CRIT", "ERROR", "WARNING", "NOTICE", "DEBUG"};
 
-
-
 //int FAST_LOG(int level, const char *name, const char *format, ...);
 #define FAST_LOG(level, name, format, ...) __FAST_LOG(level, name, format, ##__VA_ARGS__)
 
 
-
-
-
+void fastlog_init();
+void fastlog_exit();
 
 
 #endif /*<__fAStLOG_H>*/

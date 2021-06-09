@@ -149,29 +149,78 @@ static const struct {
 #undef _TYPE_SIZE    
 };
 
+
+//文件映射
+struct fastlog_file_mmap {
+    char *filepath;
+    int fd;
+    size_t mmap_size;
+    char *mmapaddr;
+};
+
+
+enum {
+    __FATSLOG_MAGIC1 = 0x1234abcd,
+    __FATSLOG_MAGIC2,
+    __FATSLOG_MAGIC3,
+    __FATSLOG_MAGIC4,
+    __FATSLOG_MAGIC5,
+    
+};
+
 /**
  *  元数据头信息
  */
-struct fastlog_log_metadata_file_header {
-#define FATSLOG_METADATA_HEADER_MAGIC_NUMBER    0x1234abcd
-    int magic;
+struct fastlog_file_header {
+
+#define FATSLOG_METADATA_HEADER_MAGIC_NUMBER    __FATSLOG_MAGIC1
+#define FATSLOG_METADATA_FILE_DEFAULT           "fastlog.metadata"
+#define FATSLOG_METADATA_FILE_SIZE_DEFAULT      (1024*1024*40) //40MB
+
+#define FATSLOG_LOG_HEADER_MAGIC_NUMBER     __FATSLOG_MAGIC2
+#define FATSLOG_LOG_FILE_DEFAULT            "fastlog.log"
+#define FATSLOG_LOG_FILE_SIZE_DEFAULT       (1024*1024*40) //40MB
+
+    unsigned int magic;
+    uint64_t cycles_per_sec;
     uint64_t start_rdtsc;
     /*
     时间戳，LOG数，统计信息
     */
-};
+    char data[];
+}__attribute__((packed));
+
+/**
+ *  LOG数据头信息
+ */
+struct fastlog_log_file_header {
+    unsigned int magic;
+    /*
+    时间戳，LOG数，统计信息
+    */
+    uint64_t cycles_per_sec;
+    uint64_t start_rdtsc;
+    
+    char logdata[];
+}__attribute__((packed));
+
 
 /**
  *  单条元数据信息
  */
-struct fastlog_log_metadata {
-    int log_id;
+struct fastlog_metadata {
+#define FATSLOG_METADATA_MAGIC_NUMBER    __FATSLOG_MAGIC3
+    unsigned int magic;
+    unsigned int log_id;
     unsigned int log_level:4;
-    unsigned int log_line:16;   // __LINE__ 宏最大 65535 行
-    int metadata_size:12;       //此数据结构 所占大小
-    char *src_file; 
-//    char *src_private_name;
-    char *print_format;
+    unsigned int log_line:28;           // __LINE__ 宏最大 65535 行
+    unsigned int metadata_size:16;      //元数据 所占大小
+    unsigned int user_string_len:8; 
+    unsigned int src_filename_len:8; 
+    unsigned int src_function_len:8; 
+    unsigned int print_format_len:8;
+    unsigned int thread_name_len:8;
+    char string_buf[]; //保存 源文件名 和 格式化字符串
 }__attribute__((packed));
 
 /**
@@ -205,8 +254,9 @@ struct arg_hdr {
     char log_args_buff[];   //存入 参数
 }__attribute__((packed));
 
+typedef struct arg_hdr fastlog_logdata_t;
 
-#define __FAST_LOG(level, name, format, ...) do {                                         \
+#define __FAST_LOG(level, name, format, ...) do {                                                   \
     /* initial LOG ID */                                                                            \
     static int __thread log_id = 0;                                                                 \
     static struct args_type __thread args = ARGS_TYPE_INITIALIZER;                                  \
@@ -323,9 +373,15 @@ __fastlog_rdtsc()
 
 
 
-int __fastlog_get_unused_logid(int level, const char *name, char *file, char *func, int line, const char *format);
+int __fastlog_get_unused_logid(int level, char *name, char *file, char *func, int line, char *format);
 int __fastlog_parse_format(const char *fmt, struct args_type *args);
 int __fastlog_print_parse_buffer(struct args_type *args);
+
+
+int mmap_fastlog_logfile_write(struct fastlog_file_mmap *mmap_file, char *filename, char *backupfilename, size_t size);
+void msync_fastlog_logfile_write(struct fastlog_file_mmap *mmap_file);
+int mmap_fastlog_logfile_read(struct fastlog_file_mmap *mmap_file, char *filename);
+int unmmap_fastlog_logfile(struct fastlog_file_mmap *mmap_file);
 
 
 static inline void
@@ -336,7 +392,6 @@ ensureStagingBufferAllocated()
         threadBuffers[fastlog_atomic64_read(&stagingBufferId)] = stagingBuffer;
         fastlog_atomic64_inc(&stagingBufferId);
     }
-    
 }
 
 
@@ -369,7 +424,7 @@ static inline int __fastlog_print_buffer(int log_id, struct args_type *args, ...
             type _val = va_arg(va, type);           \
             /*printf("STR:%s\n", _val); */          \
             if(FAT_STRING == fat_type) {            \
-                args_data_bytes += strlen(_val);    \
+                args_data_bytes += strlen(_val)+1;  \
             }                                       \
             break;                                  \
         }
@@ -443,7 +498,7 @@ try_reserve_again:
 #define _CASE_STRING(fat_type, type)                \
         case fat_type: {                            \
             type _val = va_arg(va2, type);          \
-            int len = strlen(_val);                 \
+            int len = strlen(_val)+1;               \
             memcpy(args_data, _val, len);           \
             args_data += len;                       \
             break;                                  \

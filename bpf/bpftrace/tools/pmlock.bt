@@ -1,0 +1,31 @@
+#!/usr/bin/bpftrace
+
+// 荣涛 2021年6月9日
+// libpthread 库没有帧指针，调用栈不起作用
+
+
+BEGIN
+{
+	printf("Tracing libpthread mutex lock latency. Hit ctrl-C to end.\n");
+}
+
+uprobe:/usr/lib64/libpthread.so.0:pthread_mutex_lock
+/$1 == 0 || pid == $1/
+{
+	@lock_start[tid] = nsecs;
+	@lock_addr[tid] = arg0;
+}
+
+uretprobe:/usr/lib64/libpthread.so.0:pthread_mutex_lock
+/($1 == 0 || pid == $1) && @lock_start[tid]/
+{
+	@lock_latency_ns[usym(@lock_addr[tid]), ustack(5), comm] = hist(nsecs - @lock_start[tid]);
+	delete(@lock_start[tid]);
+	delete(@lock_addr[tid]);
+}
+
+END
+{
+	clear(@lock_start);
+	clear(@lock_addr);
+}

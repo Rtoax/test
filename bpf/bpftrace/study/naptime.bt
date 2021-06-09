@@ -1,0 +1,14 @@
+#!/usr/bin/bpftrace
+
+// 荣涛 2021年6月9日
+
+#include <linux/time.h>
+#include <linux/sched.h>
+
+BEGIN
+{
+	printf("Tracing sleep. Hit ctrl-C to end.\n");
+	printf("%-8s %-6s %-16s %-6s %-16s %s\n", "TIME", "PPID", "PCOMM", "PID", "COMM", "SECONDS");
+	printf("see bpftrace/tools/naptime.bt.\n");
+	exit();
+}

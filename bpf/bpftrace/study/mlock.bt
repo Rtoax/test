@@ -1,0 +1,3 @@
+#!/usr/bin/bpftrace
+
+// TODO: see 《BPF之巅》p684 2021年6月9日

@@ -4,12 +4,17 @@
  *  
  */
 #include <pthread.h>
-#include <fastlog.h>
 #include <sys/mman.h>
 
+#include <fastlog.h>
+#include <fastlog_staging_buffer.h>
 
 /**
- *  日志索引
+ *  日志索引 
+ *
+ *  初始值在`fastlog_init()` 设置为 1
+ *  解析命令中`parse_logdata` 遇到0值(或文件结尾)即为结束标志
+ *
  */
 static fastlog_atomic64_t  maxlogId;
 
@@ -46,6 +51,8 @@ static char *logdata_mmap_curr_ptr = NULL;
  */
 static uint64_t program_cycles_per_sec;
 static uint64_t program_start_rdtsc;
+static time_t   program_unix_time_sec;      //time(2)
+static struct utsname program_unix_uname;   //uname(2)
 
 
 static void mmap_new_fastlog_file(struct fastlog_file_mmap *mmap_file, 
@@ -55,6 +62,8 @@ static void mmap_new_fastlog_file(struct fastlog_file_mmap *mmap_file,
                                     int magic,
                                     uint64_t cycles_per_sec,
                                     uint64_t rdtsc,
+                                    time_t time_from_19700101,
+                                    struct utsname *unix_uname,
                                     char **mmap_curr_ptr);
 
 
@@ -103,6 +112,8 @@ static inline void bg_handle_one_log(struct arg_hdr *log_args, size_t size)
                             FATSLOG_LOG_HEADER_MAGIC_NUMBER, 
                             program_cycles_per_sec, 
                             program_start_rdtsc, 
+                            program_unix_time_sec,
+                            &program_unix_uname,
                             &logdata_mmap_curr_ptr);
     }
 
@@ -188,6 +199,8 @@ static void mmap_new_fastlog_file(struct fastlog_file_mmap *mmap_file,
                 int magic,
                 uint64_t cycles_per_sec,
                 uint64_t rdtsc,
+                time_t time_from_19700101,
+                struct utsname *unix_uname,
                 char **mmap_curr_ptr)
 {
     int ret = -1;
@@ -206,7 +219,10 @@ static void mmap_new_fastlog_file(struct fastlog_file_mmap *mmap_file,
     meta_hdr->magic = magic;
     meta_hdr->cycles_per_sec = cycles_per_sec;
     meta_hdr->start_rdtsc = rdtsc;
-
+    meta_hdr->unix_time_sec = time_from_19700101;
+    memcpy(&meta_hdr->unix_uname, unix_uname, sizeof(struct utsname));
+    
+    
     *mmap_curr_ptr += sizeof(struct fastlog_file_header);
     msync(mmap_file->mmapaddr, sizeof(struct fastlog_file_header), MS_ASYNC);
     
@@ -225,6 +241,8 @@ void fastlog_init()
 
     program_cycles_per_sec = __fastlog_get_cycles_per_sec();
     program_start_rdtsc = __fastlog_rdtsc();
+    program_unix_time_sec = time(NULL);
+    uname(&program_unix_uname);
 
     //元数据文件映射
     mmap_new_fastlog_file(&metadata_mmap, 
@@ -234,6 +252,8 @@ void fastlog_init()
                           FATSLOG_METADATA_HEADER_MAGIC_NUMBER, 
                           program_cycles_per_sec, 
                           program_start_rdtsc, 
+                          program_unix_time_sec,
+                          &program_unix_uname,
                           &metadata_mmap_curr_ptr);
 
     
@@ -245,11 +265,14 @@ void fastlog_init()
                           FATSLOG_LOG_HEADER_MAGIC_NUMBER, 
                           program_cycles_per_sec, 
                           program_start_rdtsc, 
+                          program_unix_time_sec,
+                          &program_unix_uname,
                           &logdata_mmap_curr_ptr);
     
 
     fastlog_atomic64_init(&stagingBufferId);
     fastlog_atomic64_init(&maxlogId);
+    fastlog_atomic64_inc(&maxlogId);    //logID 初始值 1
 
     /**
      *  启动后台线程，用于和用户线程之间进行数据交互，写文件映射内存。

@@ -2,7 +2,7 @@
 
 rm -f *.out
 
-SRC="fastlog.c fastlog_parse.c  fastlog_cycles.c fastlog_template.c common.c"
+SRC="fastlog.c fastlog_parse.c  fastlog_cycles.c fastlog_template.c fastlog_utils.c common.c"
 
 for file in `ls test-*`
 do 
@@ -12,8 +12,10 @@ do
 			  -o ${file%.*}.out -w -g -ggdb $*
 done
 
+SRC_DECODE="decoder/fastlog_decode_main.c decoder/fastlog_decode_list.c decoder/fastlog_decode_rb.c  decoder/fastlog_decode_file.c "
+
 echo "Compile fastlog_decode_main.c -> decode.out"
-gcc fastlog_decode_main.c  $SRC \
-			  -pthread -I./ \
-			  -o decode.out -w -g -ggdb $*
+gcc $SRC $SRC_DECODE \
+	  -pthread -I./ -I./decoder/ \
+	  -o decoder.out -w -g -ggdb $*
 

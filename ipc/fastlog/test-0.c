@@ -41,6 +41,9 @@ void *task_routine(void*param)
         FAST_LOG(FASTLOG_WARNING, "TEST", "%d %ld %lld %d %ld %lld %s\n", 1, 2, 3L, 1, 2, 3L, "Hello");
 //        FAST_LOG(FASTLOG_CRIT, "TEST", "I have an integer %d\n", total_dequeue);
         FAST_LOG(FASTLOG_INFO, "TEST", "Hello\n");
+        FAST_LOG(FASTLOG_CRIT, "TEST", "Hello\n");
+        FAST_LOG(FASTLOG_ERR, "TEST", "Hello\n");
+        FAST_LOG(FASTLOG_DEBUG, "TEST", "Hello\n");
         total_dequeue += 1;
 //        printf("\nTotal = %ld\n", total_dequeue);
         if(total_dequeue % 100000 == 0) {
@@ -104,7 +107,7 @@ int main()
         pthread_join(threads[itask], &arg);
         free(arg);
     }
-    
+    fastlog_exit();
 	return 0;
 }
 

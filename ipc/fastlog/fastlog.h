@@ -10,7 +10,6 @@
 #define __fAStLOG_H 1
 
 #include <fastlog_internal.h>
-#include <fastlog_staging_buffer.h>
 
 
 /* 级别 */
@@ -24,7 +23,7 @@ enum FASTLOG_LEVEL
 	FASTLOGLEVELS_NUM  
 };
 
-static const char* FASTLOG_LEVEL_NAME[] = {"CRIT", "ERROR", "WARNING", "NOTICE", "DEBUG"};
+static const char* FASTLOG_LEVEL_NAME[] = {"unknown", "CRIT", "ERROR", "WARN", "INFO", "DEBUG", "unknown", "unknown"};
 
 //int FAST_LOG(int level, const char *name, const char *format, ...);
 #define FAST_LOG(level, name, format, ...) __FAST_LOG(level, name, format, ##__VA_ARGS__)

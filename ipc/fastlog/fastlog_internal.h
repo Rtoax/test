@@ -30,6 +30,7 @@
 #include <errno.h>
 #include <ctype.h>
 #include <stdio.h>
+#include <time.h>   //系统调用 time(2)
 #include <string.h>
 #include <syscall.h>
 #include <sys/types.h>
@@ -38,6 +39,7 @@
 #include <stdint.h>
 #include <stdarg.h>
 #include <printf.h> //parse_printf_format() 和 
+#include <sys/utsname.h>    //uname
 
 
 #define likely(x)    __builtin_expect(!!(x), 1)
@@ -184,26 +186,14 @@ struct fastlog_file_header {
     unsigned int magic;
     uint64_t cycles_per_sec;
     uint64_t start_rdtsc;
+    time_t unix_time_sec;       //1970.1.1 00:00:00 至今 秒数(time(2))
+    struct utsname unix_uname;  //系统信息(uname(2))
+    
     /*
     时间戳，LOG数，统计信息
     */
     char data[];
 }__attribute__((packed));
-
-/**
- *  LOG数据头信息
- */
-struct fastlog_log_file_header {
-    unsigned int magic;
-    /*
-    时间戳，LOG数，统计信息
-    */
-    uint64_t cycles_per_sec;
-    uint64_t start_rdtsc;
-    
-    char logdata[];
-}__attribute__((packed));
-
 
 /**
  *  单条元数据信息
@@ -215,11 +205,29 @@ struct fastlog_metadata {
     unsigned int log_level:4;
     unsigned int log_line:28;           // __LINE__ 宏最大 65535 行
     unsigned int metadata_size:16;      //元数据 所占大小
+
+    /* 标记下面内存中各个字符串的长度 */
     unsigned int user_string_len:8; 
     unsigned int src_filename_len:8; 
     unsigned int src_function_len:8; 
     unsigned int print_format_len:8;
     unsigned int thread_name_len:8;
+
+    /**
+     *  `fastlog_metadata->string_buf`保存多个字符串
+     *
+     *  如`fastlog_metadata->string_buf`在内存中 为 TEST\0test.c\0main\0Hello, %s\0task1\0
+     *  
+     *  拆分结果在数据结构`struct metadata_decode`被解析为：
+     *  
+     *  metadata_decode->user_string     = "TEST"
+     *  metadata_decode->src_filename    = "test.c"
+     *  metadata_decode->src_function    = "main"
+     *  metadata_decode->print_format    = "Hello, %s"
+     *  metadata_decode->thread_name     = "task1"
+     *
+     *  而字符串长度由`fastlog_metadata->xxxx_len`决定
+     */
     char string_buf[]; //保存 源文件名 和 格式化字符串
 }__attribute__((packed));
 
@@ -329,6 +337,17 @@ fastlog_atomic64_inc(fastlog_atomic64_t *v) {
 	asm volatile(
 			"lock ; "
 			"incq %[cnt]"
+			: [cnt] "=m" (v->cnt)   /* output */
+			: "m" (v->cnt)          /* input */
+			);
+}
+
+static inline void
+fastlog_atomic64_dec(fastlog_atomic64_t *v)
+{
+	asm volatile(
+			"lock ; "
+			"decq %[cnt]"
 			: [cnt] "=m" (v->cnt)   /* output */
 			: "m" (v->cnt)          /* input */
 			);

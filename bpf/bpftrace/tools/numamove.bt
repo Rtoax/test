@@ -1,0 +1,30 @@
+#!/usr/bin/bpftrace
+
+// 荣涛 2021年6月10日
+
+kprobe:migrate_misplaced_page 
+{
+	@start[tid] = nsecs;
+}
+
+kretprobe:migrate_misplaced_page
+/@start[tid]/
+{
+	$dur = nsecs - @start[tid];
+	@ns += $dur;
+	@num ++;
+	delete(@start[tid]);
+}
+
+BEGIN
+{
+	printf("%-10s %18s %18s\n", "TIME", "NUMA_migrations", "NUMA_migrations_ms");
+}
+
+interval:s:1
+{
+	time("%H:%M:%S");
+	printf(" %18d %18d\n", @num, @ns/1000000);
+	delete(@num);
+	delete(@ns);
+}

@@ -1,0 +1,14 @@
+#!/usr/bin/bpftrace
+
+// 荣涛 2021年6月10日
+
+BEGIN
+{
+	printf("Tracing page allocation stacks kmem:mm_page_alloc.\n");
+	printf("Hit Ctrl-C to end.\n");
+}
+
+tracepoint:kmem:mm_page_alloc
+{
+	@bytes[kstack(5), comm] = count();
+}

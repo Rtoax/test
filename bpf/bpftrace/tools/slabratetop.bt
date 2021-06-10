@@ -1,0 +1,25 @@
+#!/usr/bin/bpftrace
+
+// 荣涛 2021年6月10日
+
+#include <linux/mm.h>
+#include <linux/slab.h>
+#ifdef CONFIG_SLUB
+#include <linux/slub_def.h>
+#else
+#include <linux/slab_def.h>
+#endif
+
+//void *kmem_cache_alloc(struct kmem_cache *cachep, gfp_t flags)
+kprobe:kmem_cache_alloc
+{
+	$cachep = (struct kmem_cache *)arg0;
+	@[str($cachep->name)] = count();
+}
+
+interval:s:1
+{
+	time();
+	print(@);
+	clear(@);
+}

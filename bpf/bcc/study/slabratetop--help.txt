@@ -1,0 +1,19 @@
+usage: slabratetop [-h] [-C] [-r MAXROWS] [interval] [count]
+
+Kernel SLAB/SLUB memory cache allocation rate top
+
+positional arguments:
+  interval              output interval, in seconds
+  count                 number of outputs
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -C, --noclear         don't clear the screen
+  -r MAXROWS, --maxrows MAXROWS
+                        maximum rows to print, default 20
+
+examples:
+    ./slabratetop            # kmem_cache_alloc() top, 1 second refresh
+    ./slabratetop -C         # don't clear the screen
+    ./slabratetop 5          # 5 second summaries
+    ./slabratetop 5 10       # 5 second summaries, 10 times only

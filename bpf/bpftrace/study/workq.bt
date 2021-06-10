@@ -1,0 +1,30 @@
+#!/usr/bin/bpftrace
+
+// 荣涛 2021年6月10日
+
+BEGIN
+{
+	printf("Tracing workqueue request latencies. ctrl-C to end.\n");
+}
+
+tracepoint:workqueue:workqueue_execute_start
+{
+	@start[tid] = nsecs;
+	@wqfunc[tid] = args->function;
+}
+
+tracepoint:workqueue:workqueue_execute_end
+/@start[tid]/
+{
+	$dur = (nsecs - @start[tid]) / 1000;
+	@us[ksym(@wqfunc[tid])] = hist($dur);
+
+	delete(@start[tid]);
+	delete(@wqfunc[tid]);
+}
+
+END
+{
+	clear(@start);
+	clear(@wqfunc);
+}

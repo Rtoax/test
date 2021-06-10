@@ -1,0 +1,16 @@
+#!/usr/bin/bpftrace
+
+// 荣涛 2021年6月10日
+
+BEGIN
+{
+	printf("Tracing kmem allocation stacks (kmalloc, kmem_cache_alloc).\n");
+	printf("Hit Ctrl-C to end.\n");
+}
+
+//void *kmem_cache_alloc(struct kmem_cache *cachep, gfp_t flags)
+tracepoint:kmem:kmalloc,
+tracepoint:kmem:kmem_cache_alloc
+{
+	@bytes[kstack(5), comm] = stats(args->bytes_alloc);
+}

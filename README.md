@@ -88,6 +88,7 @@
 * `JIT`: Just-in Time 及时编译器
 * `json`: Json语言与开元框架
 * `jvm`: Java虚拟机
+* `kubernetes`: 容器编排工具
 * `kvm`: Linux KVM虚拟机技术
 * `latex`: 写作
 * `leetcode`: 力扣算法[rtoax](https://leetcode-cn.com/u/rtoax/)

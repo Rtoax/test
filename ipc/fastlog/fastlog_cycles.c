@@ -33,18 +33,20 @@ void __fastlog_cycles_init()
             if (micros > 10000) {
                 __cycles_per_sec = (double)(stopCycles - startCycles);
                 __cycles_per_sec = 1000000.0*__cycles_per_sec/(double)(micros);
+//                printf("cal __cycles_per_sec %ld\n", __cycles_per_sec);
                 break;
             }
         }
         double delta = __cycles_per_sec/100000.0;
         if ((oldCycles > (__cycles_per_sec - delta)) &&
                 (oldCycles < (__cycles_per_sec + delta))) {
+//            printf("cal done __cycles_per_sec %ld\n", __cycles_per_sec);
             return;
         }
         oldCycles = __cycles_per_sec;
     }
 
-    printf("__cycles_per_sec = %ld\n", __cycles_per_sec);
+//    printf("ret __cycles_per_sec = %ld\n", __cycles_per_sec);
 }
 
 uint64_t 

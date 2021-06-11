@@ -59,7 +59,7 @@ void *task_routine(void*param)
 
             gettimeofday(&start, NULL);
         }
-//        usleep(100000);
+        usleep(10000);
     }
     pthread_exit(arg);
 }

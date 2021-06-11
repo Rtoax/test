@@ -4,7 +4,7 @@
  *  
  */
 #include <fastlog_decode.h>
-
+#include <fastlog_cycles.h>
 
 
 
@@ -59,7 +59,7 @@ static int parse_header(struct fastlog_file_header *header)
     strftime(buffer, 256, "Recoreded in:  %Y-%d-%m/%T", &_tm);
     printf("%s\n",buffer);
     }
-    
+
     /*  */
     return 0;
 }
@@ -221,6 +221,22 @@ static void signal_handler(int signum)
     exit(1);
 }
 
+void timestamp_tsc_to_string(uint64_t tsc, char str_buffer[32])
+{
+    double secondsSinceCheckpoint, nanos = 0.0;
+    secondsSinceCheckpoint = __fastlog_cycles_to_seconds(tsc - log_hdr()->start_rdtsc, 
+                                        log_hdr()->cycles_per_sec);
+    
+    int64_t wholeSeconds = (int64_t)(secondsSinceCheckpoint);
+    nanos = 1.0e9 * (secondsSinceCheckpoint - (double)(wholeSeconds));
+    time_t absTime = wholeSeconds + log_hdr()->unix_time_sec;
+    
+    
+    struct tm *_tm = localtime(&absTime);
+    
+    strftime(str_buffer, 32, "%Y-%d-%m/%T", _tm);
+}
+
 
 void metadata_print(struct metadata_decode *meta, void *arg)
 {
@@ -229,17 +245,23 @@ void metadata_print(struct metadata_decode *meta, void *arg)
 
 void logdata_print(struct logdata_decode *logdata, void *arg)
 {
-    printf("[%5s] logId = %3d, rdtsc = %ld, args size = %d\n", 
-        FASTLOG_LEVEL_NAME[logdata->metadata->metadata->log_level], 
-        logdata->metadata->metadata->log_id, 
-        logdata->logdata->log_rdtsc, 
-        logdata->logdata->log_args_size);
+    //时间戳
+    char buffer[32] = {0};
+    timestamp_tsc_to_string(logdata->logdata->log_rdtsc, buffer);
+    
+
+    printf("[%s][%5s] logId = %3d, rdtsc = %ld, args size = %d\n", 
+            buffer,
+            FASTLOG_LEVEL_NAME[logdata->metadata->metadata->log_level], 
+            logdata->metadata->metadata->log_id, 
+            logdata->logdata->log_rdtsc, 
+            logdata->logdata->log_args_size);
 
     //TODO
     // 从 "Hello, %s, %d" + World\02021 
     // 转化为
     // Hello, World, 2021
-    
+    sleep(1);
 }
 
 /* 解析程序 主函数 */
@@ -284,7 +306,7 @@ int main(int argc, char *argv[])
     parse_header(log_hdr());
     parse_logdata(logdata, log_mmapfile()->mmap_size - sizeof(struct fastlog_file_header));
 
-#if 0
+#if 1
     /* 遍历元数据 */
     metadata_rbtree__iter(metadata_print, NULL);
 

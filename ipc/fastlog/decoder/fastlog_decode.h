@@ -10,7 +10,7 @@
 
 #include <fastlog_rb.h>
 #include <fastlog_list.h>
-
+#include <fastlog_cycles.h>
 
 
 /* 解析出的元数据 */
@@ -71,6 +71,9 @@ struct fastlog_file_mmap *log_mmapfile();
 
 struct fastlog_file_header *meta_hdr();
 struct fastlog_file_header *log_hdr();
+
+
+void timestamp_tsc_to_string(uint64_t tsc, char str_buffer[32]);
 
 
 int load_metadata_file(const char *mmapfile_name);

@@ -7,6 +7,7 @@
 #include <sys/mman.h>
 
 #include <fastlog.h>
+#include <fastlog_cycles.h>
 #include <fastlog_staging_buffer.h>
 
 /**
@@ -49,10 +50,10 @@ static char *logdata_mmap_curr_ptr = NULL;
 /**
  *  程序初始化时被初始化，程序运行过程中为只读常数
  */
-static uint64_t program_cycles_per_sec;
-static uint64_t program_start_rdtsc;
-static time_t   program_unix_time_sec;      //time(2)
-static struct utsname program_unix_uname;   //uname(2)
+static uint64_t program_cycles_per_sec = 0;
+static uint64_t program_start_rdtsc = 0;
+static time_t   program_unix_time_sec = 0;      //time(2)
+static struct utsname program_unix_uname = {0};   //uname(2)
 
 
 static void mmap_new_fastlog_file(struct fastlog_file_mmap *mmap_file, 
@@ -243,6 +244,9 @@ void fastlog_init()
     program_start_rdtsc = __fastlog_rdtsc();
     program_unix_time_sec = time(NULL);
     uname(&program_unix_uname);
+
+    printf("Cycles/s        = %ld.\n", program_cycles_per_sec);
+    printf("Start Cycles    = %ld.\n", program_start_rdtsc);
 
     //元数据文件映射
     mmap_new_fastlog_file(&metadata_mmap, 

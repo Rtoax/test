@@ -1,0 +1,32 @@
+#!/usr/bin/bpftrace
+
+// 荣涛 2021年6月11日
+// 统计 cgroup blk 控制器基于硬限制 来限制IO时间
+
+// TODO
+// 我的内核版本没有对应的头文件，该程序无法运行
+
+#include <linux/cgroup-defs.h>
+#include <linux/blk-cgroup.h>
+
+BEGIN
+{
+	printf("Tracing block IO throttles by cgroups. Hit ctrl-C to end.\n");
+}
+
+kprobe:blk_throtl_bio
+{
+	@blkg[tid] = arg1;
+}
+
+kretprobe:blk_throtl_bio
+/@blkg[tid]/
+{
+	$blkg = (struct blkcg_gq *)@blkg[tid];
+	if(retval) {
+		@throttled[$blkg->blkcg->css.id] = count();
+	} else {
+		@nothrottled[$blkg->blkcg->css.id] = count();
+	}
+	delete(@blkg[tid]);
+}

@@ -1,0 +1,44 @@
+#!/usr/bin/bpftrace
+
+// 荣涛 2021年6月11日
+// 通过检测调度器上下文切换使的PID命名空间切换，来计算CPU切换容器运行的次数
+// 该工具 用于 确认或免除多个容器争用单个CPU的问题
+
+#include <linux/sched.h>
+#include <linux/nsproxy.h>
+#include <linux/utsname.h>
+#include <linux/pid_namespace.h>
+
+BEGIN
+{
+	printf("Tracing PID Namespace switches. Hit ctrl-C to end.\n");
+}
+
+// 较新的 linux 内核
+//static struct rq *finish_task_switch(struct task_struct *prev)
+//
+// kernel-rt-3.10.0-1127.rt56.1093.el7.src
+//static void finish_task_switch(struct rq *rq, struct task_struct *prev)
+kprobe:finish_task_switch
+{
+	$prev = (struct task_struct *)arg1;
+	$curr = (struct task_struct *)curtask;
+
+	// 我的内核 3.10.0-1062.el7.x86_64 没有 pid_ns_for_children 数据结构
+	//$prev_pidns = $prev->nsproxy->pid_ns_for_children->ns.inum;
+	//$curr_pidns = $curr->nsproxy->pid_ns_for_children->ns.inum;
+	
+	// 我的内核 3.10.0-1062.el7.x86_64 没有 pid_ns_for_children 数据结构
+	// kernel-rt-3.10.0-1127.rt56.1093.el7.src
+	$prev_pidns = $prev->nsproxy->pid_ns->proc_inum;
+	$curr_pidns = $curr->nsproxy->pid_ns->proc_inum;
+
+	if($prev_pidns != $curr_pidns) {
+		@[$prev_pidns, $prev->nsproxy->uts_ns->name.nodename] = count();
+	}
+}
+
+END
+{
+	printf("\nVictim PID namespace switch counts [PIDNS, nodename].\n");
+}

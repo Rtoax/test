@@ -22,5 +22,14 @@ int main()
 		printf("%3d/%d  [%.*s]\n", i, strlen(STR), i, STR);
 
 	printf("KB/s \n");
+
+	//printf("%*.*d\n", 3, 10);
+	printf("%.*s\n", 4, "hello");
+	printf("%*s\n", 40, "hell0");
+	printf("%*.*s\n", 40, 4, "hell0");
+
+	printf("%.*d\n", 4, 10000);
+	printf("%*d\n", 40, 10000);
+	printf("%*.*d\n", 40, 4, 10000);
 	return 0;
 }

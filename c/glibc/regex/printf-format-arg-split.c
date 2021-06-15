@@ -1,3 +1,5 @@
+// https://github.com/Rtoax/test/blob/master/c/glibc/regex/printf-format-arg-split.c
+
 #include <stdio.h>
 #include <sys/types.h>
 #include <regex.h>
@@ -25,9 +27,26 @@ const char format_arg_pattern[] = {
     
 char *format_strings[] = {
     "Hello, %d %s %ld %f %lf %x %lx.\n",
-    "Hello, %*.*s  %*.*d %5.3f.\n",
+    "Hello, %*.*s %.*s %*.*d %5.3f.\n",
     NULL
 };
+
+// %.*s  -> printf("%.*s\n", 4, "hello");
+// %*s   -> printf("%*s\n", 40, "hell0");
+// %*.*s -> printf("%*.*s\n", 40, 4, "hell0");
+// ===>
+//hell
+//                                   hell0
+//                                    hell
+
+// printf("%.*d\n", 4, 10000);
+// printf("%*d\n", 40, 10000);
+// printf("%*.*d\n", 40, 4, 10000);
+// ===>
+//10000
+//                                   10000
+//                                   10000
+
 
 
 int test2_printf_format(int idx)

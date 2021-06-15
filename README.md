@@ -1,6 +1,7 @@
 # test
 
 [https://github.com/Rtoax/test](https://github.com/Rtoax/test)
+[https://gitee.com/rtoax/test](https://gitee.com/rtoax/test)
 
 ```
         _____________

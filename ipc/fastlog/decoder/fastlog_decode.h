@@ -62,33 +62,78 @@ struct logdata_decode {
     struct list list_level[FASTLOGLEVELS_NUM];
 };
 
-
+//(默认为ALL)
 typedef enum {
-    LOG_OUTPUT_ALL      = 0x0001,       //输出全部
-    LOG_OUTPUT_LEVEL    = 0x0002,       //按级别输出
-    LOG_OUTPUT_NAME     = 0x0003,       //按名称输出
-    LOG_OUTPUT_REAPPEAR = 0x0004,       //重现日志 Reappear yesterday
-}LOG_RANGE_TYPE;
+    LOG__RANGE_ALL      = 0x0001,       //输出全部
+    LOG__RANGE_LEVEL    = 0x0002,       //按级别输出
+    LOG__RANGE_NAME     = 0x0004,       //按名称(模块名)输出
+    LOG__RANGE_THREAD   = 0x0008,       //按线程输出
+    LOG__RANGE_REAPPEAR = 0x0010,       //重现日志 Reappear yesterday
+}LOG__RANGE_TYPE;
 
+//(默认为 console|txt)
 typedef enum {
-    LOG_OUTPUT_FILE_TXT,
-    LOG_OUTPUT_FILE_JSON,
-    LOG_OUTPUT_FILE_XML,
-    LOG_OUTPUT_FILE_CONSOLE,
+    LOG_OUTPUT_FILE_TXT     = 0x0001,   //txt 格式
+    LOG_OUTPUT_FILE_JSON    = 0x0002,   //json 格式
+    LOG_OUTPUT_FILE_XML     = 0x0004,   //XML 格式
+    LOG_OUTPUT_FILE_CONSOLE = 0x0008,   //终端输出
 }LOG_OUTPUT_FILE_TYPE;
 
-struct print_operations {
-    
+
+struct output_struct;
+
+/**
+ *  输出操作符
+ *
+ *  open 初始化
+ *  
+ */
+struct output_operations {
+    int (*open)(struct output_struct *o);
+    int (*header)(struct output_struct *o, struct fastlog_file_header *header);
+    int (*log_item)(struct output_struct *o, struct logdata_decode *logdata, char *log);
+    int (*footer)(struct output_struct *o);
+    int (*close)(struct output_struct *o);
 };
 
-struct print_struct {
-    LOG_RANGE_TYPE          range;
-    LOG_OUTPUT_FILE_TYPE    file_type;
+/**
+ *  输出实体
+ *
+ *  range   输出范围
+ *  file    输出文件类型
+ *  filename    当 file 未置位 LOG_OUTPUT_FILE_CONSOLE 终端时，会检查该文件名
+ *              如果为空，则执行失败
+ *  ops     对应的操作
+ */
+struct output_struct {
+    LOG__RANGE_TYPE range;
+    union {
+        enum FASTLOG_LEVEL level;
+        char *name;
+        char *thread;
+    }range_value;
     
-    struct print_operations *print_ops;
+    LOG_OUTPUT_FILE_TYPE file;
+    char *filename;
+    union {
+        FILE *fp;   //对应 CONSOLE 或者 txt
+        //xml 和 json 句柄
+    }file_handler;
+    struct output_operations *ops;
 };
 
-int reprintf(struct logdata_decode *logdata);
+extern struct output_operations output_operations_txt;
+extern struct output_struct output_txt;
+
+
+int output_open(struct output_struct *output, char *filename);
+int output_header(struct output_struct *output, struct fastlog_file_header *header);
+int output_log_item(struct output_struct *output, struct logdata_decode *logdata, char *log);
+int output_footer(struct output_struct *output);
+int output_close(struct output_struct *output);
+
+
+int reprintf(struct logdata_decode *logdata, struct output_struct *output);
 
 
 int release_file(struct fastlog_file_mmap *mapfile);

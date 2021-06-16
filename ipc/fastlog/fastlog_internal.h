@@ -154,6 +154,10 @@ static const struct {
 
 //文件映射
 struct fastlog_file_mmap {
+    enum {
+        FILE_MMAP_NULL,     //未映射
+        FILE_MMAP_MMAPED,   //已经映射
+    } status;
     char *filepath;
     int fd;
     size_t mmap_size;

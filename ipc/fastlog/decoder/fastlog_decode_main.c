@@ -172,10 +172,11 @@ parse_next:
         /* 插入到日志数据红黑树中 */
         logdata_rbtree__insert(log_decode);
         
-//        printf("[%s] logId = %d, rdtsc = %ld, args size = %d\n", FASTLOG_LEVEL_NAME[metadata->metadata->log_level], log_id, rdtsc, args_size);
         logdata = (((char*)logdata) + ret );
         logdata_size -= ret;
+
 //        usleep(100000);
+
         goto parse_next;
     }
     
@@ -231,10 +232,9 @@ void timestamp_tsc_to_string(uint64_t tsc, char str_buffer[32])
     nanos = 1.0e9 * (secondsSinceCheckpoint - (double)(wholeSeconds));
     time_t absTime = wholeSeconds + log_hdr()->unix_time_sec;
     
-    
     struct tm *_tm = localtime(&absTime);
     
-    strftime(str_buffer, 32, "%Y-%d-%m/%T", _tm);
+    strftime(str_buffer, 32, "%Y-%m-%d/%T", _tm);
 }
 
 
@@ -245,25 +245,12 @@ void metadata_print(struct metadata_decode *meta, void *arg)
 
 void logdata_print(struct logdata_decode *logdata, void *arg)
 {
-    //时间戳
-    char buffer[32] = {0};
-    timestamp_tsc_to_string(logdata->logdata->log_rdtsc, buffer);
-    
+    struct output_struct *output = (struct output_struct *)arg;
 
-//    printf("[%s][%5s] logId = %3d, rdtsc = %ld, args size = %d\n", 
-//            buffer,
-//            FASTLOG_LEVEL_NAME[logdata->metadata->metadata->log_level], 
-//            logdata->metadata->metadata->log_id, 
-//            logdata->logdata->log_rdtsc, 
-//            logdata->logdata->log_args_size);
-
-    //TODO
     // 从 "Hello, %s, %d" + World\02021 
     // 转化为
     // Hello, World, 2021
-    reprintf(logdata);
-    
-//    sleep(1);
+    reprintf(logdata, output);
 }
 
 /* 解析程序 主函数 */
@@ -299,24 +286,34 @@ int main(int argc, char *argv[])
         goto release;
     }
     
+    struct output_struct *output = &output_txt;
+
+    output_open(output, NULL);
+    
     /* 解析 元数据 */
     struct fastlog_metadata *metadata = meta_hdr()->data;
-    parse_header(meta_hdr());
+//    parse_header(meta_hdr());
     parse_metadata(metadata);
     
     fastlog_logdata_t *logdata = log_hdr()->data;
-    parse_header(log_hdr());
+//    parse_header(log_hdr());
     parse_logdata(logdata, log_mmapfile()->mmap_size - sizeof(struct fastlog_file_header));
 
+
+    output_header(output, log_hdr());
+
 #if 1
+
     /* 遍历元数据 */
-    metadata_rbtree__iter(metadata_print, NULL);
+//    metadata_rbtree__iter(metadata_print, output);
 
     /* 以日志级别遍历 */
-    level_list__iter(FASTLOG_ERR, logdata_print, NULL);
+//    level_list__iter(FASTLOG_ERR, logdata_print, output);
 
     /* 以时间 tsc 寄存器的值 遍历 */
-    logdata_rbtree__iter(logdata_print, NULL);
+    logdata_rbtree__iter(logdata_print, output);
+
+//    release_logdata_file();
 
 #else
 
@@ -325,6 +322,9 @@ int main(int argc, char *argv[])
     printf("  log count %ld\n", log_count());
     
 #endif
+    
+    output_footer(output);
+    output_close(output);
 
 release:
     release_and_exit();

@@ -10,6 +10,38 @@ static struct fastlog_file_header *logdata_header = NULL;
 
 
 
+int output_open(struct output_struct *output, char *filename)
+{
+    if(filename) {
+        output->filename = strdup(filename);
+    }
+
+    return output->ops->open(output);
+}
+int output_header(struct output_struct *output, struct fastlog_file_header *header)
+{
+    return output->ops->header(output, header);
+}
+int output_log_item(struct output_struct *output, struct logdata_decode *logdata, char *log)
+{
+    return output->ops->log_item(output, logdata, log);
+}
+
+int output_footer(struct output_struct *output)
+{
+    return output->ops->footer(output);
+}
+int output_close(struct output_struct *output)
+{
+    int ret = output->ops->close(output);
+
+    if(output->filename) {
+        free(output->filename);
+    }
+    
+    return 0;
+}
+
 
 int release_file(struct fastlog_file_mmap *mapfile)
 {

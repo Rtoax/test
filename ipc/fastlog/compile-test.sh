@@ -16,6 +16,7 @@ SRC_DECODE="decoder/fastlog_decode_main.c \
 			decoder/fastlog_decode_list.c \
 			decoder/fastlog_decode_reprintf.c \
 			decoder/fastlog_decode_rb.c\
+			decoder/fastlog_decode_output_txt.c\
 			decoder/fastlog_decode_file.c "
 
 echo "Compile fastlog_decode_main.c -> decode.out"

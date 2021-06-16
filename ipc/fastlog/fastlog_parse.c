@@ -103,6 +103,7 @@ static int mmap_fastlog_logfile(struct fastlog_file_mmap *mmap_file, char *filen
         assert(0 && "mmap failed.");
     }
 
+    mmap_file->status = FILE_MMAP_MMAPED;
 
     return 0;
 }
@@ -130,10 +131,16 @@ int unmmap_fastlog_logfile(struct fastlog_file_mmap *mmap_file)
 {
     assert(mmap_file && "NULL pointer error");
 
+    if(mmap_file->status == FILE_MMAP_NULL) {
+        return 0;
+    }
+
     int ret = munmap(mmap_file->mmapaddr, mmap_file->mmap_size);
     if(ret != 0) {
         printf("munmap %s failed.\n", mmap_file->filepath);
     }
+    
+    mmap_file->status = FILE_MMAP_NULL;
     
     free(mmap_file->filepath);
     

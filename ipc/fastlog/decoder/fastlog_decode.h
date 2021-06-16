@@ -54,13 +54,41 @@ struct metadata_decode {
 /* 解析出的日志数据 */
 struct logdata_decode {
     
-    fastlog_logdata_t *logdata;         //malloc(), 而不是文件映射中的内存
+    fastlog_logdata_t *logdata;         //malloc(), 而不是文件映射中的内存, 因为可能将映射的文件 munmap
     
     struct metadata_decode *metadata;   //所对应的源数据
     
     rb_node(struct logdata_decode) rb_link_node_time;   //按时间顺序排序的红黑树
     struct list list_level[FASTLOGLEVELS_NUM];
 };
+
+
+typedef enum {
+    LOG_OUTPUT_ALL      = 0x0001,       //输出全部
+    LOG_OUTPUT_LEVEL    = 0x0002,       //按级别输出
+    LOG_OUTPUT_NAME     = 0x0003,       //按名称输出
+    LOG_OUTPUT_REAPPEAR = 0x0004,       //重现日志 Reappear yesterday
+}LOG_RANGE_TYPE;
+
+typedef enum {
+    LOG_OUTPUT_FILE_TXT,
+    LOG_OUTPUT_FILE_JSON,
+    LOG_OUTPUT_FILE_XML,
+    LOG_OUTPUT_FILE_CONSOLE,
+}LOG_OUTPUT_FILE_TYPE;
+
+struct print_operations {
+    
+};
+
+struct print_struct {
+    LOG_RANGE_TYPE          range;
+    LOG_OUTPUT_FILE_TYPE    file_type;
+    
+    struct print_operations *print_ops;
+};
+
+int reprintf(struct logdata_decode *logdata);
 
 
 int release_file(struct fastlog_file_mmap *mapfile);

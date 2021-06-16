@@ -31,5 +31,7 @@ int main()
 	printf("%.*d\n", 4, 10000);
 	printf("%*d\n", 40, 10000);
 	printf("%*.*d\n", 40, 4, 10000);
+
+	printf("Hello %.*ld %.*ld\n", 5, 2, 5, 3);
 	return 0;
 }

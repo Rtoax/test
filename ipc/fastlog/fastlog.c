@@ -321,6 +321,7 @@ int parse_fastlog_metadata(struct fastlog_metadata *metadata,
     
     *format = string_buf;
     string_buf += metadata->print_format_len;
+//    string_buf[0] = '\0';
     
     *thread_name = string_buf;
     string_buf += metadata->thread_name_len;

@@ -250,18 +250,20 @@ void logdata_print(struct logdata_decode *logdata, void *arg)
     timestamp_tsc_to_string(logdata->logdata->log_rdtsc, buffer);
     
 
-    printf("[%s][%5s] logId = %3d, rdtsc = %ld, args size = %d\n", 
-            buffer,
-            FASTLOG_LEVEL_NAME[logdata->metadata->metadata->log_level], 
-            logdata->metadata->metadata->log_id, 
-            logdata->logdata->log_rdtsc, 
-            logdata->logdata->log_args_size);
+//    printf("[%s][%5s] logId = %3d, rdtsc = %ld, args size = %d\n", 
+//            buffer,
+//            FASTLOG_LEVEL_NAME[logdata->metadata->metadata->log_level], 
+//            logdata->metadata->metadata->log_id, 
+//            logdata->logdata->log_rdtsc, 
+//            logdata->logdata->log_args_size);
 
     //TODO
     // 从 "Hello, %s, %d" + World\02021 
     // 转化为
     // Hello, World, 2021
-    sleep(1);
+    reprintf(logdata);
+    
+//    sleep(1);
 }
 
 /* 解析程序 主函数 */

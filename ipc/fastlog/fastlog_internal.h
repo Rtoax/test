@@ -504,7 +504,7 @@ try_reserve_again:
     for(iarg=0; iarg<args->nargs; iarg++) {
 
 //        printf("%d->%d(%s)\n", iarg, args->argtype[iarg], FASTLOG_FAT_TYPE2SIZENAME[args->argtype[iarg]].name);
-        
+//        sleep(1);
         switch(args->argtype[iarg]) {
 
 #define _CASE(fat_type, type)                       \

@@ -45,6 +45,7 @@ static char *command_groups[] = {
 
 enum {
     CMD_SHOW_LEVEL,
+    CMD_SHOW_LS,
 };
 struct command_help command_helps[] = {
     
@@ -52,6 +53,12 @@ struct command_help command_helps[] = {
         .name = "show",
         .params = "level all|crit|err|warn|info|debug txt|xml|json [FILENAME]",
         .summary = "show log by level and save to txt,xml,json FILENAME",
+        .group = GRP_SHOW,
+    },
+    [CMD_SHOW_LS] = { 
+        .name = "ls",
+        .params = "",
+        .summary = "system ls command",
         .group = GRP_SHOW,
     },
 };
@@ -66,6 +73,10 @@ static void show_help()
                         command_helps[CMD_SHOW_LEVEL].name, 
                         command_helps[CMD_SHOW_LEVEL].params, 
                         command_helps[CMD_SHOW_LEVEL].summary);
+    printf("`%s %s`: %s\n", 
+                        command_helps[CMD_SHOW_LS].name, 
+                        command_helps[CMD_SHOW_LS].params, 
+                        command_helps[CMD_SHOW_LS].summary);
 }
 
 static void cliInitHelp(void)
@@ -317,7 +328,9 @@ static int invoke_command(int argc, char **argv, long repeat)
             }
         }
         
-    } 
+    } if(strncasecmp(argv[0], "ls", 2) == 0) {
+        system("ls ./");
+    }
     
     
     return 0;
@@ -380,7 +393,7 @@ void cli_loop()
                 strcasecmp(argv[0],"exit") == 0)
             {
                 printf("\nGoodbye!\n");
-                exit(0);
+                return ;
             } else if (argc == 1 && !strcasecmp(argv[0],"clear")) {
                 linenoiseClearScreen();
             } else {

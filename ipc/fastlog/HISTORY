@@ -11,6 +11,7 @@ FastLog 开发日志
 * 2021年6月17日
 	* decoder: show level 命令行
 	* decoder: getopt 命令行参数
+	* decoder: 添加 `ls` 命令(system("ls"))
 * 2021年6月16日 
 	* decoder reprintf: 恢复字符串的输出。
 	* txt 的输出

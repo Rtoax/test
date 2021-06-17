@@ -481,6 +481,12 @@ static void release_and_exit()
 
 static void signal_handler(int signum)
 {
+    /* 开启命令行，请使用 quit exit命令退出 */
+    //if(decoder_config.has_cli) {
+    //    printf("input `quit` or `exit` to end.\n");
+    //    return ;
+    //}
+
     switch(signum) {
     case SIGINT:
         printf("Catch ctrl-C.\n");

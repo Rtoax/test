@@ -181,11 +181,12 @@ struct fastlog_file_header {
 
 #define FATSLOG_METADATA_HEADER_MAGIC_NUMBER    __FATSLOG_MAGIC1
 #define FATSLOG_METADATA_FILE_DEFAULT           "fastlog.metadata"
-#define FATSLOG_METADATA_FILE_SIZE_DEFAULT      (1024*1024*40) //40MB
+#define FATSLOG_METADATA_FILE_SIZE_DEFAULT      (1024*1024*10) //10MB
+
 
 #define FATSLOG_LOG_HEADER_MAGIC_NUMBER     __FATSLOG_MAGIC2
 #define FATSLOG_LOG_FILE_DEFAULT            "fastlog.log"
-#define FATSLOG_LOG_FILE_SIZE_DEFAULT       (1024*1024*40) //40MB
+#define FATSLOG_LOG_FILE_SIZE_DEFAULT       (1024*1024*10) 
 
     unsigned int magic;
     uint64_t cycles_per_sec;

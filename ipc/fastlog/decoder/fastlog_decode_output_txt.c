@@ -85,11 +85,23 @@ static int txt_log_item(struct output_struct *o, struct logdata_decode *logdata,
     //时间戳
     char timestamp_buf[32] = {0};
     timestamp_tsc_to_string(logdata->logdata->log_rdtsc, timestamp_buf);
-    
+
+    const char *(*my_strlevel)(enum FASTLOG_LEVEL level);
+
+    /* 文件输出还是不要颜色了 */
+    if(o->filename) {
+        my_strlevel = strlevel;
+    } else {
+    /* 终端输出有颜色骚气一点 */
+        my_strlevel = strlevel_color;
+    }
 
     fprintf(o->file_handler.fp, "[%s][%s][%s:%d][%s] ", 
-            timestamp_buf,
-            FASTLOG_LEVEL_NAME[logdata->metadata->metadata->log_level], src_function, src_line, thread_name);
+                                my_strlevel(logdata->metadata->metadata->log_level), 
+                                timestamp_buf,
+                                src_function, 
+                                src_line, 
+                                thread_name);
     
     fprintf(o->file_handler.fp, "%s", log);
     
@@ -101,6 +113,43 @@ static int txt_footer(struct output_struct *o)
         assert(0 && "Not txt type.");
         return -1;
     }
+    fprintf(o->file_handler.fp, "\n");
+
+    
+    const char *(*my_strlevel)(enum FASTLOG_LEVEL level);
+    char *level_fmt = NULL;
+    
+    /* 文件输出还是不要颜色了 */
+    if(o->filename) {
+        my_strlevel = strlevel;
+        level_fmt = "        %-8s %-8s %-8s %-8s %-8s \n";
+    } else {
+    /* 终端输出有颜色骚气一点 */
+        my_strlevel = strlevel_color;
+        level_fmt = "        %-19s %-19s %-19s %-19s %-19s \n";
+    }
+
+
+        fprintf(o->file_handler.fp, level_fmt, 
+                                     my_strlevel(FASTLOG_CRIT), 
+                                     my_strlevel(FASTLOG_ERR),
+                                     my_strlevel(FASTLOG_WARNING),
+                                     my_strlevel(FASTLOG_INFO),
+                                     my_strlevel(FASTLOG_DEBUG));
+
+
+                                                                     
+    fprintf(o->file_handler.fp, "Number  %-8ld %-8ld %-8ld %-8ld %-8ld \n", 
+                                                                    level_count(FASTLOG_CRIT),
+                                                                    level_count(FASTLOG_ERR),
+                                                                    level_count(FASTLOG_WARNING),
+                                                                    level_count(FASTLOG_INFO),
+                                                                    level_count(FASTLOG_DEBUG));
+    fprintf(o->file_handler.fp, "\n");
+
+    fprintf(o->file_handler.fp, "Total metas %ld\n", meta_count());
+    fprintf(o->file_handler.fp, "Total logs  %ld\n", log_count());
+
     fprintf(o->file_handler.fp, "txt output done.\n");
 
     return 0;

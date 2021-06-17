@@ -109,9 +109,20 @@ rb_proto(static, logdata_rbtree_, logdata_rbtree_t, struct logdata_decode);
 
 static int logdata_rbtree__cmp(const struct logdata_decode *a_node, const struct logdata_decode *a_other)
 {
-    if(a_node->logdata->log_rdtsc <  a_other->logdata->log_rdtsc) return -1;
-    else if(a_node->logdata->log_rdtsc == a_other->logdata->log_rdtsc) return 0;
-    else if(a_node->logdata->log_rdtsc >  a_other->logdata->log_rdtsc) return 1;
+    if(a_node->logdata->log_rdtsc <  a_other->logdata->log_rdtsc) {
+        return -1;
+    } else if(a_node->logdata->log_rdtsc == a_other->logdata->log_rdtsc) {
+        if(a_node->logdata->log_id < a_other->logdata->log_id) {
+            return -1;
+        } else if(a_node->logdata->log_id == a_other->logdata->log_id) {
+            return 0;
+        } else if(a_node->logdata->log_id > a_other->logdata->log_id) {
+            return 1;
+        }
+    } else if(a_node->logdata->log_rdtsc >  a_other->logdata->log_rdtsc) {
+        return 1;
+    }
+    return 0;
 }
 
 
@@ -145,9 +156,15 @@ void logdata_rbtree__remove(struct logdata_decode *new_node)
     fastlog_atomic64_dec(&logdata_count);
 }
 
-struct logdata_decode * logdata_rbtree__search(int meta_log_id)
+struct logdata_decode * logdata_rbtree__search(int log_id, uint64_t log_rdtsc)
 {
-    return logdata_rbtree_search(&logdata_rbtree, (const struct logdata_decode*)&meta_log_id);
+    fastlog_logdata_t log;
+    log.log_id = log_id;
+    log.log_rdtsc = log_rdtsc;
+    
+    struct logdata_decode logdata = {.logdata = &log};
+    
+    return logdata_rbtree_search(&logdata_rbtree, (const struct logdata_decode*)&logdata);
 }
 
 
@@ -165,5 +182,5 @@ void logdata_rbtree__iter(void (*cb)(struct logdata_decode *meta, void *arg), vo
 }
 
 
-rb_gen(static, logdata_rbtree_, logdata_rbtree_t, struct logdata_decode, rb_link_node_time, logdata_rbtree__cmp);
+rb_gen(static, logdata_rbtree_, logdata_rbtree_t, struct logdata_decode, rb_link_node_rdtsc, logdata_rbtree__cmp);
 

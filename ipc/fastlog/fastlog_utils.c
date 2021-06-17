@@ -50,33 +50,71 @@ const static char *COLORS[] = {
 #undef _ITEM
 
 
-static inline int _color_vprint(FILE *fp, color_type color, const char *fmt, va_list arg);
+static const char* FASTLOG_LEVEL_NAME[] = {
+    "unknown", 
+    "CRIT", 
+    "ERRO",
+    "WARN", 
+    "INFO", 
+    "DEBG",
+    "unknown", 
+    "unknown"
+};
+static const char* FASTLOG_LEVEL_NAME_COLORFUL[] = {
+    "unknown",
+    _ANSI_PURPLE_STR"CRIT"_ANSI_RESET_STR, 
+    _ANSI_RED_STR"ERRO"_ANSI_RESET_STR,
+    _ANSI_YELLOW_STR"WARN"_ANSI_RESET_STR, 
+    _ANSI_BLUE_STR"INFO"_ANSI_RESET_STR, 
+    _ANSI_BOLD_STR"DEBG"_ANSI_RESET_STR, 
+    "unknown",
+    "unknown"
+};
 
-int fp_gray(FILE *fp, const char *fmt, ...)
+const char *strlevel(enum FASTLOG_LEVEL level)
 {
-    va_list arg1;
-    va_start(arg1, fmt);
-    int n = _color_vprint(fp, _ANSI_GRAY, fmt, arg1);
-    va_end(arg1);
-    return n;
+    if(level < FASTLOG_CRIT || level >= FASTLOGLEVELS_NUM)
+        return "unknown";
+
+    return FASTLOG_LEVEL_NAME[level];
 }
+
+const char *strlevel_color(enum FASTLOG_LEVEL level)
+{
+    if(level < FASTLOG_CRIT || level >= FASTLOGLEVELS_NUM)
+        return _ANSI_GRAY_STR"unknown"_ANSI_RESET_STR;
+
+    return FASTLOG_LEVEL_NAME_COLORFUL[level];
+}
+
+//static inline int _color_vprint(FILE *fp, color_type color, const char *fmt, va_list arg);
+//
+//int fp_gray(FILE *fp, const char *fmt, ...)
+//{
+//    va_list arg1;
+//    va_start(arg1, fmt);
+//    int n = _color_vprint(fp, _ANSI_GRAY, fmt, arg1);
+//    va_end(arg1);
+//    return n;
+//}
 
 //TODO
 
 
-static inline int _color_vprint(FILE *fp, color_type color, const char *fmt, va_list arg)
-{
-    int n = 0;        
+//static inline int _color_vprint(FILE *fp, color_type color, const char *fmt, va_list arg)
+//{
+//    int n = 0;        
+//
+//    if(color != _ANSI_NONE)
+//        fprintf(fp, "%s", COLORS[color]);
+//
+//    n += vfprintf(fp, fmt, arg);
+//
+//    if(color != _ANSI_NONE)
+//        fprintf(fp, "%s", _ANSI_RESET);
+//
+//
+//    return n;
+//}
 
-    if(color != _ANSI_NONE)
-        fprintf(fp, "%s", COLORS[color]);
-
-    n += vfprintf(fp, fmt, arg);
-
-    if(color != _ANSI_NONE)
-        fprintf(fp, "%s", _ANSI_RESET);
-
-
-    return n;
-}
 

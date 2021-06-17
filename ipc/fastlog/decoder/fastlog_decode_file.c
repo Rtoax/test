@@ -9,7 +9,6 @@ static struct fastlog_file_header *metadata_header = NULL;
 static struct fastlog_file_header *logdata_header = NULL;
 
 
-
 int output_open(struct output_struct *output, char *filename)
 {
     if(filename) {
@@ -22,6 +21,8 @@ int output_header(struct output_struct *output, struct fastlog_file_header *head
 {
     return output->ops->header(output, header);
 }
+
+//在`reprintf`中被调用
 int output_log_item(struct output_struct *output, struct logdata_decode *logdata, char *log)
 {
     return output->ops->log_item(output, logdata, log);
@@ -80,10 +81,14 @@ struct fastlog_file_mmap *log_mmapfile()
     return &ro_logdata_mmap;
 }
 
+/* 初始化即可任意访问 */
 struct fastlog_file_header *meta_hdr()
 {
     return metadata_header;
 }
+
+/* 只有在映射了 log 文件时，该接口才可用
+    用于提供 可以动态加载多个 日志文件的 功能*/
 struct fastlog_file_header *log_hdr()
 {
     return logdata_header;

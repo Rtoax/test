@@ -4,6 +4,7 @@
 #include <pthread.h>
 #include <signal.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <fastlog.h>
 #include <sys/time.h>
@@ -58,7 +59,7 @@ struct logdata_decode {
     
     struct metadata_decode *metadata;   //所对应的源数据
     
-    rb_node(struct logdata_decode) rb_link_node_time;   //按时间顺序排序的红黑树
+    rb_node(struct logdata_decode) rb_link_node_rdtsc;   //按时间顺序排序的红黑树
     struct list list_level[FASTLOGLEVELS_NUM];
 };
 
@@ -125,14 +126,48 @@ struct output_struct {
 extern struct output_operations output_operations_txt;
 extern struct output_struct output_txt;
 
+/**
+ *  fastlog decoder 进程 配置参数， 有默认值，同时支持 getopt 命令行配置
+ *  
+ */
+struct fastlog_decoder_config {
+    char *decoder_version;
+    
+    /* 是否输出详细的日志信息 */
+    bool log_verbose_flag;
+
+    /*  */
+    char *metadata_file;
+
+    
+#define MAX_NUM_LOGDATA_FILES   10
+    int nr_log_files;
+    char *logdata_file;
+#define LOGDATA_FILE_SEPERATOR  ','
+    char *other_log_data_files[MAX_NUM_LOGDATA_FILES-1];
+    
+    bool has_cli;
+
+    int default_log_level;
+    
+    int output_type;
+#define DEFAULT_OUTPUT_FILE "fastlog.txt"
+    bool output_filename_isset;
+    char* output_filename;
+};
+
+// fastlog decoder 配置参数，在 getopt 之后只读
+extern struct fastlog_decoder_config decoder_config;
+
 
 int output_open(struct output_struct *output, char *filename);
 int output_header(struct output_struct *output, struct fastlog_file_header *header);
-int output_log_item(struct output_struct *output, struct logdata_decode *logdata, char *log);
+int output_log_item(struct output_struct *output, struct logdata_decode *logdata, char *log); //在`reprintf`中被调用
 int output_footer(struct output_struct *output);
 int output_close(struct output_struct *output);
 
 
+void logdata_print_output(struct logdata_decode *logdata, void *arg);
 int reprintf(struct logdata_decode *logdata, struct output_struct *output);
 
 
@@ -180,7 +215,7 @@ void logdata_rbtree__init();
 void logdata_rbtree__destroy(void (*cb)(struct logdata_decode *node, void *arg), void *arg);
 void logdata_rbtree__insert(struct logdata_decode *new_node);
 void logdata_rbtree__remove(struct logdata_decode *new_node);
-struct logdata_decode * logdata_rbtree__search(int meta_log_id);
+struct logdata_decode * logdata_rbtree__search(int log_id, uint64_t log_rdtsc);
 void logdata_rbtree__iter(void (*cb)(struct logdata_decode *meta, void *arg), void *arg);
 
 

@@ -295,14 +295,9 @@ static void sprintf_regex_format(char *buffer, char* format, struct args_type *a
 int reprintf(struct logdata_decode *logdata, struct output_struct *output)
 {
     char log_buffer[MAX_BUFFER_LEN] = {0};
-    
-//    printf(">> %s,%s,%s,%s,%s. <<<<<<<<<<<<<\n", user_string, src_filename, src_function, print_format, thread_name);
-
-//    printf(">>>>\n");
 
     sprintf_regex_format(log_buffer, logdata->metadata->print_format, &logdata->metadata->argsType, logdata->logdata);
     
-//    printf("==> %s", log_buffer);
     output_log_item(output, logdata, log_buffer);
 }
 

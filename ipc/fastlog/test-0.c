@@ -57,10 +57,12 @@ void *task_routine(void*param)
 //        FAST_LOG(FASTLOG_INFO, "TEST", ">>># Hello %*.*d 3#<<<\n", 30, 7, total_dequeue+20);
         FAST_LOG(FASTLOG_CRIT, "TEST", "Hello %d\n", total_dequeue);
         FAST_LOG(FASTLOG_ERR, "TEST", "Hello %d\n", total_dequeue+10);
-        FAST_LOG(FASTLOG_DEBUG, "TEST", "Hello %d\n", total_dequeue+20);
+        FAST_LOG(FASTLOG_WARNING, "TEST", "Hello %d\n", total_dequeue+20);
+        FAST_LOG(FASTLOG_INFO, "TEST", "Hello %d\n", total_dequeue+30);
+        FAST_LOG(FASTLOG_DEBUG, "TEST", "Hello %d\n", total_dequeue+40);
         total_dequeue += 1;
         printf("\nTotal = %ld\n", total_dequeue);
-        if(total_dequeue % 100000 == 0) {
+        if(total_dequeue % 2000 == 0) {
             
             gettimeofday(&end, NULL);
 
@@ -73,7 +75,7 @@ void *task_routine(void*param)
 
             gettimeofday(&start, NULL);
         }
-        usleep(10000);
+//        usleep(10000);
     }
     pthread_exit(arg);
 }

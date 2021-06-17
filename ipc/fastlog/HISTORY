@@ -8,9 +8,13 @@ FastLog 开发日志
 
 # 编码历史
 
+* 2021年6月17日
+	* decoder: show level 命令行
+	* decoder: getopt 命令行参数
 * 2021年6月16日 
 	* decoder reprintf: 恢复字符串的输出。
 	* txt 的输出
+	* linenoise 新建
 * 2021年6月11日 decoder timestamp
 * 2021年6月10日 解析命令 数据结构设计
 * 2021年6月9日 添加 日志 解析 main() 程序

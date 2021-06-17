@@ -18,7 +18,8 @@ static char *commandGroups[] = {
     "hyperloglog",
     "cluster",
     "geo",
-    "stream"
+    "stream",
+    "rtoax"
 };
 
 struct commandHelp {
@@ -32,14 +33,19 @@ struct commandHelp {
     { "RTOAX NAME",
     "[name]",
     "rtoax name",
-    9,
+    16,
     "6.0.0" },
     { "RTOAX AGE",
     "[age]",
     "rtoax name",
-    9,
+    16,
     "6.0.0" },
     
+    { "show",
+    "[LEVEL error|info|warn|crit]",
+    "show level log",
+    16,
+    "2.6.0" },
 #endif
 
     { "ACL CAT",

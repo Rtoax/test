@@ -15,6 +15,7 @@
 /* 级别 */
 enum FASTLOG_LEVEL
 {
+    FASTLOGLEVEL_ALL = 0,
 	FASTLOG_CRIT = 1,
 	FASTLOG_ERR,      
 	FASTLOG_WARNING, 
@@ -23,7 +24,11 @@ enum FASTLOG_LEVEL
 	FASTLOGLEVELS_NUM  
 };
 
-static const char* FASTLOG_LEVEL_NAME[] = {"unknown", "CRIT", "ERROR", "WARN", "INFO", "DEBUG", "unknown", "unknown"};
+
+
+const char *strlevel(enum FASTLOG_LEVEL level);
+const char *strlevel_color(enum FASTLOG_LEVEL level);
+
 
 //int FAST_LOG(int level, const char *name, const char *format, ...);
 #define FAST_LOG(level, name, format, ...) __FAST_LOG(level, name, format, ##__VA_ARGS__)

@@ -9,13 +9,21 @@ void completion(const char *buf, linenoiseCompletions *lc) {
         linenoiseAddCompletion(lc,"hello");
         linenoiseAddCompletion(lc,"hello there");
     }
+    else if (buf[0] == 'r') {
+        linenoiseAddCompletion(lc,"rong");
+        linenoiseAddCompletion(lc,"rong tao");
+    }
 }
 
 char *hints(const char *buf, int *color, int *bold) {
-    if (!strcasecmp(buf,"hello")) {
+    if (strcasecmp(buf,"hello") == 0) {
         *color = 35;
-        *bold = 0;
+        *bold = 1;
         return " World";
+    }else if (strcasecmp(buf,"rong") == 0) {
+        *color = 34;
+        *bold = 1;
+        return " tao [filename]";
     }
     return NULL;
 }

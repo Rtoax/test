@@ -11,6 +11,7 @@
 
 #include <fastlog_rb.h>
 #include <fastlog_list.h>
+#include <fastlog_utils.h>
 #include <fastlog_cycles.h>
 
 
@@ -107,6 +108,7 @@ struct output_operations {
  *  ops     对应的操作
  */
 struct output_struct {
+    bool enable;
     LOG__RANGE_TYPE range;
     union {
         enum FASTLOG_LEVEL level;
@@ -118,14 +120,24 @@ struct output_struct {
     char *filename;
     union {
         FILE *fp;   //对应 CONSOLE 或者 txt
+#ifdef FASTLOG_HAVE_LIBXML2
+        struct {
+            xmlDocPtr doc;
+            xmlNodePtr root_node;
+            xmlNodePtr header;
+            xmlNodePtr body;
+            xmlNodePtr footer;
+        }xml;
+#endif
         //xml 和 json 句柄
     }file_handler;
     struct output_operations *ops;
 };
 
 extern struct output_operations output_operations_txt;
+extern struct output_operations output_operations_xml;
 extern struct output_struct output_txt;
-
+extern struct output_struct output_xml;
 /**
  *  fastlog decoder 进程 配置参数， 有默认值，同时支持 getopt 命令行配置
  *  
@@ -135,6 +147,9 @@ struct fastlog_decoder_config {
     
     /* 是否输出详细的日志信息 */
     bool log_verbose_flag;
+
+    /* 启动过程是否打印日志 */
+    bool boot_silence;
 
     /*  */
     char *metadata_file;
@@ -170,6 +185,7 @@ int output_close(struct output_struct *output);
 void logdata_print_output(struct logdata_decode *logdata, void *arg);
 int reprintf(struct logdata_decode *logdata, struct output_struct *output);
 
+int parse_logdata(fastlog_logdata_t *logdata, size_t logdata_size);
 
 int release_file(struct fastlog_file_mmap *mapfile);
 

@@ -130,7 +130,7 @@ static int txt_footer(struct output_struct *o)
     }
 
 
-        fprintf(o->file_handler.fp, level_fmt, 
+    fprintf(o->file_handler.fp, level_fmt, 
                                      my_strlevel(FASTLOG_CRIT), 
                                      my_strlevel(FASTLOG_ERR),
                                      my_strlevel(FASTLOG_WARNING),
@@ -179,10 +179,11 @@ struct output_operations output_operations_txt = {
 };
 
 struct output_struct output_txt = {
+    .enable = true,
     .range = LOG__RANGE_ALL,
 
     .range_value = {
-        .level = 0,
+        .level = FASTLOGLEVEL_ALL,
         .name = NULL,
     },
     

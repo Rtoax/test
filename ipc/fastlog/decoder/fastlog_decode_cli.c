@@ -44,11 +44,20 @@ static char *command_groups[] = {
 };
 
 enum {
+    CMD_SHOW_CMD_LIST,
     CMD_SHOW_LEVEL,
     CMD_SHOW_LS,
+    CMD_LOAD_LOG,
+    CMD_MAX_NUM,
 };
 struct command_help command_helps[] = {
     
+    [CMD_SHOW_CMD_LIST] = { 
+        .name = "list",
+        .params = "",
+        .summary = "show all command list",
+        .group = GRP_SHOW,
+    },
     [CMD_SHOW_LEVEL] = { 
         .name = "show",
         .params = "level all|crit|err|warn|info|debug txt|xml|json [FILENAME]",
@@ -61,22 +70,59 @@ struct command_help command_helps[] = {
         .summary = "system ls command",
         .group = GRP_SHOW,
     },
+    [CMD_LOAD_LOG] = { 
+        .name = "load",
+        .params = "log [FILENAME]",
+        .summary = "load a new logdata file, named by FILENAME",
+        .group = GRP_LOAD,
+    },
 };
 
-char cli_prompt[64]  ={"fastlog>> "};
+char cli_prompt[64]  ={"FastLog>> "};
 
+
+static void show_command_list()
+{
+    int i;
+    
+    printf("\n");
+    printf("input CMD help to check command manual.\n");
+    printf("\n");
+    
+    for (i=0; i<CMD_MAX_NUM; i++) {
+        printf("%10s: %s\n", 
+                            command_helps[i].name, 
+                            command_helps[i].summary);
+    }
+}
 
 static void show_help()
 {
+    printf("\n");
     printf("`show help`: show this information.\n");
-    printf("`%s %s`: %s\n", 
+    printf("\n");
+    printf("%10s %s: %s\n", 
                         command_helps[CMD_SHOW_LEVEL].name, 
                         command_helps[CMD_SHOW_LEVEL].params, 
                         command_helps[CMD_SHOW_LEVEL].summary);
-    printf("`%s %s`: %s\n", 
+    printf("%10s %s: %s\n", 
                         command_helps[CMD_SHOW_LS].name, 
                         command_helps[CMD_SHOW_LS].params, 
                         command_helps[CMD_SHOW_LS].summary);
+    printf("\n");
+}
+
+static void load_help()
+{
+    printf("\n");
+    printf("`load help`: show this information.\n");
+    printf("\n");
+    printf("%10s %s: %s\n", 
+                        command_helps[CMD_LOAD_LOG].name, 
+                        command_helps[CMD_LOAD_LOG].params, 
+                        command_helps[CMD_LOAD_LOG].summary);
+    
+    printf("\n");
 }
 
 static void cliInitHelp(void)
@@ -230,7 +276,7 @@ static void cmd_show_level(enum FASTLOG_LEVEL log_level, LOG_OUTPUT_FILE_TYPE fi
     if(file_type & LOG_OUTPUT_FILE_TXT) {
         output = &output_txt;
     } else if(file_type & LOG_OUTPUT_FILE_XML) {
-        output = &output_txt;
+        output = &output_xml;
     } else if(file_type & LOG_OUTPUT_FILE_JSON) {
         output = &output_txt;
     } else {
@@ -254,6 +300,34 @@ static void cmd_show_level(enum FASTLOG_LEVEL log_level, LOG_OUTPUT_FILE_TYPE fi
 
     printf("show level %s 0x%04x %s.\n", strlevel_color(log_level), file_type, filename?filename:"null");
 }
+
+static void cmd_load_log(char *filename)
+{
+    int ret;
+    
+    /* 日志数据文件的读取 */
+    ret = load_logdata_file(filename);
+    if(ret) {
+        printf("load_logdata_file %s failed.\n", filename);
+        goto error;
+    }
+    /* 元数据和数据文件需要匹配，对比时间戳 */
+    ret = match_metadata_and_logdata();
+    if(!ret) {
+        printf("metadata file and logdata file not match.\n");
+        goto error;
+    }
+    
+    fastlog_logdata_t *logdata = log_hdr()->data;
+    parse_logdata(logdata, log_mmapfile()->mmap_size - sizeof(struct fastlog_file_header));
+
+    printf("Load fastlog logdata file `%s` success.\n", filename);
+    
+error:
+    release_logdata_file(); //释放元数据内存
+    return;
+}
+
 
 static int invoke_command(int argc, char **argv, long repeat)
 {
@@ -325,14 +399,53 @@ static int invoke_command(int argc, char **argv, long repeat)
 
                 cmd_show_level(log_level, file_type, filename);
                 
+            }else {
+                printf("input `show help` to check show command.\n");
+                return 0;
             }
         }
-        
-    } if(strncasecmp(argv[0], "ls", 2) == 0) {
+
+    //ls
+    } else if(strncasecmp(argv[0], "ls", 2) == 0) {
         system("ls ./");
+
+    //load
+    } else if(strncasecmp(argv[0], "load", 4) == 0) {
+        if(argc == 1) {
+            printf("input `load help` to check show command.\n");
+            return 0;
+        } else if(argc >= 2) {
+            //load help
+            if(strncasecmp(argv[1], "help", 4) == 0) {
+                load_help();
+                return 0;
+            //load log
+            } else if(strncasecmp(argv[1], "log", 3) == 0) {
+                char *filename = NULL;
+                /* 文件名 */
+                if(argc >= 3) {
+                    filename = argv[2];
+                    if(access(filename, F_OK) != 0) {
+                        printf("\t Input file `%s` not exist.\n", filename);
+                        return 0;
+                    }
+
+                    cmd_load_log(filename);
+                } else {
+                    printf("\t MUST Input file name.\n", filename);
+                }
+                
+                return 0;
+            } else {
+                printf("input `load help` to check load command.\n");
+                return 0;
+            }
+        }
+    } else if(strncasecmp(argv[0], "list", 4) == 0)  {
+        show_command_list();
+    } else {
+        printf("input `list` to check all command.\n");
     }
-    
-    
     return 0;
 }
 

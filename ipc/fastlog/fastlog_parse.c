@@ -65,7 +65,7 @@ static int mmap_fastlog_logfile(struct fastlog_file_mmap *mmap_file, char *filen
     assert(mmap_file && filename && "NULL pointer error");
 
     if(access(filename, F_OK) == 0) {
-        printf("File %s exist.\n", filename);
+        //printf("File %s exist.\n", filename);
         /* 如果备份文件名设定 */
         if(backupfilename) {
             rename(filename, backupfilename);

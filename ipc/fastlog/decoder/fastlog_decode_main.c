@@ -6,6 +6,7 @@
 #include <fastlog_decode.h>
 #include <fastlog_cycles.h>
 #include <fastlog_decode_cli.h>
+#include <fastlog_utils.h>
 
 #include <getopt.h>
 
@@ -14,6 +15,7 @@
 struct fastlog_decoder_config decoder_config = {
     .decoder_version = "fq-decoder-1.0.0",
     .log_verbose_flag = true,  
+    .boot_silence = false,
     .metadata_file = FATSLOG_METADATA_FILE_DEFAULT,
     .nr_log_files = 1,
     .logdata_file = FATSLOG_LOG_FILE_DEFAULT,
@@ -49,9 +51,12 @@ static void show_help(char *programname)
     printf("  %3s %-15s \t: %s\n",   "-v,", "--version", "show version information");
     printf("  %3s %-15s \t: %s\n",   "-h,", "--help", "show this information");
     printf("\n");
-    printf(" [Config]\n");
+    printf(" [Show]\n");
     printf("  %3s %-15s \t: %s\n",   "-V,", "--verbose", "show detail log information");
     printf("  %3s %-15s \t: %s\n",   "-B,", "--brief", "show brief log information");
+    printf("  %3s %-15s \t: %s\n",   "-q,", "--quiet", "execute silence.");
+    printf("\n");
+    printf(" [Config]\n");
     printf("  %3s %-15s \t: %s\n",   "-M,", "--metadata [FILENAME]", "metadata file name");
     printf("  %3s %-15s \t: %s\n",   "-L,", "--logdata [FILENAME(s)]", "metadata file name");
     printf("  %3s %-15s \t  %s`%c`\n", " ",  "                      ", "FILENAMEs separate by ", LOGDATA_FILE_SEPERATOR);
@@ -62,12 +67,15 @@ static void show_help(char *programname)
     printf("  %3s %-15s \t  %s\n",   "   ", "                    ", "OPTION=[all|crit|err|warn|info|debug], default [all]");
     printf("  %3s %-15s \t: %s\n",   "-t,", "--log-type [OPTION]", "output type.");
     printf("  %3s %-15s \t  %s\n",   "   ", "                   ", "OPTION=[txt|xml|json], default [txt]");
+    printf("  %3s %-15s \t  %s\n",   "   ", "                   ", "sometime may `xmlEscapeEntities : char out of range`,");
+    printf("  %3s %-15s \t  %s\n",   "   ", "                   ", " use `2>/dev/null` or -o log.xml");
     printf("  %3s %-15s \t: %s\n",   "-o,", "--output-file [FILENAME]", "output file name.");
     printf("  %3s %-15s \t  %s\n",   "   ", "                        ", "default "DEFAULT_OUTPUT_FILE);
     printf("\n");
     printf("FastLog Decoder(version %s).\n", decoder_config.decoder_version);
     printf("Developed by Rong Tao(2386499836@qq.com).\n");
 }
+
 
 static int parse_decoder_config(int argc, char *argv[])
 {
@@ -77,6 +85,7 @@ static int parse_decoder_config(int argc, char *argv[])
         {"help",    no_argument,    0,  'h'},
         {"verbose", no_argument,    0,  'V'},
         {"brief",   no_argument,    0,  'B'},
+        {"quiet",   no_argument,    0,  'q'},
         {"metadata",    required_argument,     0,  'M'},
         {"logdata",     required_argument,     0,  'L'},
         {"cli",         required_argument,     0,  'c'},
@@ -90,7 +99,7 @@ static int parse_decoder_config(int argc, char *argv[])
     while (1) {
         int c;
         int option_index = 0;
-        c = getopt_long (argc, argv, "vhVBM:L:c:l:t:o:", options, &option_index);
+        c = getopt_long (argc, argv, "vhVBqM:L:c:l:t:o:", options, &option_index);
         if(c < 0) {
             break;
         }
@@ -124,7 +133,10 @@ static int parse_decoder_config(int argc, char *argv[])
             decoder_config.log_verbose_flag = false;
             //printf("decoder_config.log_verbose_flag false.\n");
             break;
-            
+        case 'q':
+            decoder_config.boot_silence = true;
+            //printf("decoder_config.log_verbose_flag false.\n");
+            break;
             
         case 'M':
             decoder_config.metadata_file = strdup(optarg);
@@ -225,16 +237,16 @@ static int parse_decoder_config(int argc, char *argv[])
             break;
             
         case 't':
-            if(strncasecmp(argv[3], "txt", 3) == 0) {
+            if(strncasecmp(optarg, "txt", 3) == 0) {
                 decoder_config.output_type = LOG_OUTPUT_FILE_TXT;
-            } else if(strncasecmp(argv[3], "xml", 3) == 0) {
+            } else if(strncasecmp(optarg, "xml", 3) == 0) {
                 decoder_config.output_type = LOG_OUTPUT_FILE_XML;
-            } else if(strncasecmp(argv[3], "json", 4) == 0) {
+            } else if(strncasecmp(optarg, "json", 4) == 0) {
                 decoder_config.output_type = LOG_OUTPUT_FILE_JSON;
             } else {
                 printf("-t, --log-type MUST be one of txt|xml|json.\n");
                 printf("Check: %s -h, --help\n", argv[0]);
-                return 0;
+                exit(0);
             }
             break;
 
@@ -400,7 +412,7 @@ parse_next:
 }
 
 
-static int parse_logdata(fastlog_logdata_t *logdata, size_t logdata_size)
+int parse_logdata(fastlog_logdata_t *logdata, size_t logdata_size)
 {
     int ret;
     
@@ -527,8 +539,6 @@ void logdata_print_output(struct logdata_decode *logdata, void *arg)
     reprintf(logdata, output);
 }
 
-
-
 /* 解析程序 主函数 */
 int main(int argc, char *argv[])
 {
@@ -604,28 +614,33 @@ load_logdata:
     
     struct output_struct *output = &output_txt;
     char *output_filename = NULL;
-    
+
     /**
-     *  如果不开启命令行，将使用命令行指定的参数对日志进行获取
+     *  输出类型
      */
-    if(!decoder_config.has_cli) {
-    
-        if(decoder_config.output_type & LOG_OUTPUT_FILE_TXT) {
-            output = &output_txt;
-        } else if(decoder_config.output_type & LOG_OUTPUT_FILE_XML) {
-            output = &output_txt;
-        } else if(decoder_config.output_type & LOG_OUTPUT_FILE_JSON) {
-            output = &output_txt;
-        } else {
-            printf("just support txt, xml, json.\n");
-            goto release;
-        }
-        if(decoder_config.output_filename_isset) {
-            output_filename = decoder_config.output_filename;
-        }
+    if(decoder_config.output_type & LOG_OUTPUT_FILE_TXT) {
+        output = &output_txt;
+    } else if(decoder_config.output_type & LOG_OUTPUT_FILE_XML) {
+        output = &output_xml;
+    } else if(decoder_config.output_type & LOG_OUTPUT_FILE_JSON) {
+        output = &output_txt;
+    } else {
+        printf("just support txt, xml, json.\n");
+        goto release;
     }
 
-    output = &output_txt;
+    /**
+     *  是否设置了输出文件
+     */
+    if(decoder_config.output_filename_isset) {
+        output_filename = decoder_config.output_filename;
+    } 
+
+    /* 如果以 quiet 模式启动，将不直接打印 */
+    if(decoder_config.boot_silence) {
+        goto quiet_boot;
+    }
+    
     output_open(output, output_filename);
     output_header(output, meta_hdr());
 
@@ -652,7 +667,9 @@ load_logdata:
     output_footer(output);
     output_close(output);
 
-    
+
+quiet_boot:
+
     /**
      *  命令行默认是开启的
      */

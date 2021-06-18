@@ -38,6 +38,7 @@ int output_close(struct output_struct *output)
 
     if(output->filename) {
         free(output->filename);
+        output->filename = NULL;
     }
     
     return 0;

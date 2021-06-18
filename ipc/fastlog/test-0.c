@@ -38,23 +38,23 @@ void *task_routine(void*param)
     unsigned long total_dequeue = 0;
 
     while(1) {
-//        FAST_LOG(FASTLOG_WARNING, "TEST", "[%s] CPU %d(%ld)\n", "hello", __fastlog_sched_getcpu(), __fastlog_getcpu());
-//        FAST_LOG(FASTLOG_WARNING, "TEST", "%f %lf %llf\n", 3.14, 3.14, 3.14L);
-//        FAST_LOG(FASTLOG_WARNING, "TEST", "%2.3f %2.3lf %2.3llf\n", 3.14, 3.14, 3.14L);
-//        FAST_LOG(FASTLOG_WARNING, "TEST", "%d %ld %lld %d %ld %lld %s\n", 1, 2, 3L, 1, 2, 3L, "Hello");
-//        FAST_LOG(FASTLOG_WARNING, "TEST", ">>># %d %ld %lld %s %f #<<<\n", 1, 2L, 3L, "Hello", 1024.0);
+        FAST_LOG(FASTLOG_WARNING, "TEST", "[%s] CPU %d(%ld)\n", "hello", __fastlog_sched_getcpu(), __fastlog_getcpu());
+        FAST_LOG(FASTLOG_WARNING, "TEST", "%f %lf %llf\n", 3.14, 3.14, 3.14L);
+        FAST_LOG(FASTLOG_WARNING, "TEST", "%2.3f %2.3lf %2.3llf\n", 3.14, 3.14, 3.14L);
+        FAST_LOG(FASTLOG_WARNING, "TEST", "%d %ld %lld %d %ld %lld %s\n", 1, 2, 3L, 1, 2, 3L, "Hello");
+        FAST_LOG(FASTLOG_WARNING, "TEST", ">>># %d %ld %lld %s %f #<<<\n", 1, 2L, 3L, "Hello", 1024.0);
         FAST_LOG(FASTLOG_CRIT, "TEST", ">>># I have an integer %d #<<<\n", total_dequeue);
-//        FAST_LOG(FASTLOG_CRIT, "TEST", ">>># I have an integer %d #<<<\n", total_dequeue+10);
-//        FAST_LOG(FASTLOG_CRIT, "TEST", ">>># I have an integer %d #<<<\n", total_dequeue+11);
-//        FAST_LOG(FASTLOG_INFO, "TEST", ">>># Hello %s 1#<<<\n", "World");
-//        FAST_LOG(FASTLOG_INFO, "TEST", ">>># Hello %s 2#<<<\n", "World");
-//        FAST_LOG(FASTLOG_INFO, "TEST", ">>># Hello %s 3#<<<\n", "World");
-//        FAST_LOG(FASTLOG_INFO, "TEST", ">>># Hello %*s 3#<<<\n", 10, "World");
-//        FAST_LOG(FASTLOG_INFO, "TEST", ">>># Hello %.*s 3#<<<\n", 4, "World");
-//        FAST_LOG(FASTLOG_INFO, "TEST", ">>># Hello %*.*s 3#<<<\n", 20, 4, "World");
-//        FAST_LOG(FASTLOG_INFO, "TEST", ">>># Hello %.*ld %.*ld 3#<<<\n", 7, total_dequeue, 7, total_dequeue+1);
-//        FAST_LOG(FASTLOG_INFO, "TEST", ">>># Hello %*.*d 3#<<<\n", 20, 7, total_dequeue+10);
-//        FAST_LOG(FASTLOG_INFO, "TEST", ">>># Hello %*.*d 3#<<<\n", 30, 7, total_dequeue+20);
+        FAST_LOG(FASTLOG_CRIT, "TEST", ">>># I have an integer %d #<<<\n", total_dequeue+10);
+        FAST_LOG(FASTLOG_CRIT, "TEST", ">>># I have an integer %d #<<<\n", total_dequeue+11);
+        FAST_LOG(FASTLOG_INFO, "TEST", ">>># Hello %s 1#<<<\n", "World");
+        FAST_LOG(FASTLOG_INFO, "TEST", ">>># Hello %s 2#<<<\n", "World");
+        FAST_LOG(FASTLOG_INFO, "TEST", ">>># Hello %s 3#<<<\n", "World");
+        FAST_LOG(FASTLOG_INFO, "TEST", ">>># Hello %*s 3#<<<\n", 10, "World");
+        FAST_LOG(FASTLOG_INFO, "TEST", ">>># Hello %.*s 3#<<<\n", 4, "World");
+        FAST_LOG(FASTLOG_INFO, "TEST", ">>># Hello %*.*s 3#<<<\n", 20, 4, "World");
+        FAST_LOG(FASTLOG_INFO, "TEST", ">>># Hello %.*ld %.*ld 3#<<<\n", 7, total_dequeue, 7, total_dequeue+1);
+        FAST_LOG(FASTLOG_INFO, "TEST", ">>># Hello %*.*d 3#<<<\n", 20, 7, total_dequeue+10);
+        FAST_LOG(FASTLOG_INFO, "TEST", ">>># Hello %*.*d 3#<<<\n", 30, 7, total_dequeue+20);
         FAST_LOG(FASTLOG_CRIT, "TEST", "Hello %d\n", total_dequeue);
         FAST_LOG(FASTLOG_ERR, "TEST", "Hello %d\n", total_dequeue+10);
         FAST_LOG(FASTLOG_WARNING, "TEST", "Hello %d\n", total_dequeue+20);
@@ -97,7 +97,7 @@ int main()
     int icpu, itask;
 
     pthread_t threads[64];
-    int nthread = 1;
+    int nthread = 3;
     char thread_name[32] = {0};
     
     signal(SIGINT, signal_handler);

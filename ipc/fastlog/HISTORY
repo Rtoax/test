@@ -8,6 +8,9 @@ FastLog 开发日志
 
 # 编码历史
 
+* 2021年6月18日
+	* decoder: load log [file name] 命令行
+	* decoder: xml 支持
 * 2021年6月17日
 	* decoder: show level 命令行
 	* decoder: getopt 命令行参数

@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 #include <fastlog.h>
 
 #include <fastlog_utils.h>
@@ -86,35 +88,4 @@ const char *strlevel_color(enum FASTLOG_LEVEL level)
 
     return FASTLOG_LEVEL_NAME_COLORFUL[level];
 }
-
-//static inline int _color_vprint(FILE *fp, color_type color, const char *fmt, va_list arg);
-//
-//int fp_gray(FILE *fp, const char *fmt, ...)
-//{
-//    va_list arg1;
-//    va_start(arg1, fmt);
-//    int n = _color_vprint(fp, _ANSI_GRAY, fmt, arg1);
-//    va_end(arg1);
-//    return n;
-//}
-
-//TODO
-
-
-//static inline int _color_vprint(FILE *fp, color_type color, const char *fmt, va_list arg)
-//{
-//    int n = 0;        
-//
-//    if(color != _ANSI_NONE)
-//        fprintf(fp, "%s", COLORS[color]);
-//
-//    n += vfprintf(fp, fmt, arg);
-//
-//    if(color != _ANSI_NONE)
-//        fprintf(fp, "%s", _ANSI_RESET);
-//
-//
-//    return n;
-//}
-
 

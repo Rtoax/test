@@ -472,7 +472,7 @@ static void logdata_rbtree__rbtree_node_destroy(struct logdata_decode *logdata, 
 {
 //    printf("destroy logID %d\n", node->log_id);
 //    free(node);
-    list_remove(&logdata->list_level[logdata->metadata->metadata->log_level]);
+    list_remove(&logdata->list_level);
     free(logdata->logdata);
     free(logdata);
 }

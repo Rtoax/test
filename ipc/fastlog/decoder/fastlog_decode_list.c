@@ -43,7 +43,7 @@ void level_list__insert(enum FASTLOG_LEVEL level, struct logdata_decode *logdata
     if(unlikely(level >= FASTLOGLEVELS_NUM)) {
         assert(0 && "wrong level in" && __func__);
     }
-    list_insert(&level_lists[level], &logdata->list_level[level]);
+    list_insert(&level_lists[level], &logdata->list_level);
     fastlog_atomic64_inc(&_level_count[level]);
 }
 
@@ -52,7 +52,7 @@ void level_list__remove(enum FASTLOG_LEVEL level, struct logdata_decode *logdata
     if(unlikely(level >= FASTLOGLEVELS_NUM)) {
         assert(0 && "wrong level in" && __func__);
     }
-    list_remove(&logdata->list_level[level]);
+    list_remove(&logdata->list_level);
     fastlog_atomic64_dec(&_level_count[level]);
 }
 
@@ -64,7 +64,7 @@ void level_list__iter(enum FASTLOG_LEVEL level, void (*cb)(struct logdata_decode
     assert(cb && "NULL callback error.");
     
     struct logdata_decode *logdata;
-    list_for_each_entry(logdata, &level_lists[level], list_level[level]) {
+    list_for_each_entry(logdata, &level_lists[level], list_level) {
         cb(logdata, arg);
     }
 }

@@ -61,7 +61,11 @@ struct logdata_decode {
     struct metadata_decode *metadata;   //所对应的源数据
     
     rb_node(struct logdata_decode) rb_link_node_rdtsc;   //按时间顺序排序的红黑树
-    struct list list_level[FASTLOGLEVELS_NUM];
+    struct list list_level;
+    
+//    struct list list_file;  //相同文件名日志的链表
+//    struct list list_func;  //相同函数名的链表
+//    struct list list_line;  //相同行号 日志 的链表
 };
 
 //(默认为ALL)

@@ -8,6 +8,10 @@ FastLog 开发日志
 
 # 编码历史
 
+* 2021年6月21日
+	* decoder: `show level`改为`level show`
+	* decoder: 统计命令行
+
 * 2021年6月18日
 	* decoder: load log [file name] 命令行
 	* decoder: xml 支持

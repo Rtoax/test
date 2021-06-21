@@ -32,6 +32,17 @@ struct metadata_decode {
     rb_node(struct metadata_decode) rb_link_node;   /* 红黑树节点 */
 
     /**
+     *  log_id 链表头
+     *
+     *  id_list: 所有 log_id 相同的链表头
+     *           链表节点为`struct logdata_decode`中的`list_id`
+     *
+     *  id_cnt:  log_id 的数量统计
+     */
+    struct list id_list;
+    unsigned long id_cnt;
+
+    /**
      *  以下字符串拆分了 `metadata->string_buf`
      *
      *  如`metadata->string_buf`在内存中 为 TEST\0test.c\0main\0Hello, %s\0task1\0
@@ -62,6 +73,13 @@ struct logdata_decode {
     
     rb_node(struct logdata_decode) rb_link_node_rdtsc;   //按时间顺序排序的红黑树
     struct list list_level;
+
+    /**
+     *  log_id 链表节点
+     *
+     *  链表头为 `struct metadata_decode`结构中的`id_list`
+     */
+    struct list list_id;
     
 //    struct list list_file;  //相同文件名日志的链表
 //    struct list list_func;  //相同函数名的链表
@@ -249,6 +267,37 @@ void level_lists__init();
 void level_list__insert(enum FASTLOG_LEVEL level, struct logdata_decode *logdata);
 void level_list__remove(enum FASTLOG_LEVEL level, struct logdata_decode *logdata);
 void level_list__iter(enum FASTLOG_LEVEL level, void (*cb)(struct logdata_decode *logdata, void *arg), void *arg);
+
+/**
+ *  log_id 的bitmask 
+ *
+ *  用户统计 log_id 信息
+ */
+void log_ids__init();
+void log_ids__destroy();
+void log_ids__set(int log_id);
+int  log_ids__isset(int log_id);
+int  log_ids__first();
+int  log_ids__next(int log_id);
+int  log_ids__last();
+void log_ids__iter(void (*cb)(int log_id, void* arg), void *arg);
+
+
+/**
+ *  每个元数据中，都存有一个 log_id 的链表
+ *
+ *  XXX_raw 使用原始`struct metadata_decode`结构操作
+ *  XXX     使用`log_id`操作
+ */
+void id_lists__init_raw(struct metadata_decode *metadata);
+void id_list__insert_raw(struct metadata_decode *metadata, struct logdata_decode *logdata);
+void id_list__remove_raw(struct metadata_decode *metadata, struct logdata_decode *logdata);
+void id_list__iter_raw(struct metadata_decode *metadata, void (*cb)(struct logdata_decode *logdata, void *arg), void *arg);
+
+void id_lists__init(int log_id);
+void id_list__insert(int log_id, struct logdata_decode *logdata);
+void id_list__remove(int log_id, struct logdata_decode *logdata);
+void id_list__iter(int log_id, void (*cb)(struct logdata_decode *logdata, void *arg), void *arg);
 
 
 #endif /*<__fastlog_DECODE_h>*/

@@ -36,22 +36,34 @@ static int help_entries_len;
 #define GRP_SHOW    0
 #define GRP_SAVE    1
 #define GRP_LOAD    2
+#define GRP_QUIT    3
 
 static char *command_groups[] = {
     "show",
     "save",
     "load",
+    "quit",
 };
 
 enum {
+    CMD_SHOW_HELP,
     CMD_SHOW_CMD_LIST,
     CMD_SHOW_LEVEL,
     CMD_SHOW_LS,
+    CMD_SHOW_STATS,
     CMD_LOAD_LOG,
+    CMD_QUIT_QUIT,
+    CMD_QUIT_EXIT,
     CMD_MAX_NUM,
 };
 struct command_help command_helps[] = {
     
+    [CMD_SHOW_HELP] = { 
+        .name = "show",
+        .params = "help",
+        .summary = "show help",
+        .group = GRP_SHOW,
+    },
     [CMD_SHOW_CMD_LIST] = { 
         .name = "list",
         .params = "",
@@ -59,8 +71,8 @@ struct command_help command_helps[] = {
         .group = GRP_SHOW,
     },
     [CMD_SHOW_LEVEL] = { 
-        .name = "show",
-        .params = "level all|crit|err|warn|info|debug txt|xml|json [FILENAME]",
+        .name = "level",
+        .params = "show all|crit|err|warn|info|debug txt|xml|json [FILENAME]",
         .summary = "show log by level and save to txt,xml,json FILENAME",
         .group = GRP_SHOW,
     },
@@ -70,11 +82,29 @@ struct command_help command_helps[] = {
         .summary = "system ls command",
         .group = GRP_SHOW,
     },
+    [CMD_SHOW_STATS] = { 
+        .name = "stats",
+        .params = "",
+        .summary = "show statistics information",
+        .group = GRP_SHOW,
+    },
     [CMD_LOAD_LOG] = { 
         .name = "load",
         .params = "log [FILENAME]",
         .summary = "load a new logdata file, named by FILENAME",
         .group = GRP_LOAD,
+    },
+    [CMD_QUIT_QUIT] = { 
+        .name = "quit",
+        .params = "",
+        .summary = "quit program",
+        .group = GRP_QUIT,
+    },
+    [CMD_QUIT_EXIT] = { 
+        .name = "exit",
+        .params = "",
+        .summary = "quit program",
+        .group = GRP_QUIT,
     },
 };
 
@@ -109,6 +139,10 @@ static void show_help()
                         command_helps[CMD_SHOW_LS].name, 
                         command_helps[CMD_SHOW_LS].params, 
                         command_helps[CMD_SHOW_LS].summary);
+    printf("%10s %s: %s\n", 
+                        command_helps[CMD_SHOW_STATS].name, 
+                        command_helps[CMD_SHOW_STATS].params, 
+                        command_helps[CMD_SHOW_STATS].summary);
     printf("\n");
 }
 
@@ -343,8 +377,17 @@ static int invoke_command(int argc, char **argv, long repeat)
             if(strncasecmp(argv[1], "help", 4) == 0) {
                 show_help();
                 return 0;
-            //show level
-            } else if(strncasecmp(argv[1], "level", 5) == 0) {
+            }
+        }
+    //level 
+    } else if(strncasecmp(argv[0], "level", 5) == 0) {
+        if(argc == 1) {
+            printf("input `show help` to check show command.\n");
+            return 0;
+        } else if(argc >= 2) {
+            
+            // level show
+            if(strncasecmp(argv[1], "show", 4) == 0) {
 
                 /*all|crit|err|warn|info|debug txt|xml|json [FILENAME] */
                 enum FASTLOG_LEVEL log_level = FASTLOG_ERR;
@@ -443,6 +486,10 @@ static int invoke_command(int argc, char **argv, long repeat)
         }
     } else if(strncasecmp(argv[0], "list", 4) == 0)  {
         show_command_list();
+        
+    //stats
+    } else if(strncasecmp(argv[0], "stats", 5) == 0) {
+        //TODO
     } else {
         printf("input `list` to check all command.\n");
     }

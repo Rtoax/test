@@ -1,4 +1,103 @@
 #include <fastlog_decode.h>
+#include <bitmask/bitmask.h>
+
+
+static struct bitmask *log_id_bitmask = NULL;
+
+#define MAX_LOG_ID  65535
+
+void log_ids__init()
+{
+    log_id_bitmask = bitmask_alloc(MAX_LOG_ID);
+    assert(log_id_bitmask && "log_id_bitmask init allocated failed.");
+}
+void log_ids__destroy()
+{
+    if(likely(log_id_bitmask)) {
+        bitmask_free(log_id_bitmask);
+        log_id_bitmask = NULL;
+    }
+}
+
+void log_ids__set(int log_id)
+{
+    if(unlikely(!log_id_bitmask)) {
+        assert(0 && "log_id_bitmask not init");
+    }
+    if(unlikely(log_id > MAX_LOG_ID)) {
+        assert(0 && "log_id bigger than 65535");
+    }
+
+    bitmask_setbit(log_id_bitmask, log_id);
+}
+
+int log_ids__isset(int log_id)
+{
+    if(unlikely(!log_id_bitmask)) {
+        assert(0 && "log_id_bitmask not init");
+    }
+    return bitmask_isbitset(log_id_bitmask, log_id);
+}
+
+int log_ids__first()
+{
+    if(unlikely(!log_id_bitmask)) {
+        assert(0 && "log_id_bitmask not init");
+    }
+     return bitmask_first(log_id_bitmask);
+}
+
+int log_ids__next(int log_id)
+{
+    if(unlikely(!log_id_bitmask)) {
+        assert(0 && "log_id_bitmask not init");
+    }
+    return bitmask_next(log_id_bitmask, log_id+1);
+}
+
+int log_ids__last()
+{
+    if(unlikely(!log_id_bitmask)) {
+        assert(0 && "log_id_bitmask not init");
+    }
+     return bitmask_last(log_id_bitmask);
+}
+
+
+void log_ids__iter(void (*cb)(int log_id, void* arg), void *arg)
+{
+    if(unlikely(!log_id_bitmask) || unlikely(!cb)) {
+        assert(0 && "log_id_bitmask not init or callback NULL.");
+    }
+    int log_id;
+    for(log_id = log_ids__first(); log_ids__isset(log_id); log_id = log_ids__next(log_id)) {
+        cb(log_id, arg);
+    }
+
+}
+
+#ifdef TEST
+void test_log_ids()
+{
+    int log_id;
+    
+    log_ids__init();
+
+    log_ids__set(1);
+    log_ids__set(6);
+    log_ids__set(19);
+    log_ids__set(11349);
+    log_ids__set(129);
+
+    void callback(int log_id, void *arg) {
+        printf("log_id = %d\n", log_id);
+    }
+    log_ids__iter(callback, NULL);
+
+    exit(1);
+}
+#endif
+
 
 /**
  *  所有级别的链表
@@ -69,4 +168,76 @@ void level_list__iter(enum FASTLOG_LEVEL level, void (*cb)(struct logdata_decode
     }
 }
 
+
+/**
+ *  每个元数据中，都存有一个 log_id 的链表
+ */
+void id_lists__init_raw(struct metadata_decode *metadata)
+{
+    if(unlikely(!metadata)) {
+        assert(0 && "NULL error" && __func__);
+    }
+    list_init(&metadata->id_list);
+    metadata->id_cnt = 0;
+}
+
+void id_lists__init(int log_id)
+{
+    struct metadata_decode *metadata = metadata_rbtree__search(log_id);
+
+    id_lists__init_raw(metadata);
+}
+
+void id_list__insert_raw(struct metadata_decode *metadata, struct logdata_decode *logdata)
+{
+    if(unlikely(!metadata) || unlikely(!logdata)) {
+        assert(0 && "NULL error" && __func__);
+    }
+    list_insert(&metadata->id_list, &logdata->list_id);
+    metadata->id_cnt ++;
+}
+
+
+void id_list__insert(int log_id, struct logdata_decode *logdata)
+{
+    struct metadata_decode *metadata = metadata_rbtree__search(log_id);
+    
+    id_list__insert_raw(metadata, logdata);
+}
+
+void id_list__remove_raw(struct metadata_decode *metadata, struct logdata_decode *logdata)
+{   
+    if(unlikely(!metadata) || unlikely(!logdata)) {
+        assert(0 && "NULL error" && __func__);
+    }
+    list_remove(&logdata->list_id);
+    metadata->id_cnt --;
+}
+
+
+void id_list__remove(int log_id, struct logdata_decode *logdata)
+{
+    struct metadata_decode *metadata = metadata_rbtree__search(log_id);
+    
+    id_list__remove_raw(metadata, logdata);
+}
+
+void id_list__iter_raw(struct metadata_decode *metadata, void (*cb)(struct logdata_decode *logdata, void *arg), void *arg)
+{
+    if(unlikely(!metadata)) {
+        assert(0 && "NULL error" && __func__);
+    }
+    assert(cb && "NULL callback error.");
+    
+    struct logdata_decode *logdata;
+    list_for_each_entry(logdata, &metadata->id_list, list_id) {
+        cb(logdata, arg);
+    }
+}
+void id_list__iter(int log_id, void (*cb)(struct logdata_decode *logdata, void *arg), void *arg)
+{
+    struct metadata_decode *metadata = metadata_rbtree__search(log_id);
+    
+    id_list__iter_raw(metadata, cb, arg);
+}
 

@@ -397,7 +397,8 @@ parse_next:
 //    printf("insert logID %d\n", decode_metadata->log_id);
 
     metadata_rbtree__insert(decode_metadata);
-
+    id_lists__init_raw(decode_metadata);
+    
 //    struct metadata_decode *_search = metadata_rbtree__search(decode_metadata->log_id);
 //    printf("_search logID %d\n", _search->log_id);
 
@@ -447,6 +448,12 @@ parse_next:
         /* 将其插入链表中 */
         level_list__insert(metadata->metadata->log_level, log_decode);
 
+        /* 插入到 log_id 链表中 */
+        id_list__insert_raw(metadata, log_decode);
+
+        /* 将 log_id 标记入 bitmask */
+        log_ids__set(log_id);
+
         /* 插入到日志数据红黑树中 */
         logdata_rbtree__insert(log_decode);
         
@@ -487,6 +494,7 @@ static void release_and_exit()
 
     cli_exit();
 
+    log_ids__destroy();
     
     exit(0);
 }
@@ -555,6 +563,9 @@ int main(int argc, char *argv[])
 
     /* 日志级别链表初始化 */
     level_lists__init();
+
+    /* 初始化 log_id bitmask */
+    log_ids__init();
 
     /* 元数据文件的读取 */
     ret = load_metadata_file(decoder_config.metadata_file);
@@ -668,7 +679,19 @@ load_logdata:
     output_close(output);
 
 
+
+
 quiet_boot:
+
+//    void log_callback(struct logdata_decode *logdata, void *arg) {
+//        printf("log_id = %d\n", logdata->logdata->log_id);
+//
+//    }
+//    void id_callback(int log_id, void *arg) {
+//        id_list__iter(log_id, log_callback, NULL);
+//    }
+//
+//    log_ids__iter(id_callback, NULL);
 
     /**
      *  命令行默认是开启的

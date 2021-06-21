@@ -27,6 +27,7 @@ SRC_DECODE="decoder/fastlog_decode_main.c \
 			decoder/fastlog_decode_output_xml.c\
 			decoder/fastlog_decode_file.c \
 			decoder/linenoise/linenoise.c \
+			decoder/bitmask/bitmask.c \
 			decoder/hiredis/sds.c "
 
 echo "Compile fastlog_decode_main.c -> decode.out"

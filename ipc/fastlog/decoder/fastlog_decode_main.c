@@ -34,7 +34,7 @@ struct fastlog_decoder_config decoder_config = {
     /**
      *  默认日志输出类型与输出文件
      *
-     *  `output_type`输出类型为`LOG_OUTPUT_FILE_TYPE`
+     *  `output_type`输出类型为`LOG_OUTPUT_TYPE`
      *  `output_filename`输出文件名默认为空，标识默认为 console 输出(LOG_OUTPUT_FILE_CONSOLE)
      *          见命令行`command_helps`的`show level`
      */
@@ -532,24 +532,13 @@ void timestamp_tsc_to_string(uint64_t tsc, char str_buffer[32])
 }
 
 
-void metadata_print(struct metadata_decode *meta, void *arg)
-{
-    printf("metadata_print logID %d\n", meta->log_id);
-}
 
-void logdata_print_output(struct logdata_decode *logdata, void *arg)
-{
-    struct output_struct *output = (struct output_struct *)arg;
-
-    // 从 "Hello, %s, %d" + World\02021 
-    // 转化为
-    // Hello, World, 2021
-    reprintf(logdata, output);
-}
 
 /* 解析程序 主函数 */
 int main(int argc, char *argv[])
 {
+
+    
     int ret;
     int load_logdata_count = 0;
     char *current_logdata_file = NULL;
@@ -655,24 +644,30 @@ load_logdata:
     output_open(output, output_filename);
     output_header(output, meta_hdr());
 
+    metadata_rbtree__iter(output_metadata, output);
 
     if(decoder_config.default_log_level >= FASTLOG_CRIT && decoder_config.default_log_level < FASTLOGLEVELS_NUM) {
-        level_list__iter(decoder_config.default_log_level, logdata_print_output, output);
+        level_list__iter(decoder_config.default_log_level, output_logdata, output);
     } else {
-        logdata_rbtree__iter(logdata_print_output, output);
+        logdata_rbtree__iter(output_logdata, output);
     }
 
 
 #if 0 /* 几个遍历的 示例代码 */
     /* 遍历元数据 */
-    metadata_rbtree__iter(metadata_print, output);
+    metadata_rbtree__iter(output_metadata, output);
 
     /* 以日志级别遍历 */
-    level_list__iter(FASTLOG_ERR, logdata_print_output, output);
+    level_list__iter(FASTLOG_ERR, output_logdata, output);
 
     /* 以时间 tsc 寄存器的值 遍历 */
-    logdata_rbtree__iter(logdata_print_output, output);
+    logdata_rbtree__iter(output_logdata, output);
 
+    printf("show log ID.\n");
+    ret = id_list__iter(3, output_logdata, output);
+    if(ret) {
+        printf("logid %d not exit.\n", 3);
+    }
 #endif
     
     output_footer(output);

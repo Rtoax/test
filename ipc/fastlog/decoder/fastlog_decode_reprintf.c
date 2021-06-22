@@ -291,13 +291,23 @@ static void sprintf_regex_format(char *buffer, char* format, struct args_type *a
 	regfree(&reg);
 }
 
-
+/**
+ *  将 logdata 格式转化为 字符串，并调用 `output_log_item` 进行单项输出
+ */
 int reprintf(struct logdata_decode *logdata, struct output_struct *output)
 {
     char log_buffer[MAX_BUFFER_LEN] = {0};
 
     sprintf_regex_format(log_buffer, logdata->metadata->print_format, &logdata->metadata->argsType, logdata->logdata);
+
+    /* 生成 buffer content数据后，更新 filter 对应的 buffer指针 */
+    output_updatefilter_arg(output, log_buffer);
+
+    /* 被过滤掉 */
+    if(!output_callfilter(output, logdata)) {
+        return 0;
+    }
     
-    output_log_item(output, logdata, log_buffer);
+    return output_log_item(output, logdata, log_buffer);
 }
 

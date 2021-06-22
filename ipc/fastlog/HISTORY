@@ -8,10 +8,17 @@ FastLog 开发日志
 
 # 编码历史
 
+* 2021年6月22日
+	* decoder: output 添加 元数据 输出
+	* decoder: `level`命令改为`log`
+	* decoder: 新的命令行`meta`
+	* decoder: 新的命令行`search`, 2021年6月22日13:25:39(完成)
+
 * 2021年6月21日
 	* decoder: `show level`改为`level show`
 	* decoder: 统计命令行
-
+	* decoder: filter 过滤器
+	* decoder: `level show`命令改为`level`
 * 2021年6月18日
 	* decoder: load log [file name] 命令行
 	* decoder: xml 支持

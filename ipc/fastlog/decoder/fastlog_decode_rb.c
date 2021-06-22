@@ -73,8 +73,7 @@ struct metadata_decode * metadata_rbtree__search(int meta_log_id)
     return metadata_rbtree_search(&metadata_rbtree, (const struct metadata_decode*)&meta_log_id);
 }
 
-
-void metadata_rbtree__iter(void (*cb)(struct metadata_decode *meta, void *arg), void *arg)
+void metadata_rbtree__iter_level(enum FASTLOG_LEVEL level, void (*cb)(struct metadata_decode *meta, void *arg), void *arg)
 {
     assert(cb && "NULL callback error.");
     
@@ -83,8 +82,22 @@ void metadata_rbtree__iter(void (*cb)(struct metadata_decode *meta, void *arg), 
     for(_next = metadata_rbtree_first(&metadata_rbtree); 
         _next; 
         _next = metadata_rbtree_next(&metadata_rbtree, _next)) {
-        cb(_next, arg);
+        //所有级别
+        if(FASTLOGLEVEL_ALL == level) {
+            cb(_next, arg);
+        } else {
+            //级别匹配
+            if(level == _next->metadata->log_level) {
+                cb(_next, arg);
+            } else continue;
+        }
     }
+}
+
+
+void metadata_rbtree__iter(void (*cb)(struct metadata_decode *meta, void *arg), void *arg)
+{
+    metadata_rbtree__iter_level(FASTLOGLEVEL_ALL, cb, arg);
 }
 
 

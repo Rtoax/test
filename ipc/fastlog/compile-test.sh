@@ -25,6 +25,7 @@ SRC_DECODE="decoder/fastlog_decode_main.c \
 			decoder/fastlog_decode_rb.c\
 			decoder/fastlog_decode_output_txt.c\
 			decoder/fastlog_decode_output_xml.c\
+			decoder/fastlog_decode_output_filter.c\
 			decoder/fastlog_decode_file.c \
 			decoder/linenoise/linenoise.c \
 			decoder/bitmask/bitmask.c \

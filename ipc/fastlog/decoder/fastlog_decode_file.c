@@ -17,10 +17,95 @@ int output_open(struct output_struct *output, char *filename)
 
     return output->ops->open(output);
 }
+
 int output_header(struct output_struct *output, struct fastlog_file_header *header)
 {
     return output->ops->header(output, header);
 }
+
+int output_setfilter(struct output_struct *output, struct output_filter *filter, struct output_filter_arg arg)
+{
+    assert(output && filter && "NULL error.");
+
+    if(output->filter_num > __LOG__RANGE_FILTER_NUM) {
+        assert(0 && "filter number out of range.");
+    }
+
+    output->filter[output->filter_num] = filter;
+    output->filter_arg[output->filter_num] = arg;
+    output->filter_num++;
+    
+    return 0;
+}
+
+bool output_callfilter(struct output_struct *output, struct logdata_decode *logdata)
+{
+    int i;
+    struct output_filter *filter = NULL;
+    struct output_filter_arg *filter_arg = NULL;
+    
+    for(i=0; i<output->filter_num; i++) {
+        filter = output->filter[i];
+        filter_arg = &output->filter_arg[i];
+    
+        /* 如果 filter 为空，等同于 匹配成功 */
+        if(!filter) continue;
+
+        if(filter->log_range & LOG__RANGE_CONTENT) {
+            //不匹配
+            if(!filter->match_log_content_ok(filter, logdata, filter_arg->log_buffer, filter_arg->value)) {
+                return false;
+            }
+        } else {
+            //不匹配
+            if(!filter->match_prefix_ok(filter, logdata, filter_arg->value)) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+int output_updatefilter_arg(struct output_struct *output, char *log_buffer)
+{
+    int i;
+    for(i=0; i<output->filter_num; i++) {
+        output->filter_arg[i].log_buffer = log_buffer;
+    }
+    return 0;
+}
+
+int output_clearfilter(struct output_struct *output)
+{
+    int i;
+    for(i=0; i<output->filter_num; i++) {
+        output->filter[i] = NULL;
+        output->filter_arg[i] = output_filter_arg_null;
+    }
+    output->filter_num = 0;
+    return 0;
+}
+
+void output_metadata(struct metadata_decode *meta, void *arg)
+{
+    //printf("metadata_print logID %d\n", meta->log_id);
+    
+    struct output_struct *output = (struct output_struct *)arg;
+    
+    return output->ops->meta_item(output, meta);
+}
+
+void output_logdata(struct logdata_decode *logdata, void *arg)
+{
+    struct output_struct *output = (struct output_struct *)arg;
+
+    // 从 "Hello, %s, %d" + World\02021 
+    // 转化为
+    // Hello, World, 2021
+    reprintf(logdata, output);
+}
+
 
 //在`reprintf`中被调用
 int output_log_item(struct output_struct *output, struct logdata_decode *logdata, char *log)
@@ -40,6 +125,8 @@ int output_close(struct output_struct *output)
         free(output->filename);
         output->filename = NULL;
     }
+
+    output_clearfilter(output);
     
     return 0;
 }

@@ -94,8 +94,65 @@ static int xml_header(struct output_struct *o, struct fastlog_file_header *heade
     }
 
     
+    o->file_handler.xml.header_metadata = xmlNewNode(NULL,BAD_CAST"metadata");
+    xmlAddChild(o->file_handler.xml.header, o->file_handler.xml.header_metadata);
 #endif //FASTLOG_HAVE_LIBXML2
     /*  */
+    return 0;
+}
+
+static int xml_meta_item(struct output_struct *o, struct metadata_decode *meta)
+{
+    //assert( 0&& "就是玩");
+    
+    char* user_string    = meta->user_string; 
+    char* src_filename   = meta->src_filename; 
+    char* src_function   = meta->src_function; 
+    int   src_line       = meta->metadata->log_line; 
+    char* print_format   = meta->print_format;
+    char* thread_name    = meta->thread_name;
+    unsigned long log_num= meta->id_cnt;
+    
+    const char *(*my_strlevel)(enum FASTLOG_LEVEL level);
+
+    /* 文件输出还是不要颜色了 */
+    if(o->filename) {
+        my_strlevel = strlevel;
+    } else {
+    /* 终端输出有颜色骚气一点 */
+        my_strlevel = strlevel_color;
+    }
+
+    
+    xmlNodePtr xmlmeta = xmlNewNode(NULL, BAD_CAST "meta");  
+    xmlAddChild(o->file_handler.xml.header_metadata, xmlmeta);
+
+    {
+        char buffer[16] = {0};
+        sprintf(buffer, "%ld", meta->log_id);
+        xmlNewProp(xmlmeta, BAD_CAST"ID",BAD_CAST buffer);
+    }
+    
+    xmlNewProp(xmlmeta, BAD_CAST"LV",BAD_CAST my_strlevel(meta->metadata->log_level));
+    xmlNewProp(xmlmeta, BAD_CAST"NM",BAD_CAST user_string);
+    xmlNewProp(xmlmeta, BAD_CAST"FILE",BAD_CAST src_filename);
+    
+    {
+        char buffer[256] = {0};
+        sprintf(buffer, "%s:%d", src_function, src_line);
+        xmlNewProp(xmlmeta, BAD_CAST"FUNC",BAD_CAST buffer);
+    }
+    
+    xmlNewProp(xmlmeta, BAD_CAST"THR",BAD_CAST thread_name);
+    
+    {
+        char buffer[16] = {0};
+        sprintf(buffer, "%ld", log_num);
+        xmlNewProp(xmlmeta, BAD_CAST"LOGs",BAD_CAST buffer);
+    }
+
+    o->output_meta_cnt ++;
+    
     return 0;
 }
 
@@ -126,8 +183,9 @@ static int xml_log_item(struct output_struct *o, struct logdata_decode *logdata,
     sprintf(buffer, "%d", logdata->logdata->log_id);
     xmlNewProp(log_item, BAD_CAST"id",BAD_CAST buffer);
 
-    //级别,函数名,线程名
+    //级别,模块名,函数名,线程名
     xmlNewProp(log_item, BAD_CAST"lv",BAD_CAST my_strlevel(logdata->metadata->metadata->log_level));
+    xmlNewProp(log_item, BAD_CAST"nm",BAD_CAST logdata->metadata->user_string);
     xmlNewProp(log_item, BAD_CAST"fn",BAD_CAST logdata->metadata->src_function);
     
     sprintf(buffer, "%d", logdata->metadata->metadata->log_line);
@@ -172,7 +230,7 @@ static int xml_log_item(struct output_struct *o, struct logdata_decode *logdata,
     xmlAddChild(content, xmlNewText(BAD_CAST log));
 
 
-
+    o->output_log_cnt ++;
 
 #endif //FASTLOG_HAVE_LIBXML2
 }
@@ -207,6 +265,13 @@ static int xml_footer(struct output_struct *o)
         xmlNewProp(statistics, BAD_CAST my_strlevel(_ilevel), BAD_CAST buffer);
     }
     
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "%ld", o->output_meta_cnt);
+    xmlNewProp(statistics, BAD_CAST "OutputMeta", BAD_CAST buffer);
+    
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "%ld", o->output_log_cnt);
+    xmlNewProp(statistics, BAD_CAST "OutputLog", BAD_CAST buffer);
     
     xmlNodePtr copyright = xmlNewNode(NULL, BAD_CAST "Copyright");  
     xmlAddChild(o->file_handler.xml.footer, copyright);
@@ -248,6 +313,10 @@ static int xml_close(struct output_struct *o)
     }
 
     xmlFreeDoc(o->file_handler.xml.doc);
+
+    o->file_handler.xml.doc = NULL;
+    o->output_log_cnt = 0;
+    o->output_meta_cnt = 0;
     
 #endif //FASTLOG_HAVE_LIBXML2
     return 0;
@@ -259,6 +328,7 @@ static int xml_close(struct output_struct *o)
 struct output_operations output_operations_xml = {
     .open = xml_open,
     .header = xml_header,
+    .meta_item = xml_meta_item,
     .log_item = xml_log_item,
     .footer = xml_footer,
     .close = xml_close,
@@ -271,19 +341,18 @@ struct output_struct output_xml = {
 #else
     .enable = false,
 #endif //FASTLOG_HAVE_LIBXML2
-
-    .range = LOG__RANGE_ALL,
-
-    .range_value = {
-        .level = FASTLOGLEVEL_ALL,
-        .name = NULL,
-    },
     
-    .file = LOG_OUTPUT_FILE_XML,
+    .file = LOG_OUTPUT_FILE_XML|LOG_OUTPUT_ITEM_MASK,
     .filename = NULL,
     .file_handler = {
         .fp = NULL,
     },
+    
+    .output_meta_cnt = 0,
+    .output_log_cnt = 0,
     .ops = &output_operations_xml,
+    
+    .filter_num = 0,
+    .filter = {NULL},
 };
 

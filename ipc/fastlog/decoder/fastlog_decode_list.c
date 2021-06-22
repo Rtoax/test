@@ -222,10 +222,11 @@ void id_list__remove(int log_id, struct logdata_decode *logdata)
     id_list__remove_raw(metadata, logdata);
 }
 
-void id_list__iter_raw(struct metadata_decode *metadata, void (*cb)(struct logdata_decode *logdata, void *arg), void *arg)
+int id_list__iter_raw(struct metadata_decode *metadata, void (*cb)(struct logdata_decode *logdata, void *arg), void *arg)
 {
     if(unlikely(!metadata)) {
-        assert(0 && "NULL error" && __func__);
+        //assert(0 && "NULL error" && __func__);
+        return -1;
     }
     assert(cb && "NULL callback error.");
     
@@ -233,11 +234,13 @@ void id_list__iter_raw(struct metadata_decode *metadata, void (*cb)(struct logda
     list_for_each_entry(logdata, &metadata->id_list, list_id) {
         cb(logdata, arg);
     }
+
+    return 0;
 }
-void id_list__iter(int log_id, void (*cb)(struct logdata_decode *logdata, void *arg), void *arg)
+int id_list__iter(int log_id, void (*cb)(struct logdata_decode *logdata, void *arg), void *arg)
 {
     struct metadata_decode *metadata = metadata_rbtree__search(log_id);
     
-    id_list__iter_raw(metadata, cb, arg);
+    return id_list__iter_raw(metadata, cb, arg);
 }
 

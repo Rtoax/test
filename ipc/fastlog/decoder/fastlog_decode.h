@@ -5,6 +5,7 @@
 #include <signal.h>
 #include <stdarg.h>
 #include <stdbool.h>
+#include <regex.h>
 #include <stdio.h>
 #include <fastlog.h>
 #include <sys/time.h>
@@ -88,23 +89,69 @@ struct logdata_decode {
 
 //(默认为ALL)
 typedef enum {
-    LOG__RANGE_ALL      = 0x0001,       //输出全部
-    LOG__RANGE_LEVEL    = 0x0002,       //按级别输出
-    LOG__RANGE_NAME     = 0x0004,       //按名称(模块名)输出
-    LOG__RANGE_THREAD   = 0x0008,       //按线程输出
-    LOG__RANGE_REAPPEAR = 0x0010,       //重现日志 Reappear yesterday
+    LOG__RANGE_TIME     = 0x0001,       //时间(戳)(filter 时 不支持)
+    LOG__RANGE_LEVEL    = 0x0002,       //级别    (filter 时 不支持)
+    LOG__RANGE_NAME     = 0x0004,       //模块名
+    LOG__RANGE_FILE     = 0x0008,       //源文件名    (filter 时 不支持)
+    LOG__RANGE_FUNC     = 0x0010,       //函数名
+    LOG__RANGE_LINE     = 0x0020,       //行号 (filter 时 不支持)
+    LOG__RANGE_THREAD   = 0x0040,       //线程
+    LOG__RANGE_CONTENT  = 0x0080,       //内容(单条信息)
+    LOG__RANGE_ALL      = 0x00ff,       //全部
+    LOG__RANGE_MASK     = LOG__RANGE_ALL,
+
+    /**
+     *  Filter 过滤时，支持的 过滤 掩码, 数量需要与`__LOG__RANGE_FILTER_NUM`同步
+     *
+     *  LOG__RANGE_NAME:    支持模块名过滤
+     *  LOG__RANGE_FUNC:    支持函数名过滤
+     *  LOG__RANGE_THREAD:  支持线程名过滤
+     *  LOG__RANGE_CONTENT: 支持内容过滤
+     *
+     */
+    LOG__RANGE_FILTER_MASK  = LOG__RANGE_NAME|LOG__RANGE_FUNC|LOG__RANGE_THREAD|LOG__RANGE_CONTENT
 }LOG__RANGE_TYPE;
+    
+typedef enum {
+    LOG__RANGE_NAME_ENUM,
+    LOG__RANGE_FUNC_ENUM,
+    LOG__RANGE_THREAD_ENUM,
+    LOG__RANGE_CONTENT_ENUM,
+    __LOG__RANGE_FILTER_NUM,    /* 注意不要填错，见`LOG__RANGE_FILTER_MASK`注释描述 */
+}LOG__RANGE_FILTER_ENUM;
+
+//#define for_each_filter_range(iter, mask) \
+//    for
+
 
 //(默认为 console|txt)
 typedef enum {
+    /**
+     *  输出文件类型
+     */
     LOG_OUTPUT_FILE_TXT     = 0x0001,   //txt 格式
     LOG_OUTPUT_FILE_JSON    = 0x0002,   //json 格式
     LOG_OUTPUT_FILE_XML     = 0x0004,   //XML 格式
     LOG_OUTPUT_FILE_CONSOLE = 0x0008,   //终端输出
-}LOG_OUTPUT_FILE_TYPE;
+    LOG_OUTPUT_FILE_MASK    = 0x000f,   //文件输出掩码
+
+    /* `0x0010` - `0x0080` 预留，用于扩展其他文件格式 */
+
+    /**
+     *  输出项，见 `struct output_operations`中`header``meta_item``log_item``footer`
+     */
+    LOG_OUTPUT_ITEM_HDR     = 0x0100,   //头信息项
+    LOG_OUTPUT_ITEM_META    = 0x0200,   //元数据信息项
+    LOG_OUTPUT_ITEM_LOG     = 0x0400,   //LOG数据信息项
+    LOG_OUTPUT_ITEM_FOOT    = 0x0800,   //尾部统计信息项
+    LOG_OUTPUT_ITEM_MASK    = 0x0f00,   //信息项掩码
+    LOG_OUTPUT_ITEM_LOG_MASK = LOG_OUTPUT_ITEM_HDR|LOG_OUTPUT_ITEM_LOG|LOG_OUTPUT_ITEM_FOOT,
+    LOG_OUTPUT_ITEM_META_MASK = LOG_OUTPUT_ITEM_HDR|LOG_OUTPUT_ITEM_META|LOG_OUTPUT_ITEM_FOOT,
+}LOG_OUTPUT_TYPE;
 
 
 struct output_struct;
+struct output_filter;
 
 /**
  *  输出操作符
@@ -113,11 +160,56 @@ struct output_struct;
  *  
  */
 struct output_operations {
+
     int (*open)(struct output_struct *o);
     int (*header)(struct output_struct *o, struct fastlog_file_header *header);
+    int (*meta_item)(struct output_struct *o, struct metadata_decode *meta);
     int (*log_item)(struct output_struct *o, struct logdata_decode *logdata, char *log);
     int (*footer)(struct output_struct *o);
     int (*close)(struct output_struct *o);
+};
+
+/**
+ *  过滤器-类型
+ *
+ *  
+ */
+typedef enum {
+    LOG__FILTER_MATCH_TOTAL = 1,    //完全匹配
+    LOG__FILTER_MATCH_STRSTR,       //子串匹配，使用 `strstr()`
+    LOG__FILTER_REGEX,              //正则表达式(暂不支持)
+}LOG__FILTER_TYPE;
+
+
+/**
+ *  用于传递参数
+ */
+struct output_filter_arg {
+    union {
+        char *func;
+        char *name;
+        char *thread;
+        char *content;
+        char *value;
+    };
+    char *log_buffer;
+};
+
+static const struct output_filter_arg output_filter_arg_null = {{NULL}, NULL};
+
+/**
+ *  过滤器
+ */
+struct output_filter {
+    
+    LOG__RANGE_TYPE log_range;
+    
+    LOG__FILTER_TYPE filter_type;
+
+    union {
+        bool (*match_prefix_ok)(struct output_filter *, struct logdata_decode *, char *value);
+        bool (*match_log_content_ok)(struct output_filter *, struct logdata_decode *, char *log, char *value);
+    };
 };
 
 /**
@@ -131,14 +223,8 @@ struct output_operations {
  */
 struct output_struct {
     bool enable;
-    LOG__RANGE_TYPE range;
-    union {
-        enum FASTLOG_LEVEL level;
-        char *name;
-        char *thread;
-    }range_value;
     
-    LOG_OUTPUT_FILE_TYPE file;
+    LOG_OUTPUT_TYPE file;
     char *filename;
     union {
         FILE *fp;   //对应 CONSOLE 或者 txt
@@ -147,19 +233,44 @@ struct output_struct {
             xmlDocPtr doc;
             xmlNodePtr root_node;
             xmlNodePtr header;
+            xmlNodePtr header_metadata;
             xmlNodePtr body;
             xmlNodePtr footer;
         }xml;
 #endif
         //xml 和 json 句柄
     }file_handler;
+
+    /* 输出时进行统计 */
+    unsigned long output_meta_cnt;
+    unsigned long output_log_cnt;
+
+    /**
+     *  输出操作
+     *
+     *  支持 txt, xml, json 等格式的输出
+     */
     struct output_operations *ops;
+
+    /**
+     *  过滤器
+     */
+    int filter_num;
+    struct output_filter_arg filter_arg[__LOG__RANGE_FILTER_NUM];
+    struct output_filter *filter[__LOG__RANGE_FILTER_NUM];
 };
 
 extern struct output_operations output_operations_txt;
 extern struct output_operations output_operations_xml;
 extern struct output_struct output_txt;
 extern struct output_struct output_xml;
+
+extern const struct output_filter filter_name;
+extern const struct output_filter filter_func;
+extern const struct output_filter filter_thread;
+extern const struct output_filter filter_content;
+
+
 /**
  *  fastlog decoder 进程 配置参数， 有默认值，同时支持 getopt 命令行配置
  *  
@@ -203,8 +314,12 @@ int output_log_item(struct output_struct *output, struct logdata_decode *logdata
 int output_footer(struct output_struct *output);
 int output_close(struct output_struct *output);
 
+int output_setfilter(struct output_struct *output, struct output_filter *filter, struct output_filter_arg arg);
+bool output_callfilter(struct output_struct *output, struct logdata_decode *logdata);
+int output_clearfilter(struct output_struct *output);
 
-void logdata_print_output(struct logdata_decode *logdata, void *arg);
+void output_metadata(struct metadata_decode *meta, void *arg);
+void output_logdata(struct logdata_decode *logdata, void *arg);
 int reprintf(struct logdata_decode *logdata, struct output_struct *output);
 
 int parse_logdata(fastlog_logdata_t *logdata, size_t logdata_size);
@@ -246,6 +361,7 @@ void metadata_rbtree__insert(struct metadata_decode *new_node);
 void metadata_rbtree__remove(struct metadata_decode *new_node);
 struct metadata_decode * metadata_rbtree__search(int meta_log_id);
 void metadata_rbtree__iter(void (*cb)(struct metadata_decode *meta, void *arg), void *arg);
+void metadata_rbtree__iter_level(enum FASTLOG_LEVEL level, void (*cb)(struct metadata_decode *, void *arg), void *arg);
 
 
 /* 日志数据红黑树操作函数 */
@@ -292,12 +408,12 @@ void log_ids__iter(void (*cb)(int log_id, void* arg), void *arg);
 void id_lists__init_raw(struct metadata_decode *metadata);
 void id_list__insert_raw(struct metadata_decode *metadata, struct logdata_decode *logdata);
 void id_list__remove_raw(struct metadata_decode *metadata, struct logdata_decode *logdata);
-void id_list__iter_raw(struct metadata_decode *metadata, void (*cb)(struct logdata_decode *logdata, void *arg), void *arg);
+int id_list__iter_raw(struct metadata_decode *metadata, void (*cb)(struct logdata_decode *logdata, void *arg), void *arg);
 
 void id_lists__init(int log_id);
 void id_list__insert(int log_id, struct logdata_decode *logdata);
 void id_list__remove(int log_id, struct logdata_decode *logdata);
-void id_list__iter(int log_id, void (*cb)(struct logdata_decode *logdata, void *arg), void *arg);
+int id_list__iter(int log_id, void (*cb)(struct logdata_decode *logdata, void *arg), void *arg);
 
 
 #endif /*<__fastlog_DECODE_h>*/

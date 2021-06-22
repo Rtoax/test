@@ -6,6 +6,7 @@
 
 
 void cli_init();
+void cli_loop();
 void cli_exit();
 
 

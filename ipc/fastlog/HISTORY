@@ -15,7 +15,7 @@ FastLog 开发日志
 	* decoder: 新的命令行`search`, 2021年6月22日13:25:39(完成)
 	* 第一次文档评审结束 2021年6月22日16:23:19
 	* decoder: 日志文件个数和大小限制(初始化阶段`fastlog_init()`)
-
+	* 整体软件目录结构以及 CMakeLists.txt 2021年6月22日18:15:27
 * 2021年6月21日
 	* decoder: `show level`改为`level show`
 	* decoder: 统计命令行

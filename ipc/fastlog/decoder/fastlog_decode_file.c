@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <fastlog_decode.h>
 
 /**
@@ -93,7 +94,7 @@ void output_metadata(struct metadata_decode *meta, void *arg)
     
     struct output_struct *output = (struct output_struct *)arg;
     
-    return output->ops->meta_item(output, meta);
+    output->ops->meta_item(output, meta);
 }
 
 void output_logdata(struct logdata_decode *logdata, void *arg)
@@ -119,7 +120,7 @@ int output_footer(struct output_struct *output)
 }
 int output_close(struct output_struct *output)
 {
-    int ret = output->ops->close(output);
+    int _unused ret = output->ops->close(output);
 
     if(output->filename) {
         free(output->filename);
@@ -138,7 +139,7 @@ int release_file(struct fastlog_file_mmap *mapfile)
 }
 
 /* 以只读方式映射一个文件 */
-static int load_file(struct fastlog_file_mmap *mapfile, const char *file, 
+static int load_file(struct fastlog_file_mmap *mapfile, char *file, 
                         struct fastlog_file_header **hdr, unsigned int magic)
 {
     int ret;
@@ -148,7 +149,7 @@ static int load_file(struct fastlog_file_mmap *mapfile, const char *file,
     if(ret) {
         return -1;
     }
-    *hdr = mapfile->mmapaddr;
+    *hdr = (struct fastlog_file_header *)mapfile->mmapaddr;
 
     if((*hdr)->magic != magic) {
         fprintf(stderr, "%s is not fastlog metadata file.\n", file);
@@ -192,12 +193,12 @@ int release_logdata_file()
     return release_file(&ro_logdata_mmap);
 }
 
-int load_metadata_file(const char *mmapfile_name)
+int load_metadata_file(char *mmapfile_name)
 {
     return load_file(&ro_metadata_mmap, mmapfile_name, &metadata_header, FATSLOG_METADATA_HEADER_MAGIC_NUMBER);
 }
 
-int load_logdata_file(const char *mmapfile_name)
+int load_logdata_file(char *mmapfile_name)
 {
     return load_file(&ro_logdata_mmap, mmapfile_name, &logdata_header, FATSLOG_LOG_HEADER_MAGIC_NUMBER);
 }

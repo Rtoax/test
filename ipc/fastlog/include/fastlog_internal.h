@@ -12,16 +12,19 @@
 #ifndef __fAStLOG_H
 #error "You can't include <fastlog_internal.h> directly, #include <fastlog.h> instead."
 #endif
-
-#include <fastlog_staging_buffer.h>
-
 #if !defined(__x86_64__) && defined(__i386__)
 #error "Just support x86"
 #endif
 
-#define __USE_GNU
+#ifndef __USE_GNU
+#define __USE_GNU 1
+#endif
 #define _GNU_SOURCE
 #include <sched.h>
+
+
+#include <fastlog_staging_buffer.h>
+
 #include <ctype.h>
 #include <string.h>
 #include <syscall.h>
@@ -254,7 +257,7 @@ struct args_type {
     unsigned int has_string:1;   //只有存在 字符串时，参数总大小才不固定
     unsigned int pre_size:8;     //参数总size：如果 没有字符串`has_string=0`时该字段生效
     uint8_t argtype[_FASTLOG_MAX_NR_ARGS];  // enum format_arg_type 之一
-#define ARGS_TYPE_INITIALIZER     {0,0,0,0,{0}}  
+#define ARGS_TYPE_INITIALIZER     {0u,0u,0u,{0}}  
 };
 
 /**
@@ -364,28 +367,28 @@ extern struct StagingBuffer *threadBuffers[1024];
 extern fastlog_atomic64_t  stagingBufferId;
 
 /* 编译阶段检测 printf 格式 */
-static void __attribute__((format (printf, 1, 2)))
+static void __attribute__((format (printf, 1, 2))) _unused
 __fastlog_check_format(const char *fmt, ...)
 {
 }
 
 /* 获取 当前 CPU */
-static inline int 
+static inline int _unused
 __fastlog_sched_getcpu() 
 { 
     return sched_getcpu(); 
 }
 
 /* 同上 */
-static inline unsigned 
+static inline unsigned _unused
 __fastlog_getcpu()
 {
     unsigned cpu, node;
-    int ret = syscall(__NR_getcpu, &cpu, &node);
+    int _unused ret = syscall(__NR_getcpu, &cpu, &node);
     return cpu;
 }
 
-static inline __attribute__((always_inline)) uint64_t 
+static inline __attribute__((always_inline)) _unused uint64_t 
 __fastlog_rdtsc()
 {
     uint32_t lo, hi;
@@ -397,7 +400,7 @@ __fastlog_rdtsc()
 
 
 
-int __fastlog_get_unused_logid(int level, char *name, char *file, char *func, int line, char *format);
+int __fastlog_get_unused_logid(int level, const char *name, const char *file, const char *func, int line, const char *format);
 int __fastlog_parse_format(const char *fmt, struct args_type *args);
 int __fastlog_print_parse_buffer(struct args_type *args);
 
@@ -408,7 +411,7 @@ int mmap_fastlog_logfile_read(struct fastlog_file_mmap *mmap_file, char *filenam
 int unmmap_fastlog_logfile(struct fastlog_file_mmap *mmap_file);
 
 
-static inline void
+static inline void _unused
 ensureStagingBufferAllocated()
 {
     if (stagingBuffer == NULL) {
@@ -420,7 +423,7 @@ ensureStagingBufferAllocated()
 
 
 /* 通过 */
-static inline int __fastlog_print_buffer(int log_id, struct args_type *args, ...)
+static inline int _unused __fastlog_print_buffer(int log_id, struct args_type *args, ...)
 {
     int iarg;
     va_list va, va2;
@@ -440,39 +443,39 @@ static inline int __fastlog_print_buffer(int log_id, struct args_type *args, ...
 
 #define _CASE(fat_type, type)                       \
         case fat_type: {                            \
-            type _val = va_arg(va, type);           \
+            type _unused _val = va_arg(va, type);           \
             break;                                  \
         }
 #define _CASE_STRING(fat_type, type)                \
         case fat_type: {                            \
-            type _val = va_arg(va, type);           \
+            type _unused _val = va_arg(va, type);           \
             /*printf("STR:%s\n", _val); */          \
             if(FAT_STRING == fat_type) {            \
                 args_data_bytes += strlen(_val)+1;  \
             }                                       \
             break;                                  \
         }
-            _CASE(FAT_INT8, int8_t);
-            _CASE(FAT_INT16, int16_t);
+            _CASE(FAT_INT8, int);
+            _CASE(FAT_INT16, int);
             _CASE(FAT_INT32, int32_t);
             _CASE(FAT_INT64, int64_t);
             
-            _CASE(FAT_UINT8, uint8_t);
-            _CASE(FAT_UINT16, uint16_t);
+            _CASE(FAT_UINT8, unsigned int);
+            _CASE(FAT_UINT16, unsigned int);
             _CASE(FAT_UINT32, uint32_t);
             _CASE(FAT_UINT64, uint64_t);
-            
+//            
             _CASE(FAT_INT, int);
-            _CASE(FAT_SHORT, short);
-            _CASE(FAT_SHORT_INT, short int);
+            _CASE(FAT_SHORT, int);
+            _CASE(FAT_SHORT_INT, int);
 
             _CASE(FAT_LONG, long);
             _CASE(FAT_LONG_INT, long int);
             _CASE(FAT_LONG_LONG, long long);
             _CASE(FAT_LONG_LONG_INT, long long int);
 
-            _CASE(FAT_CHAR, char);
-            _CASE(FAT_UCHAR, unsigned char);
+            _CASE(FAT_CHAR, int);
+            _CASE(FAT_UCHAR, unsigned int);
             
             _CASE_STRING(FAT_STRING, char *);
 
@@ -497,7 +500,7 @@ try_reserve_again:
     /**
      *  stagingBuffer 在`ensureStagingBufferAllocated`确保不为空
      */
-    arghdr = reserveProducerSpace(stagingBuffer, args_data_bytes + sizeof(struct arg_hdr));
+    arghdr = (struct arg_hdr *)reserveProducerSpace(stagingBuffer, args_data_bytes + sizeof(struct arg_hdr));
 
     if(!arghdr) {
         goto try_reserve_again;
@@ -514,14 +517,14 @@ try_reserve_again:
 
 #define _CASE(fat_type, type)                       \
         case fat_type: {                            \
-            type _val = va_arg(va2, type);          \
+            type _val = (type)va_arg(va2, type);    \
             memcpy(args_data, &_val, sizeof(type)); \
             args_data += sizeof(type);              \
             break;                                  \
         }
 #define _CASE_STRING(fat_type, type)                \
         case fat_type: {                            \
-            type _val = va_arg(va2, type);          \
+            type _val = (type)va_arg(va2, type);    \
             int len = strlen(_val)+1;               \
             memcpy(args_data, _val, len);           \
             args_data += len;                       \
@@ -529,34 +532,34 @@ try_reserve_again:
         }
 #define _CASE_POINTER(fat_type, type)                   \
         case fat_type: {                                \
-            type _val = va_arg(va2, type);              \
+            type _val = (type)va_arg(va2, type);        \
             unsigned long __v = (unsigned long)_val;    \
             memcpy(args_data, &__v, sizeof(type));      \
             args_data += sizeof(type);                  \
             break;                                      \
         }
 
-        _CASE(FAT_INT8, int8_t);
-        _CASE(FAT_INT16, int16_t);
+        _CASE(FAT_INT8, int);
+        _CASE(FAT_INT16, int);
         _CASE(FAT_INT32, int32_t);
         _CASE(FAT_INT64, int64_t);
         
-        _CASE(FAT_UINT8, uint8_t);
-        _CASE(FAT_UINT16, uint16_t);
+        _CASE(FAT_UINT8, unsigned int);
+        _CASE(FAT_UINT16, unsigned int);
         _CASE(FAT_UINT32, uint32_t);
         _CASE(FAT_UINT64, uint64_t);
         
         _CASE(FAT_INT, int);
-        _CASE(FAT_SHORT, short);
-        _CASE(FAT_SHORT_INT, short int);
+        _CASE(FAT_SHORT, int);
+        _CASE(FAT_SHORT_INT, int);
 
         _CASE(FAT_LONG, long);
         _CASE(FAT_LONG_INT, long int);
         _CASE(FAT_LONG_LONG, long long);
         _CASE(FAT_LONG_LONG_INT, long long int);
 
-        _CASE(FAT_CHAR, char);
-        _CASE(FAT_UCHAR, unsigned char);
+        _CASE(FAT_CHAR, int);
+        _CASE(FAT_UCHAR, unsigned int);
         
         _CASE_STRING(FAT_STRING, char *);
 

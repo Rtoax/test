@@ -3,6 +3,7 @@
  *
  *  
  */
+#define _GNU_SOURCE
 #include <fastlog_decode.h>
 #include <fastlog_cycles.h>
 #include <fastlog_decode_cli.h>
@@ -289,6 +290,7 @@ static int parse_decoder_config(int argc, char *argv[])
     //TODO
     
     //exit(0);
+    return 0;
 }
 
 
@@ -300,7 +302,7 @@ int parse_fastlog_metadata(struct fastlog_metadata *metadata,
 
 int parse_fastlog_logdata(fastlog_logdata_t *logdata, int *log_id, int *args_size, uint64_t *rdtsc, char **argsbuf);
 
-static int parse_header(struct fastlog_file_header *header)
+static int _unused parse_header(struct fastlog_file_header *header)
 {
     /* 类型 */
     switch(header->magic) {
@@ -402,7 +404,7 @@ parse_next:
 //    struct metadata_decode *_search = metadata_rbtree__search(decode_metadata->log_id);
 //    printf("_search logID %d\n", _search->log_id);
 
-    metadata = (((char*)metadata) + ret );
+    metadata = (struct fastlog_metadata *)(((char*)metadata) + ret );
 
     //轮询所有的元数据，直至到文件末尾
     if(metadata->magic == FATSLOG_METADATA_MAGIC_NUMBER) {
@@ -434,11 +436,11 @@ parse_next:
         assert(metadata && "You gotta a wrong log_id");
 
         log_decode = (struct logdata_decode *)malloc(sizeof(struct logdata_decode));
-        assert(log_decode && "Malloc <struct logdata_decode> failed." && __func__);
+        assert(log_decode && "Malloc <struct logdata_decode> failed.");
         memset(log_decode, 0, sizeof(struct logdata_decode));
         
         log_decode->logdata = (fastlog_logdata_t *)malloc(sizeof(fastlog_logdata_t) + args_size);
-        assert(log_decode->logdata && "Malloc <fastlog_logdata_t> failed." && __func__);
+        assert(log_decode->logdata && "Malloc <fastlog_logdata_t> failed.");
         memset(log_decode->logdata, 0, sizeof(fastlog_logdata_t) + args_size);
         memcpy(log_decode->logdata, logdata, sizeof(fastlog_logdata_t) + args_size);
 
@@ -457,7 +459,7 @@ parse_next:
         /* 插入到日志数据红黑树中 */
         logdata_rbtree__insert(log_decode);
         
-        logdata = (((char*)logdata) + ret );
+        logdata = (fastlog_logdata_t *)(((char*)logdata) + ret );
         logdata_size -= ret;
 
 //        usleep(100000);
@@ -518,12 +520,12 @@ static void signal_handler(int signum)
 
 void timestamp_tsc_to_string(uint64_t tsc, char str_buffer[32])
 {
-    double secondsSinceCheckpoint, nanos = 0.0;
+    double secondsSinceCheckpoint, _unused nanos = 0.0;
     secondsSinceCheckpoint = __fastlog_cycles_to_seconds(tsc - meta_hdr()->start_rdtsc, 
                                         meta_hdr()->cycles_per_sec);
     
     int64_t wholeSeconds = (int64_t)(secondsSinceCheckpoint);
-    nanos = 1.0e9 * (secondsSinceCheckpoint - (double)(wholeSeconds));
+    //nanos = 1.0e9 * (secondsSinceCheckpoint - (double)(wholeSeconds));
     time_t absTime = wholeSeconds + meta_hdr()->unix_time_sec;
     
     struct tm *_tm = localtime(&absTime);
@@ -586,7 +588,7 @@ load_logdata:
 
     
     /* 解析 元数据 */
-    struct fastlog_metadata *metadata = meta_hdr()->data;
+    struct fastlog_metadata *metadata = (struct fastlog_metadata *)meta_hdr()->data;
     parse_metadata(metadata);
 
     /**
@@ -600,7 +602,7 @@ load_logdata:
      *  在调用 `release_logdata_file()` 后`log_mmapfile`和`log_hdr`不可用；
      *  需要使用`load_logdata_file`映射新的文件,并使用`match_metadata_and_logdata`检测和元数据匹配
      */
-    fastlog_logdata_t *logdata = log_hdr()->data;
+    fastlog_logdata_t *logdata = (fastlog_logdata_t *)log_hdr()->data;
     parse_logdata(logdata, log_mmapfile()->mmap_size - sizeof(struct fastlog_file_header));
     release_logdata_file();
 

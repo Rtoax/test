@@ -120,9 +120,6 @@ typedef enum {
     __LOG__RANGE_FILTER_NUM,    /* 注意不要填错，见`LOG__RANGE_FILTER_MASK`注释描述 */
 }LOG__RANGE_FILTER_ENUM;
 
-//#define for_each_filter_range(iter, mask) \
-//    for
-
 
 //(默认为 console|txt)
 typedef enum {
@@ -265,10 +262,10 @@ extern struct output_operations output_operations_xml;
 extern struct output_struct output_txt;
 extern struct output_struct output_xml;
 
-extern const struct output_filter filter_name;
-extern const struct output_filter filter_func;
-extern const struct output_filter filter_thread;
-extern const struct output_filter filter_content;
+extern struct output_filter filter_name;
+extern struct output_filter filter_func;
+extern struct output_filter filter_thread;
+extern struct output_filter filter_content;
 
 
 /**
@@ -316,6 +313,7 @@ int output_close(struct output_struct *output);
 
 int output_setfilter(struct output_struct *output, struct output_filter *filter, struct output_filter_arg arg);
 bool output_callfilter(struct output_struct *output, struct logdata_decode *logdata);
+int output_updatefilter_arg(struct output_struct *output, char *log_buffer);
 int output_clearfilter(struct output_struct *output);
 
 void output_metadata(struct metadata_decode *meta, void *arg);
@@ -337,8 +335,8 @@ struct fastlog_file_header *log_hdr();
 void timestamp_tsc_to_string(uint64_t tsc, char str_buffer[32]);
 
 
-int load_metadata_file(const char *mmapfile_name);
-int load_logdata_file(const char *mmapfile_name);
+int load_metadata_file(char *mmapfile_name);
+int load_logdata_file(char *mmapfile_name);
 
 int match_metadata_and_logdata();
 

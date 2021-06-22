@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <fastlog_decode.h>
 
 
@@ -35,6 +36,7 @@ static int metadata_rbtree__cmp(const struct metadata_decode *a_node, const stru
     if(a_node->log_id <  a_other->log_id) return -1;
     else if(a_node->log_id == a_other->log_id) return 0;
     else if(a_node->log_id >  a_other->log_id) return 1;
+    return 0;
 }
 
 
@@ -101,7 +103,7 @@ void metadata_rbtree__iter(void (*cb)(struct metadata_decode *meta, void *arg), 
 }
 
 
-rb_gen(static, metadata_rbtree_, metadata_rbtree_t, struct metadata_decode, rb_link_node, metadata_rbtree__cmp);
+rb_gen(static _unused, metadata_rbtree_, metadata_rbtree_t, struct metadata_decode, rb_link_node, metadata_rbtree__cmp);
 
 
 
@@ -195,5 +197,5 @@ void logdata_rbtree__iter(void (*cb)(struct logdata_decode *meta, void *arg), vo
 }
 
 
-rb_gen(static, logdata_rbtree_, logdata_rbtree_t, struct logdata_decode, rb_link_node_rdtsc, logdata_rbtree__cmp);
+rb_gen(static _unused, logdata_rbtree_, logdata_rbtree_t, struct logdata_decode, rb_link_node_rdtsc, logdata_rbtree__cmp);
 

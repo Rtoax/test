@@ -3,6 +3,7 @@
  *
  *  
  */
+#define _GNU_SOURCE
 #include <pthread.h>
 #include <sys/mman.h>
 
@@ -59,7 +60,7 @@ static char *logdata_mmap_curr_ptr = NULL;
 static uint64_t program_cycles_per_sec = 0;
 static uint64_t program_start_rdtsc = 0;
 static time_t   program_unix_time_sec = 0;      //time(2)
-static struct utsname program_unix_uname = {0};   //uname(2)
+static struct utsname program_unix_uname = {{0}};   //uname(2)
 
 
 static void mmap_new_fastlog_file(struct fastlog_file_mmap *mmap_file, 
@@ -179,6 +180,8 @@ static void * bg_task_routine(void *arg)
             }
         }
     }
+
+    return NULL;
 }
 
 /**
@@ -214,7 +217,7 @@ static void mmap_new_fastlog_file(struct fastlog_file_mmap *mmap_file,
                 struct utsname *unix_uname,
                 char **mmap_curr_ptr)
 {
-    int ret = -1;
+    int _unused ret = -1;
     //元数据文件映射
     ret = mmap_fastlog_logfile_write(mmap_file,
                                      filename, 
@@ -243,7 +246,7 @@ static void mmap_new_fastlog_file(struct fastlog_file_mmap *mmap_file,
 //__attribute__((constructor(105))) 
 void fastlog_init(size_t nr_logfile, size_t logfile_size)
 {
-    int ret = -1;
+    int _unused ret = -1;
     //printf("FastLog initial.\n");
 
     /* 日志大小 */
@@ -348,7 +351,7 @@ int parse_fastlog_metadata(struct fastlog_metadata *metadata,
 }
 
 /* 保存 元数据 */
-static void save_fastlog_metadata(int log_id, int level, char *name, char *file, char *func, int line, char *format)
+static void save_fastlog_metadata(int log_id, int level, const char *name, const char *file, const char *func, int line, const char *format)
 {
     int ret = -1;
     char thread_name[32];
@@ -405,7 +408,7 @@ static void save_fastlog_metadata(int log_id, int level, char *name, char *file,
 // 1. 生成 logid;
 // 2. 组件 logid 对应的元数据(数据结构)
 // 3. 保存元数据
-int __fastlog_get_unused_logid(int level, char *name, char *file, char *func, int line, char *format)
+int __fastlog_get_unused_logid(int level, const char *name, const char *file, const char *func, int line, const char *format)
 {
     int log_id = __get_unused_logid();
 

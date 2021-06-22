@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <fastlog_decode.h>
 
 
@@ -41,6 +42,7 @@ static int xml_open(struct output_struct *o)
     
 #endif //FASTLOG_HAVE_LIBXML2
 
+    return 0;
 }
 
 
@@ -109,7 +111,6 @@ static int xml_meta_item(struct output_struct *o, struct metadata_decode *meta)
     char* src_filename   = meta->src_filename; 
     char* src_function   = meta->src_function; 
     int   src_line       = meta->metadata->log_line; 
-    char* print_format   = meta->print_format;
     char* thread_name    = meta->thread_name;
     unsigned long log_num= meta->id_cnt;
     
@@ -129,7 +130,7 @@ static int xml_meta_item(struct output_struct *o, struct metadata_decode *meta)
 
     {
         char buffer[16] = {0};
-        sprintf(buffer, "%ld", meta->log_id);
+        sprintf(buffer, "%d", meta->log_id);
         xmlNewProp(xmlmeta, BAD_CAST"ID",BAD_CAST buffer);
     }
     
@@ -233,6 +234,8 @@ static int xml_log_item(struct output_struct *o, struct logdata_decode *logdata,
     o->output_log_cnt ++;
 
 #endif //FASTLOG_HAVE_LIBXML2
+
+    return 0;
 }
 
 static int xml_footer(struct output_struct *o)
@@ -261,7 +264,7 @@ static int xml_footer(struct output_struct *o)
     int _ilevel;
     for(_ilevel=FASTLOG_CRIT; _ilevel<=FASTLOG_DEBUG; _ilevel++) {
         memset(buffer, 0, sizeof(buffer));
-        sprintf(buffer, "%d", level_count(_ilevel));
+        sprintf(buffer, "%ld", level_count(_ilevel));
         xmlNewProp(statistics, BAD_CAST my_strlevel(_ilevel), BAD_CAST buffer);
     }
     

@@ -1,7 +1,9 @@
+#define _GNU_SOURCE
 
 #include <sys/types.h>
 #include <regex.h>
 #include <string.h>
+
 #include <fastlog_decode.h>
 
 
@@ -189,8 +191,6 @@ static void sprintf_regex_format(char *buffer, char* format, struct args_type *a
     /* 剩下的格式化字符串长度 */
     int len_fmt_remain = strlen(format);
     char *fmt = format;
-
-    int p_fmt = 0;
     
     while(len_fmt_remain>0) {
         

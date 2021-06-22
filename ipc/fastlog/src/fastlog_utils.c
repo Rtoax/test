@@ -3,7 +3,7 @@
 #include <fastlog.h>
 
 #include <fastlog_utils.h>
-
+#include <fastlog_internal.h>
 
 typedef enum {
      _ANSI_NONE,
@@ -35,7 +35,7 @@ typedef enum {
 #define _ANSI_RESET_STR      "\x1b[0m"
 
 #define _ITEM(e) [e] = e##_STR
-const static char *COLORS[] = {
+const static char _unused *COLORS[] = {
     _ITEM(_ANSI_NONE),
     _ITEM(_ANSI_GRAY),
     _ITEM(_ANSI_CYAN),
@@ -52,7 +52,7 @@ const static char *COLORS[] = {
 #undef _ITEM
 
 
-static const char* FASTLOG_LEVEL_NAME[] = {
+static const char _unused* FASTLOG_LEVEL_NAME[] = {
     "unknown", 
     "CRIT", 
     "ERRO",

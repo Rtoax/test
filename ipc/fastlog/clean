@@ -1,0 +1,19 @@
+#!/bin/bash
+
+if [ -e build ]; then
+	rm -rf build
+fi
+
+if [ -e decoder/build ]; then
+	cd decoder
+	rm -rf build
+	cd -
+fi
+
+if [ -e test/build ]; then
+	cd test
+	rm -rf build
+	cd -
+fi
+
+rm -f fdecoder test0 fastlog.log* fastlog.metadata*

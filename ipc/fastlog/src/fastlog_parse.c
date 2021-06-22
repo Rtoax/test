@@ -145,4 +145,6 @@ int unmmap_fastlog_logfile(struct fastlog_file_mmap *mmap_file)
     free(mmap_file->filepath);
     
     close(mmap_file->fd);
+
+    return 0;
 }

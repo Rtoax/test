@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <errno.h>
 
@@ -501,7 +502,7 @@ static void cmd_load_log(char *filename)
         goto error;
     }
     
-    fastlog_logdata_t *logdata = log_hdr()->data;
+    fastlog_logdata_t *logdata = (fastlog_logdata_t *)log_hdr()->data;
     parse_logdata(logdata, log_mmapfile()->mmap_size - sizeof(struct fastlog_file_header));
 
     printf("\t Load fastlog logdata file `%s` success.\n", filename);
@@ -514,7 +515,6 @@ error:
 
 static int invoke_command(int argc, char **argv, long repeat)
 {
-    int i;
     int ret;
     
     //show 
@@ -628,7 +628,7 @@ static int invoke_command(int argc, char **argv, long repeat)
 
                     cmd_load_log(filename);
                 } else {
-                    printf("\t MUST Input file name.\n", filename);
+                    printf("\t MUST Input file name.\n");
                 }
                 
                 return 0;
@@ -764,13 +764,9 @@ void cli_loop()
     char *line;
     sds historyfile = NULL;
     int history = 1;
-    char *prgname = "fastlog.decoder";
 
     int argc;
     char **argv;
-
-    int cli_argc;
-    sds *cli_argv;
     
     while((line = linenoise(cli_prompt)) != NULL) {
         

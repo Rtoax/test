@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <stdint.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/sysinfo.h>
@@ -11,6 +12,7 @@
 #include <sched.h>
 #include <ctype.h>
 #include <string.h>
+#include <pthread.h>
 
 #include <fastlog.h>
 
@@ -19,23 +21,23 @@
 
 void log_test1()
 {
-    FAST_LOG(FASTLOG_WARNING, "TEST1", "[%s] CPU %d(%ld)\n", "hello", __fastlog_sched_getcpu(), __fastlog_getcpu());
-    FAST_LOG(FASTLOG_ERR, "TEST1", "%f %lf %llf\n", 3.14, 3.14, 3.14L);
-    FAST_LOG(FASTLOG_CRIT, "TEST1", "%2.3f %2.3lf %2.3llf\n", 3.14, 3.14, 3.14L);
-    FAST_LOG(FASTLOG_INFO, "TEST1", "%d %ld %lld %d %d %d %s\n", 1, 2, 3L, 1, 2, 3, "Hello");
-    FAST_LOG(FASTLOG_WARNING, "TEST1", ">>># %d %ld %lld %s %f #<<<\n", 1, 2L, 3L, "Hello", 1024.0);
+    FAST_LOG(FASTLOG_WARNING, "TEST1", "[%s] CPU %d(%d)\n", "hello", __fastlog_sched_getcpu(), __fastlog_getcpu());
+    FAST_LOG(FASTLOG_ERR, "TEST1", "%f %f %f\n", 3.14, 3.14, 3.14);
+    FAST_LOG(FASTLOG_CRIT, "TEST1", "%2.3f %2.3f %2.3lf\n", 3.14, 3.14, 3.14);
+    FAST_LOG(FASTLOG_INFO, "TEST1", "%d %d %ld %d %d %d %s\n", 1, 2, 3L, 1, 2, 3, "Hello");
+    FAST_LOG(FASTLOG_WARNING, "TEST1", ">>># %d %ld %ld %s %f #<<<\n", 1, 2L, 3L, "Hello", 1024.0);
 }
 void log_test2(unsigned long total_dequeue)
 {
-    FAST_LOG(FASTLOG_CRIT, "TEST2", ">>># I have an integer %d #<<<\n", total_dequeue);
-    FAST_LOG(FASTLOG_ERR, "TEST2", ">>># I have an integer %d #<<<\n", total_dequeue+10);
-    FAST_LOG(FASTLOG_INFO, "TEST2", ">>># I have an integer %d #<<<\n", total_dequeue+11);
+    FAST_LOG(FASTLOG_CRIT, "TEST2", ">>># I have an integer %ld #<<<\n", total_dequeue);
+    FAST_LOG(FASTLOG_ERR, "TEST2", ">>># I have an integer %ld #<<<\n", total_dequeue+10);
+    FAST_LOG(FASTLOG_INFO, "TEST2", ">>># I have an integer %ld #<<<\n", total_dequeue+11);
 }
 void log_test21(unsigned long total_dequeue)
 {
-    FAST_LOG(FASTLOG_CRIT, "TEST21", ">>># I have an integer %d #<<<\n", total_dequeue);
-    FAST_LOG(FASTLOG_ERR, "TEST21", ">>># I have an integer %d #<<<\n", total_dequeue+10);
-    FAST_LOG(FASTLOG_INFO, "TEST21", ">>># I have an integer %d #<<<\n", total_dequeue+11);
+    FAST_LOG(FASTLOG_CRIT, "TEST21", ">>># I have an integer %ld #<<<\n", total_dequeue);
+    FAST_LOG(FASTLOG_ERR, "TEST21", ">>># I have an integer %ld #<<<\n", total_dequeue+10);
+    FAST_LOG(FASTLOG_INFO, "TEST21", ">>># I have an integer %ld #<<<\n", total_dequeue+11);
 }
 void log_test3(unsigned long total_dequeue)
 {
@@ -46,8 +48,8 @@ void log_test3(unsigned long total_dequeue)
     FAST_LOG(FASTLOG_WARNING, "TEST3", ">>># Hello %.*s 3#<<<\n", 4, "World");
     FAST_LOG(FASTLOG_WARNING, "TEST3", ">>># Hello %*.*s 3#<<<\n", 20, 4, "World");
     FAST_LOG(FASTLOG_DEBUG, "TEST3", ">>># Hello %.*ld %.*ld 3#<<<\n", 7, total_dequeue, 7, total_dequeue+1);
-    FAST_LOG(FASTLOG_DEBUG, "TEST3", ">>># Hello %*.*d 3#<<<\n", 20, 7, total_dequeue+10);
-    FAST_LOG(FASTLOG_INFO, "TEST3", ">>># Hello %*.*d 3#<<<\n", 30, 7, total_dequeue+20);
+    FAST_LOG(FASTLOG_DEBUG, "TEST3", ">>># Hello %*.*ld 3#<<<\n", 20, 7, total_dequeue+10);
+    FAST_LOG(FASTLOG_INFO, "TEST3", ">>># Hello %*.*ld 3#<<<\n", 30, 7, total_dequeue+20);
 }
 
 void *task_routine(void*param) 
@@ -67,15 +69,18 @@ void *task_routine(void*param)
         log_test21(total_dequeue);
         log_test3(total_dequeue);
         
-        FAST_LOG(FASTLOG_CRIT, "TEST1", "Hello 1 %d\n", total_dequeue);
-        FAST_LOG(FASTLOG_ERR, "TEST2", "Hello 2 %d\n", total_dequeue+10);
-        FAST_LOG(FASTLOG_WARNING, "TEST3", "Hello 3 %d\n", total_dequeue+20);
-        FAST_LOG(FASTLOG_INFO, "TEST2", "Hello World 2 %d\n", total_dequeue+30);
-        FAST_LOG(FASTLOG_DEBUG, "TEST3", "Hello 3 %d\n", total_dequeue+40);
+        FAST_LOG(FASTLOG_CRIT, "TEST1", "Hello 1 %ld\n", total_dequeue);
+        FAST_LOG(FASTLOG_ERR, "TEST2", "Hello 2 %ld\n", total_dequeue+10);
+        FAST_LOG(FASTLOG_WARNING, "TEST3", "Hello 3 %ld\n", total_dequeue+20);
+        FAST_LOG(FASTLOG_INFO, "TEST2", "Hello World 2 %ld\n", total_dequeue+30);
+        FAST_LOG(FASTLOG_DEBUG, "TEST3", "Hello 3 %ld\n", total_dequeue+40);
+
         
+        FAST_LOG(FASTLOG_DEBUG, "TEST3", "Hello 3 %c\n", 'R');
+
         total_dequeue += 1;
         printf("\nTotal = %ld\n", total_dequeue);
-        if(total_dequeue % 20000 == 0) {
+        if(total_dequeue % 2 == 0) {
             
             gettimeofday(&end, NULL);
 
@@ -83,7 +88,7 @@ void *task_routine(void*param)
             double nmsg_per_sec = (double)((total_dequeue)*1.0 / usec) * 1000000;
             printf("\nTotal = %ld, %ld/sec\n", total_dequeue, (unsigned long )nmsg_per_sec);
             
-//            sleep(1);
+            sleep(1);
             total_dequeue = 0;
 
             gettimeofday(&start, NULL);
@@ -107,7 +112,7 @@ void signal_handler(int signum)
 int main()
 {
     int ncpu = sysconf (_SC_NPROCESSORS_ONLN);
-    int icpu, itask;
+    int itask;
 
     pthread_t threads[64];
     int nthread = 3;
@@ -133,7 +138,7 @@ int main()
     
     for(itask=0; itask<nthread; itask++) {
         struct task_arg *arg = NULL;
-        pthread_join(threads[itask], &arg);
+        pthread_join(threads[itask], (void**)&arg);
         free(arg);
     }
     fastlog_exit();

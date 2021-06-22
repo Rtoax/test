@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <fastlog_decode.h>
 #include <bitmask/bitmask.h>
 
@@ -140,7 +141,7 @@ void level_lists__init()
 void level_list__insert(enum FASTLOG_LEVEL level, struct logdata_decode *logdata)
 {
     if(unlikely(level >= FASTLOGLEVELS_NUM)) {
-        assert(0 && "wrong level in" && __func__);
+        assert(0 && "wrong level in");
     }
     list_insert(&level_lists[level], &logdata->list_level);
     fastlog_atomic64_inc(&_level_count[level]);
@@ -149,7 +150,7 @@ void level_list__insert(enum FASTLOG_LEVEL level, struct logdata_decode *logdata
 void level_list__remove(enum FASTLOG_LEVEL level, struct logdata_decode *logdata)
 {
     if(unlikely(level >= FASTLOGLEVELS_NUM)) {
-        assert(0 && "wrong level in" && __func__);
+        assert(0 && "wrong level in");
     }
     list_remove(&logdata->list_level);
     fastlog_atomic64_dec(&_level_count[level]);
@@ -158,7 +159,7 @@ void level_list__remove(enum FASTLOG_LEVEL level, struct logdata_decode *logdata
 void level_list__iter(enum FASTLOG_LEVEL level, void (*cb)(struct logdata_decode *logdata, void *arg), void *arg)
 {
     if(unlikely(level >= FASTLOGLEVELS_NUM)) {
-        assert(0 && "wrong level in" && __func__);
+        assert(0 && "wrong level in");
     }
     assert(cb && "NULL callback error.");
     
@@ -175,7 +176,7 @@ void level_list__iter(enum FASTLOG_LEVEL level, void (*cb)(struct logdata_decode
 void id_lists__init_raw(struct metadata_decode *metadata)
 {
     if(unlikely(!metadata)) {
-        assert(0 && "NULL error" && __func__);
+        assert(0 && "NULL error");
     }
     list_init(&metadata->id_list);
     metadata->id_cnt = 0;
@@ -191,7 +192,7 @@ void id_lists__init(int log_id)
 void id_list__insert_raw(struct metadata_decode *metadata, struct logdata_decode *logdata)
 {
     if(unlikely(!metadata) || unlikely(!logdata)) {
-        assert(0 && "NULL error" && __func__);
+        assert(0 && "NULL error");
     }
     list_insert(&metadata->id_list, &logdata->list_id);
     metadata->id_cnt ++;
@@ -208,7 +209,7 @@ void id_list__insert(int log_id, struct logdata_decode *logdata)
 void id_list__remove_raw(struct metadata_decode *metadata, struct logdata_decode *logdata)
 {   
     if(unlikely(!metadata) || unlikely(!logdata)) {
-        assert(0 && "NULL error" && __func__);
+        assert(0 && "NULL error");
     }
     list_remove(&logdata->list_id);
     metadata->id_cnt --;

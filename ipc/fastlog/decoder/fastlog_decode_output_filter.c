@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <fastlog_decode.h>
 
 
@@ -43,23 +44,23 @@ static bool match_log_content_ok(struct output_filter *filter, struct logdata_de
 }
 
 
-const struct output_filter filter_name = {
+struct output_filter filter_name = {
     .log_range = LOG__RANGE_NAME,
     .filter_type = LOG__FILTER_MATCH_STRSTR,
     .match_prefix_ok = match_name_ok,
 };
-const struct output_filter filter_func = {
+struct output_filter filter_func = {
     .log_range = LOG__RANGE_FUNC,
     .filter_type = LOG__FILTER_MATCH_STRSTR,
     .match_prefix_ok = match_func_ok,
 };
     
-const struct output_filter filter_thread = {
+struct output_filter filter_thread = {
     .log_range = LOG__RANGE_THREAD,
     .filter_type = LOG__FILTER_MATCH_STRSTR,
     .match_prefix_ok = match_thread_ok,
 };  
-const struct output_filter filter_content = {
+struct output_filter filter_content = {
     .log_range = LOG__RANGE_CONTENT,
     .filter_type = LOG__FILTER_MATCH_STRSTR,
     .match_log_content_ok = match_log_content_ok,

@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <fastlog_decode.h>
 
 
@@ -13,7 +14,7 @@ static int txt_open(struct output_struct *o)
     } else {
         o->file_handler.fp = stdout;
     }
-        
+    return 0;
 }
 
 
@@ -81,7 +82,6 @@ static int txt_meta_item(struct output_struct *o, struct metadata_decode *meta)
     char* src_filename   = meta->src_filename; 
     char* src_function   = meta->src_function; 
     int   src_line       = meta->metadata->log_line; 
-    char* print_format   = meta->print_format;
     char* thread_name    = meta->thread_name;
     unsigned long log_num= meta->id_cnt;
     
@@ -119,10 +119,9 @@ static int txt_log_item(struct output_struct *o, struct logdata_decode *logdata,
     }
     
     char* user_string    = logdata->metadata->user_string; 
-    char* src_filename   = logdata->metadata->src_filename; 
+    //char* src_filename   = logdata->metadata->src_filename; 
     char* src_function   = logdata->metadata->src_function; 
     int   src_line       = logdata->metadata->metadata->log_line; 
-    char* print_format   = logdata->metadata->print_format;
     char* thread_name    = logdata->metadata->thread_name;
 
 #if 0
@@ -246,7 +245,7 @@ static int txt_close(struct output_struct *o)
     }
     
     if(o->filename) {
-        close(o->file_handler.fp);
+        fclose(o->file_handler.fp);
     }
     o->file_handler.fp = NULL;
     o->output_log_cnt = 0;

@@ -1,0 +1,41 @@
+#!/bin/bash
+# 
+
+function fastloglib() {
+	if [ ! -e build ]; then
+		mkdir build
+	fi
+	cd build
+	cmake ..
+	make
+	cd ..
+}
+
+function decoder() {
+	if [ ! -e decoder/build ]; then
+		mkdir decoder/build
+	fi
+	cd decoder/build
+	cmake ..
+	make
+	cp fdecoder ../../
+	cd -
+}
+
+function test() {
+	if [ ! -e test/build ]; then
+		mkdir test/build
+	fi
+	cd test/build
+	cmake ..
+	make
+	cp test0 ../../
+	cd -
+}
+
+fastloglib
+decoder
+test
+
+
+

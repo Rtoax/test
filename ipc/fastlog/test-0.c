@@ -75,7 +75,7 @@ void *task_routine(void*param)
         
         total_dequeue += 1;
         printf("\nTotal = %ld\n", total_dequeue);
-        if(total_dequeue % 2 == 0) {
+        if(total_dequeue % 20000 == 0) {
             
             gettimeofday(&end, NULL);
 
@@ -83,7 +83,7 @@ void *task_routine(void*param)
             double nmsg_per_sec = (double)((total_dequeue)*1.0 / usec) * 1000000;
             printf("\nTotal = %ld, %ld/sec\n", total_dequeue, (unsigned long )nmsg_per_sec);
             
-            sleep(1);
+//            sleep(1);
             total_dequeue = 0;
 
             gettimeofday(&start, NULL);
@@ -115,7 +115,7 @@ int main()
     
     signal(SIGINT, signal_handler);
 
-    fastlog_init();
+    fastlog_init(9, 10*1024*1024/* 10MB */);
 
     
     FAST_LOG(FASTLOG_INFO, "MAIN", "start to run...\n");

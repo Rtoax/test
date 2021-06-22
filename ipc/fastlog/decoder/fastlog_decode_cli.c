@@ -49,6 +49,7 @@ enum {
     CMD_SHOW_HELP,
     CMD_SHOW_CMD_LIST,
     CMD_SHOW_LOG,
+    CMD_SHOW_LOGID,
     CMD_SHOW_META,
     CMD_SHOW_LS,
     CMD_SHOW_SEARCH,
@@ -74,6 +75,12 @@ struct command_help command_helps[] = {
     [CMD_SHOW_LOG] = { 
         .name = "log",
         .params = "all|crit|err|warn|info|debug txt|xml|json [FILENAME]",
+        .summary = "show log by level and save to txt,xml,json FILENAME",
+        .group = GRP_SHOW,
+    },
+    [CMD_SHOW_LOGID] = { 
+        .name = "logid",
+        .params = "id all|crit|err|warn|info|debug txt|xml|json [FILENAME]",
         .summary = "show log by level and save to txt,xml,json FILENAME",
         .group = GRP_SHOW,
     },
@@ -150,6 +157,10 @@ static void show_help()
                         command_helps[CMD_SHOW_LOG].name, 
                         command_helps[CMD_SHOW_LOG].params, 
                         command_helps[CMD_SHOW_LOG].summary);
+    printf("\t %10s %s: %s\n", 
+                        command_helps[CMD_SHOW_LOGID].name, 
+                        command_helps[CMD_SHOW_LOGID].params, 
+                        command_helps[CMD_SHOW_LOGID].summary);
     printf("\t %10s %s: %s\n", 
                         command_helps[CMD_SHOW_META].name, 
                         command_helps[CMD_SHOW_META].params, 
@@ -317,25 +328,25 @@ void cli_init()
 
 }
 
-static int cmd_show_level_getarg(int argc, char **argv, 
+static int cmd_show_level_getarg(int argc, int argc_off, char **argv, 
                     enum FASTLOG_LEVEL *log_level, LOG_OUTPUT_TYPE *file_type, char **filename)
 {
-    if(argc == 1) {
-        return -1;
+    if(argc == 1+argc_off) {
+        return -2;
     }
     
     /* 日志级别 */
-    if(strncasecmp(argv[1], "all", 3) == 0) {
+    if(strncasecmp(argv[1+argc_off], "all", 3) == 0) {
         *log_level = FASTLOGLEVEL_ALL;
-    } else if(strncasecmp(argv[1], "crit", 4) == 0) {
+    } else if(strncasecmp(argv[1+argc_off], "crit", 4) == 0) {
         *log_level = FASTLOG_CRIT;
-    } else if(strncasecmp(argv[1], "err", 3) == 0) {
+    } else if(strncasecmp(argv[1+argc_off], "err", 3) == 0) {
         *log_level = FASTLOG_ERR;
-    } else if(strncasecmp(argv[1], "warn", 4) == 0) {
+    } else if(strncasecmp(argv[1+argc_off], "warn", 4) == 0) {
         *log_level = FASTLOG_WARNING;
-    } else if(strncasecmp(argv[1], "info", 4) == 0) {
+    } else if(strncasecmp(argv[1+argc_off], "info", 4) == 0) {
         *log_level = FASTLOG_INFO;
-    } else if(strncasecmp(argv[1], "debug", 5) == 0) {
+    } else if(strncasecmp(argv[1+argc_off], "debug", 5) == 0) {
         *log_level = FASTLOG_DEBUG;
     } else {
         printf("\t show level MUST be one of all|crit|err|warn|info|debug.\n");
@@ -343,12 +354,12 @@ static int cmd_show_level_getarg(int argc, char **argv,
     }
 
     /* 文件格式 */
-    if(argc >= 3) {
-        if(strncasecmp(argv[2], "txt", 3) == 0) {
+    if(argc >= 3+argc_off) {
+        if(strncasecmp(argv[2+argc_off], "txt", 3) == 0) {
             *file_type = LOG_OUTPUT_FILE_TXT;
-        } else if(strncasecmp(argv[2], "xml", 3) == 0) {
+        } else if(strncasecmp(argv[2+argc_off], "xml", 3) == 0) {
             *file_type = LOG_OUTPUT_FILE_XML;
-        } else if(strncasecmp(argv[2], "json", 4) == 0) {
+        } else if(strncasecmp(argv[2+argc_off], "json", 4) == 0) {
             *file_type = LOG_OUTPUT_FILE_JSON;
         } else {
             printf("\t show file type MUST be one of txt|xml|json.\n");
@@ -357,8 +368,8 @@ static int cmd_show_level_getarg(int argc, char **argv,
     }
 
     /* 文件名 */
-    if(argc >= 4) {
-        *filename = argv[3];
+    if(argc >= 4+argc_off) {
+        *filename = argv[3+argc_off];
         if(access(*filename, F_OK) == 0) {
             printf("\t `%s` already exist.\n", *filename);
             return -1;
@@ -519,15 +530,15 @@ static int invoke_command(int argc, char **argv, long repeat)
             }
         }
     } 
-    //level 
-    else if(strncasecmp(argv[0], "log", 3) == 0) {
+    //log 
+    else if(strcasecmp(argv[0], "log") == 0) {
 
         /*all|crit|err|warn|info|debug txt|xml|json [FILENAME] */
         enum FASTLOG_LEVEL log_level = FASTLOG_ERR;
         LOG_OUTPUT_TYPE file_type = LOG_OUTPUT_FILE_TXT;
         char *filename = NULL;
         
-        ret = cmd_show_level_getarg(argc, argv, &log_level, &file_type, &filename);
+        ret = cmd_show_level_getarg(argc, 0, argv, &log_level, &file_type, &filename);
         if(ret) {
             printf("\t input `show help` to check show command.\n");
             return 0;
@@ -539,6 +550,36 @@ static int invoke_command(int argc, char **argv, long repeat)
         cmd_show_level(log_level, file_type, filename, NULL, NULL, NULL, NULL, 0);
 
     }
+    //logid
+    else if(strcasecmp(argv[0], "logid") == 0) {
+        
+        /*id all|crit|err|warn|info|debug txt|xml|json [FILENAME] */
+        int log_id = 0;
+        
+        enum FASTLOG_LEVEL log_level = FASTLOGLEVEL_ALL;
+        LOG_OUTPUT_TYPE file_type = LOG_OUTPUT_FILE_TXT;
+        char *filename = NULL;
+
+        if(argc >= 2) {
+            log_id = atoi(argv[1]);
+            if(log_id == 0) {
+                printf("\t wrong log_id, input `meta` cmd check log_id.\n");
+                return 0;
+            }
+        }
+        if(argc >= 3) {
+//            ret = cmd_show_level_getarg(argc, 1, argv, &log_level, &file_type, &filename);
+//            if(ret == -2) {
+//                printf("\t input `show help` to check show command.\n");
+//                return 0;
+//            }
+        }
+
+        // 默认输出所有项
+        file_type |= LOG_OUTPUT_ITEM_LOG_MASK;
+
+        cmd_show_level(log_level, file_type, filename, NULL, NULL, NULL, NULL, log_id);
+    }
     //meta
     else if(strncasecmp(argv[0], "meta", 4) == 0) {
 
@@ -547,7 +588,7 @@ static int invoke_command(int argc, char **argv, long repeat)
         LOG_OUTPUT_TYPE file_type = LOG_OUTPUT_FILE_TXT;
         char *filename = NULL;
         
-        ret = cmd_show_level_getarg(argc, argv, &log_level, &file_type, &filename);
+        ret = cmd_show_level_getarg(argc, 0, argv, &log_level, &file_type, &filename);
         if(ret) {
             printf("\t input `show help` to check show command.\n");
             return 0;

@@ -19,6 +19,12 @@
  */
 static fastlog_atomic64_t  maxlogId;
 
+/**
+ *  默认日志文件大小和文件数
+ */
+static size_t max_nr_logfile = 24;
+static size_t log_file_size = FATSLOG_LOG_FILE_SIZE_DEFAULT; 
+
 
 /**
  *  后台线程和用户线程之间的缓冲区定义
@@ -103,13 +109,17 @@ static inline void bg_handle_one_log(struct arg_hdr *log_args, size_t size)
         
         snprintf(new_log_filename, 256, "%s.%d", FATSLOG_LOG_FILE_DEFAULT, file_id);
         snprintf(new_log_filename_old, 256, "%s.%d.old", FATSLOG_LOG_FILE_DEFAULT, file_id);
+
         file_id ++;
+        if(file_id > max_nr_logfile) {
+            file_id = 0;
+        }
         
         //日志数据文件映射
         mmap_new_fastlog_file(&logdata_mmap, 
                             new_log_filename, 
                             new_log_filename_old, 
-                            FATSLOG_LOG_FILE_SIZE_DEFAULT, 
+                            log_file_size, 
                             FATSLOG_LOG_HEADER_MAGIC_NUMBER, 
                             program_cycles_per_sec, 
                             program_start_rdtsc, 
@@ -231,10 +241,16 @@ static void mmap_new_fastlog_file(struct fastlog_file_mmap *mmap_file,
 
 
 //__attribute__((constructor(105))) 
-void fastlog_init()
+void fastlog_init(size_t nr_logfile, size_t logfile_size)
 {
     int ret = -1;
-    printf("FastLog initial.\n");
+    //printf("FastLog initial.\n");
+
+    /* 日志大小 */
+    if(nr_logfile)
+        max_nr_logfile = nr_logfile;
+    if(logfile_size)
+        log_file_size = logfile_size;
 
     pthread_spin_init(&metadata_mmap_lock, PTHREAD_PROCESS_PRIVATE);
 
@@ -245,8 +261,8 @@ void fastlog_init()
     program_unix_time_sec = time(NULL);
     uname(&program_unix_uname);
 
-    printf("Cycles/s        = %ld.\n", program_cycles_per_sec);
-    printf("Start Cycles    = %ld.\n", program_start_rdtsc);
+    //printf("Cycles/s        = %ld.\n", program_cycles_per_sec);
+    //printf("Start Cycles    = %ld.\n", program_start_rdtsc);
 
     //元数据文件映射
     mmap_new_fastlog_file(&metadata_mmap, 
@@ -265,7 +281,7 @@ void fastlog_init()
     mmap_new_fastlog_file(&logdata_mmap, 
                           FATSLOG_LOG_FILE_DEFAULT, 
                           FATSLOG_LOG_FILE_DEFAULT".old", 
-                          FATSLOG_LOG_FILE_SIZE_DEFAULT, 
+                          log_file_size, 
                           FATSLOG_LOG_HEADER_MAGIC_NUMBER, 
                           program_cycles_per_sec, 
                           program_start_rdtsc, 

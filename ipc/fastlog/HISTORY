@@ -8,6 +8,11 @@ FastLog 开发日志
 
 # 编码历史
 
+* 2021年6月23日
+	* decoder: 函数名，文件名，线程名的红黑树(红黑树节点中包含日志链表)
+				用于提高查询效率,见`log_search_list__iter2()`
+				TODO: 将此功能应用于 `getopt_long` 和 `search`命令行
+
 * 2021年6月22日
 	* decoder: output 添加 元数据 输出
 	* decoder: `level`命令改为`log`

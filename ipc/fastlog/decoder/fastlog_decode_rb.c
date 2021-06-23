@@ -114,6 +114,13 @@ rb_gen(static _unused, metadata_rbtree_, metadata_rbtree_t, struct metadata_deco
  *  rb_gen: 日志数据 红黑树 函数定义
  *
  *  logdata_rbtree__cmp: logdata_decode 结构比较
+ *
+ *  logdata_rbtree__init:  红黑树初始化 
+ *  logdata_rbtree__destroy:   红黑树销毁
+ *  logdata_rbtree__insert:  红黑树插入
+ *  logdata_rbtree__remove:  红黑树删除
+ *  logdata_rbtree__search:   红黑树查找
+ *  logdata_rbtree__iter:  红黑树遍历 
  */
 
 typedef rb_tree(struct logdata_decode) logdata_rbtree_t;
@@ -198,4 +205,106 @@ void logdata_rbtree__iter(void (*cb)(struct logdata_decode *meta, void *arg), vo
 
 
 rb_gen(static _unused, logdata_rbtree_, logdata_rbtree_t, struct logdata_decode, rb_link_node_rdtsc, logdata_rbtree__cmp);
+
+
+
+/**
+ *  日志搜索 红黑树 函数
+ *
+ *  rb_proto:  日志搜索 红黑树 函数声明
+ *  rb_gen:  日志搜索 红黑树 函数定义
+ *
+ *  log_search_rbtree__cmp: metadata_decode 结构对比
+ *
+ *  log_search_rbtree__init:  红黑树初始化 
+ *  log_search_rbtree__destroy:   红黑树销毁
+ *  log_search_rbtree__insert:  红黑树插入
+ *  log_search_rbtree__remove:  红黑树删除
+ *  log_search_rbtree__search:   红黑树查找
+ *  log_search_rbtree__iter:  红黑树遍历 
+ */
+typedef rb_tree(struct log_search) log_search_rbtree_t;
+
+static log_search_rbtree_t log_search_rbtrees[__LOG__RANGE_FILTER_NUM];
+
+rb_proto(static, log_search_rbtree_, log_search_rbtree_t, struct log_search);
+
+static int log_search_rbtree__cmp(const struct log_search *a_node, const struct log_search *a_other)
+{
+
+    return strcmp(a_node->string, a_other->string);
+}
+
+
+
+void log_search_rbtree__init()
+{
+    int i;
+    for(i=0; i< __LOG__RANGE_FILTER_NUM; i++) {
+        log_search_rbtree_new(&log_search_rbtrees[i]);
+    }
+}
+void log_search_rbtree__destroy(LOG__RANGE_FILTER_ENUM type, void (*cb)(struct log_search *node, void *arg), void *arg)
+{
+    assert(cb && "NULL callback error.");
+    
+    log_search_rbtree_destroy(&log_search_rbtrees[type], cb, arg);
+}
+
+void log_search_rbtree__insert(LOG__RANGE_FILTER_ENUM type, struct log_search *new_node)
+{
+    log_search_rbtree_insert(&log_search_rbtrees[type], new_node);
+}
+
+void log_search_rbtree__remove(LOG__RANGE_FILTER_ENUM type, struct log_search *new_node)
+{
+    log_search_rbtree_remove(&log_search_rbtrees[type], new_node);
+}
+
+struct log_search * log_search_rbtree__search(LOG__RANGE_FILTER_ENUM type, char *string)
+{
+    struct log_search logdata = {.string = string};
+    
+    return log_search_rbtree_search(&log_search_rbtrees[type], (const struct log_search*)&logdata);
+}
+
+struct log_search *log_search_rbtree__search_or_create(LOG__RANGE_FILTER_ENUM type, char *string) 
+{
+    struct log_search *search = log_search_rbtree__search(type, string);
+    if(!search) {
+        struct log_search *newnode = (struct log_search *)malloc(sizeof(struct log_search));
+        assert(newnode && "Malloc failed");
+
+        newnode->string = string;
+        newnode->string_type = type;
+        newnode->log_cnt = 0;
+
+        list_init(&newnode->log_list_head);
+
+        log_search_rbtree__insert(type, newnode);
+
+        //printf("func rbtree node - %s\n", newnode->string);
+        
+        search = newnode;
+    }
+
+    return search;
+}
+
+
+void log_search_rbtree__iter(LOG__RANGE_FILTER_ENUM type, void (*cb)(struct log_search *meta, void *arg), void *arg)
+{
+    assert(cb && "NULL callback error.");
+    
+    struct log_search *_next = NULL;
+
+    for(_next = log_search_rbtree_first(&log_search_rbtrees[type]); 
+        _next; 
+        _next = log_search_rbtree_next(&log_search_rbtrees[type], _next)) {
+        cb(_next, arg);
+    }
+}
+
+
+rb_gen(static _unused, log_search_rbtree_, log_search_rbtree_t, struct log_search, rb_link, log_search_rbtree__cmp);
 

@@ -78,6 +78,11 @@ static void mmap_new_fastlog_file(struct fastlog_file_mmap *mmap_file,
 /* 后台程序处理一条log的 arg 处理函数 */
 static inline void bg_handle_one_log(struct arg_hdr *log_args, size_t size)
 {
+    if(unlikely(log_args->log_id < 0)) {
+        printf("LOGID %d < 0\n", log_args->log_id);
+        assert(0);
+    }
+
     /**
      *  当日志映射文件已满
      *  
@@ -189,9 +194,16 @@ static void * bg_task_routine(void *arg)
  */
 static inline int __get_unused_logid()
 {
-    int log_id = fastlog_atomic64_read(&maxlogId);
-    fastlog_atomic64_inc(&maxlogId);
+    static pthread_spinlock_t spin = 1;
+    int log_id;
+    
+    pthread_spin_lock(&spin);
 
+    log_id = fastlog_atomic64_read(&maxlogId);
+    fastlog_atomic64_inc(&maxlogId);
+    
+    pthread_spin_unlock(&spin);
+    
     return log_id;
 }
 
@@ -360,6 +372,9 @@ static void save_fastlog_metadata(int log_id, int level, const char *name, const
     if (ret != 0) {
         strncpy(thread_name, "unknown", 32);
     }
+
+    //不要路径
+    const char *base_file = basename((char*)file);
     
     pthread_spin_lock(&metadata_mmap_lock);
 
@@ -371,7 +386,7 @@ static void save_fastlog_metadata(int log_id, int level, const char *name, const
     metadata->log_level = level;
     metadata->log_line = line;
     metadata->user_string_len  = strlen(name) + 1;
-    metadata->src_filename_len = strlen(file) + 1;
+    metadata->src_filename_len = strlen(base_file) + 1;
     metadata->src_function_len = strlen(func) + 1;
     metadata->print_format_len = strlen(format) + 1;
     metadata->thread_name_len = strlen(thread_name) + 1;
@@ -388,7 +403,7 @@ static void save_fastlog_metadata(int log_id, int level, const char *name, const
 
     memcpy(string_buf, name, metadata->user_string_len);
     string_buf += metadata->user_string_len;
-    memcpy(string_buf, file, metadata->src_filename_len);
+    memcpy(string_buf, base_file, metadata->src_filename_len);
     string_buf += metadata->src_filename_len;
     memcpy(string_buf, func, metadata->src_function_len);
     string_buf += metadata->src_function_len;

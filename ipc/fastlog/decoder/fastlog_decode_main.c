@@ -39,9 +39,15 @@ struct fastlog_decoder_config decoder_config = {
      *  `output_filename`输出文件名默认为空，标识默认为 console 输出(LOG_OUTPUT_FILE_CONSOLE)
      *          见命令行`command_helps`的`show level`
      */
-    .output_type = LOG_OUTPUT_FILE_TXT,
+    .output_type = LOG_OUTPUT_FILE_TXT|LOG_OUTPUT_ITEM_HDR/*|LOG_OUTPUT_ITEM_LOG*/|LOG_OUTPUT_ITEM_FOOT,
     .output_filename_isset = false,
     .output_filename = DEFAULT_OUTPUT_FILE,
+
+    
+    .match_name = NULL,
+    .match_func = NULL,
+    .match_thread = NULL,
+    .match_content = NULL,
 };
     
 static void show_help(char *programname)
@@ -52,24 +58,39 @@ static void show_help(char *programname)
     printf("  %3s %-15s \t: %s\n",   "-v,", "--version", "show version information");
     printf("  %3s %-15s \t: %s\n",   "-h,", "--help", "show this information");
     printf("\n");
-    printf(" [Show]\n");
+    printf(" [Show] Show option\n");
     printf("  %3s %-15s \t: %s\n",   "-V,", "--verbose", "show detail log information");
     printf("  %3s %-15s \t: %s\n",   "-B,", "--brief", "show brief log information");
     printf("  %3s %-15s \t: %s\n",   "-q,", "--quiet", "execute silence.");
+    printf("  %3s %-15s \t: %s\n",   "-l,", "--log-level [OPTION]", "log level to output.");
+    printf("  %3s %-15s \t  %s\n",   "   ", "                    ", "OPTION=[all|crit|err|warn|info|debug], default [all]");
+    printf("  %3s %-15s \t: %s\n",   "-i,", "--log-item [OPTION(s)]", "log item to output.");
+    printf("  %3s %-15s \t  %s\n",   "   ", "                    ", "OPTIONs=[meta|log], default [log]");
+    printf("  %3s %-15s \t  %s`%c`\n", " ",  "                      ", "OPTIONs separate by ", LOGDATA_FILE_SEPERATOR);
+    printf("  %3s %-15s \t  %s%c%s\n", " ",  "                      ", "Such as: -i meta",LOGDATA_FILE_SEPERATOR,"log");
+    printf("  %3s %-15s \t  %s\n",   "   ",  "                      ", "     or: -i meta");
+    printf("  %3s %-15s \t: %s\n",   "-t,", "--log-type [OPTION]", "output type.");
+    printf("  %3s %-15s \t  %s\n",   "   ", "                   ", "OPTION=[txt|xml|json], default [txt]");
+    printf("  %3s %-15s \t  %s\n",   "   ", "                   ", "sometime may `xmlEscapeEntities : char out of range`,");
+    printf("  %3s %-15s \t  %s\n",   "   ", "                   ", " use `2>/dev/null` or -o log.xml");
     printf("\n");
-    printf(" [Config]\n");
+    printf(" [Filter] Filter option\n");
+    printf("  %3s %-15s \t: %s\n",   "-N,", "--filter-name [NAME]", "FAST_LOG(level, name, ...)'s name");
+    printf("  %3s %-15s \t: %s\n",   "-F,", "--filter-func [FUNC]", "function name");
+    printf("  %3s %-15s \t: %s\n",   "-C,", "--filter-content [log]", "log content");
+    printf("  %3s %-15s \t: %s\n",   "-T,", "--filter-thread [NAME]", "thread name");
+    printf("  %3s %-15s \t  %s\n",   "   ", "                   ", "May same as /proc/[PID]/comm");
+    printf("  %3s %-15s \t  %s\n",   "   ", "                   ", " or set by prctl(2) option PR_SET_NAME");
+    printf("  %3s %-15s \t  %s\n",   "   ", "                   ", " or set by pthread_setname_np(3)");
+    
+    printf("\n");
+    printf(" [Config] Configuration option\n");
     printf("  %3s %-15s \t: %s\n",   "-M,", "--metadata [FILENAME]", "metadata file name");
     printf("  %3s %-15s \t: %s\n",   "-L,", "--logdata [FILENAME(s)]", "metadata file name");
     printf("  %3s %-15s \t  %s`%c`\n", " ",  "                      ", "FILENAMEs separate by ", LOGDATA_FILE_SEPERATOR);
     printf("  %3s %-15s \t  %s%c%s\n", " ",  "                      ", "Such as: -l file1.log",LOGDATA_FILE_SEPERATOR,"file2.log");
     printf("  %3s %-15s \t: %s\n",   "-c,", "--cli [OPTION]", "command line on or off. ");
     printf("  %3s %-15s \t  %s\n",   "   ", "              ", "OPTION=[on|off], default [on]");
-    printf("  %3s %-15s \t: %s\n",   "-l,", "--log-level [OPTION]", "log level to output.");
-    printf("  %3s %-15s \t  %s\n",   "   ", "                    ", "OPTION=[all|crit|err|warn|info|debug], default [all]");
-    printf("  %3s %-15s \t: %s\n",   "-t,", "--log-type [OPTION]", "output type.");
-    printf("  %3s %-15s \t  %s\n",   "   ", "                   ", "OPTION=[txt|xml|json], default [txt]");
-    printf("  %3s %-15s \t  %s\n",   "   ", "                   ", "sometime may `xmlEscapeEntities : char out of range`,");
-    printf("  %3s %-15s \t  %s\n",   "   ", "                   ", " use `2>/dev/null` or -o log.xml");
     printf("  %3s %-15s \t: %s\n",   "-o,", "--output-file [FILENAME]", "output file name.");
     printf("  %3s %-15s \t  %s\n",   "   ", "                        ", "default "DEFAULT_OUTPUT_FILE);
     printf("\n");
@@ -91,7 +112,21 @@ static int parse_decoder_config(int argc, char *argv[])
         {"logdata",     required_argument,     0,  'L'},
         {"cli",         required_argument,     0,  'c'},
         {"log-level",   required_argument,     0,  'l'},
+        {"log-item",    required_argument,     0,  'i'},
         {"log-type",    required_argument,     0,  't'},
+        /**
+         *  命令行过滤
+         *  分别代表
+         *  名称(模块名, 见`FAST_LOG(...)`接口的`name`入参)过滤
+         *  函数名过滤
+         *  日志内容过滤
+         *  线程名过滤
+         */
+        {"filter-name",     required_argument,     0,  'N'},
+        {"filter-func",     required_argument,     0,  'F'},
+        {"filter-content",  required_argument,     0,  'C'},
+        {"filter-thread",   required_argument,     0,  'T'},
+        
         {"output-file", required_argument,     0,  'o'},
         
         {0,0,0,0},
@@ -100,7 +135,7 @@ static int parse_decoder_config(int argc, char *argv[])
     while (1) {
         int c;
         int option_index = 0;
-        c = getopt_long (argc, argv, "vhVBqM:L:c:l:t:o:", options, &option_index);
+        c = getopt_long (argc, argv, "vhVBqM:L:c:l:i:t:N:F:C:T:o:", options, &option_index);
         if(c < 0) {
             break;
         }
@@ -237,6 +272,47 @@ static int parse_decoder_config(int argc, char *argv[])
             }
             break;
             
+        case 'i':{
+            char* begin = optarg;
+
+            /*  */
+            while (1) {
+                bool last_token = false;
+                char* end = strchr(begin, LOGDATA_FILE_SEPERATOR);
+                if (!end)
+                {
+                    last_token = true;
+                }
+                else
+                {
+                    *end = '\0';
+                }
+
+                if(strlen(begin) > 0) {
+                    
+                    //printf("begin = %s\n", begin);
+                    
+                    if(strncasecmp(begin, "meta", 4) == 0) {
+                        decoder_config.output_type |= LOG_OUTPUT_ITEM_META;
+                    } else if(strncasecmp(begin, "log", 3) == 0) {
+                        decoder_config.output_type |= LOG_OUTPUT_ITEM_LOG;
+                    } else {
+                        printf("-i, --log-item MUST be one of meta|log.\n");
+                        printf("Check: %s -h, --help\n", argv[0]);
+                        exit(0);
+                    }
+
+                }
+
+                if (last_token) {
+                    break;
+                } else {
+                    begin = end + 1;
+                }
+            }
+            
+            break;
+        }
         case 't':
             if(strncasecmp(optarg, "txt", 3) == 0) {
                 decoder_config.output_type = LOG_OUTPUT_FILE_TXT;
@@ -251,6 +327,18 @@ static int parse_decoder_config(int argc, char *argv[])
             }
             break;
 
+        case 'N':
+            decoder_config.match_name = optarg;
+            break;
+        case 'F':
+            decoder_config.match_func = optarg;
+            break;
+        case 'C':
+            decoder_config.match_content = optarg;
+            break;
+        case 'T':
+            decoder_config.match_thread = optarg;
+            break;
         
         case 'o':
             decoder_config.output_filename = strdup(optarg);
@@ -267,8 +355,9 @@ static int parse_decoder_config(int argc, char *argv[])
             
         case '?':
             /* getopt_long already printed an error message. */
-            printf ("option unknown ??????????\n");
-            printf("Check: %s -h, --help\n", argv[0]);
+            //printf ("option unknown ??????????\n");
+            //printf("Check: %s -h, --help\n", argv[0]);
+            show_help(argv[0]);
             exit(0);
             break;
         default:
@@ -276,20 +365,34 @@ static int parse_decoder_config(int argc, char *argv[])
         }
     }
     
-    //printf("decoder_config.log_verbose_flag = %d\n", decoder_config.log_verbose_flag);
-    //printf("decoder_config.metadata_file    = %s\n", decoder_config.metadata_file);
-    //printf("decoder_config.nr_log_files     = %d\n", decoder_config.nr_log_files);
-    //printf("decoder_config.logdata_file     = %s\n", decoder_config.logdata_file);
-    //printf("decoder_config.has_cli          = %d\n", decoder_config.has_cli);
-    //printf("decoder_config.default_log_level= %d\n", decoder_config.default_log_level);
-    //printf("decoder_config.output_type      = %d\n", decoder_config.output_type);
-    //printf("decoder_config.output_filename  = %s\n", decoder_config.output_filename);
+
     /**
      *  解析参数后进行检查
      */
-    //TODO
+    //如果 输出项未设置，使用默认值(日志，而不是元数据)
+    if(!(decoder_config.output_type & LOG_OUTPUT_ITEM_META) 
+    && !(decoder_config.output_type & LOG_OUTPUT_ITEM_LOG)) {
+        decoder_config.output_type |= LOG_OUTPUT_ITEM_LOG;
+    }
+    //MORE
     
-    //exit(0);
+#if 0
+    printf("decoder_config.log_verbose_flag = %d\n", decoder_config.log_verbose_flag);
+    printf("decoder_config.metadata_file    = %s\n", decoder_config.metadata_file);
+    printf("decoder_config.nr_log_files     = %d\n", decoder_config.nr_log_files);
+    printf("decoder_config.logdata_file     = %s\n", decoder_config.logdata_file);
+    printf("decoder_config.has_cli          = %d\n", decoder_config.has_cli);
+    printf("decoder_config.default_log_level= %d\n", decoder_config.default_log_level);
+    printf("decoder_config.output_type      = %#08x\n", decoder_config.output_type);
+    printf("decoder_config.output_filename  = %s\n", decoder_config.output_filename);
+    printf("decoder_config.match_name       = %s\n", decoder_config.match_name);
+    printf("decoder_config.match_func       = %s\n", decoder_config.match_func);
+    printf("decoder_config.match_content    = %s\n", decoder_config.match_content);
+    printf("decoder_config.match_thread     = %s\n", decoder_config.match_thread);
+    
+    exit(0);
+#endif
+
     return 0;
 }
 
@@ -363,7 +466,8 @@ static int parse_metadata(struct fastlog_metadata *metadata)
     /* 创建保存 元数据和日志数据 的 红黑树 */
     metadata_rbtree__init();
     logdata_rbtree__init();
-
+    log_search_rbtree__init();
+    
 parse_next:
 
     if(metadata->magic != FATSLOG_METADATA_MAGIC_NUMBER) {
@@ -415,12 +519,15 @@ parse_next:
 }
 
 
+
 int parse_logdata(fastlog_logdata_t *logdata, size_t logdata_size)
 {
     int ret;
     
     int log_id; //所属ID
     int args_size;
+    int _unused i;
+    
     uint64_t rdtsc;
     char *args_buff;
     struct logdata_decode *log_decode;
@@ -433,7 +540,13 @@ parse_next:
     if(log_id != 0 && logdata_size > 0) {
 
         metadata = metadata_rbtree__search(log_id);
-        assert(metadata && "You gotta a wrong log_id");
+        //printf("LOGID %d's metadata is exist.\n", log_id);
+        if(unlikely(!metadata)) {
+            printf("LOGID %d's metadata is not exist.\n", log_id);
+            printf("args_size = %d\n", args_size);
+            assert(metadata && "You gotta a wrong log_id");
+            //goto parse_next;
+        }
 
         log_decode = (struct logdata_decode *)malloc(sizeof(struct logdata_decode));
         assert(log_decode && "Malloc <struct logdata_decode> failed.");
@@ -458,6 +571,15 @@ parse_next:
 
         /* 插入到日志数据红黑树中 */
         logdata_rbtree__insert(log_decode);
+
+        struct log_search _unused *search_func = NULL;
+
+        search_func = log_search_rbtree__search_or_create(LOG__RANGE_FUNC_ENUM, log_decode->metadata->src_function);
+        log_search_list__insert(search_func, log_decode);
+        search_func = log_search_rbtree__search_or_create(LOG__RANGE_NAME_ENUM, log_decode->metadata->user_string);
+        log_search_list__insert(search_func, log_decode);
+        search_func = log_search_rbtree__search_or_create(LOG__RANGE_THREAD_ENUM, log_decode->metadata->thread_name);
+        log_search_list__insert(search_func, log_decode);
         
         logdata = (fastlog_logdata_t *)(((char*)logdata) + ret );
         logdata_size -= ret;
@@ -469,6 +591,7 @@ parse_next:
     
     return ret;
 }
+
 
 
 static void metadata_rbtree__rbtree_node_destroy(struct metadata_decode *node, void *arg)
@@ -606,6 +729,8 @@ load_logdata:
     parse_logdata(logdata, log_mmapfile()->mmap_size - sizeof(struct fastlog_file_header));
     release_logdata_file();
 
+
+
     /**
      *  这里使用 goto 语句遍历 `-L`参数输入的所有日志文件
      */
@@ -646,16 +771,64 @@ load_logdata:
     output_open(output, output_filename);
     output_header(output, meta_hdr());
 
-    metadata_rbtree__iter(output_metadata, output);
+#if 0 /* 测试 */
+    
+    log_search_list__iter2(LOG__RANGE_FUNC_ENUM, "main", output_logdata, output);
+    log_search_list__iter2(LOG__RANGE_FUNC_ENUM, NULL, output_logdata, output);
 
-    if(decoder_config.default_log_level >= FASTLOG_CRIT && decoder_config.default_log_level < FASTLOGLEVELS_NUM) {
-        level_list__iter(decoder_config.default_log_level, output_logdata, output);
-    } else {
-        logdata_rbtree__iter(output_logdata, output);
+    exit(0);
+
+#endif
+
+    /*
+     *  过滤器 
+     *
+     *  根据入参决定 filter 规则，当前支持四种(见`__LOG__RANGE_FILTER_NUM`)
+     */
+    if(decoder_config.match_name) {
+        struct output_filter_arg arg1 = {
+            .name = decoder_config.match_name,
+        };
+        output_setfilter(output, &filter_name, arg1);
+    }
+
+    if(decoder_config.match_func) {
+        struct output_filter_arg arg2 = {
+            .func = decoder_config.match_func,
+        };
+        output_setfilter(output, &filter_func, arg2);
+    }
+    if(decoder_config.match_content) {
+        struct output_filter_arg arg3 = {
+            .content = decoder_config.match_content,
+        };
+        output_setfilter(output, &filter_content, arg3);
+    }
+    if(decoder_config.match_thread) {
+        struct output_filter_arg arg4 = {
+            .thread = decoder_config.match_thread,
+        };
+        output_setfilter(output, &filter_thread, arg4);
     }
 
 
+    
+    //是否输出元数据
+    if(decoder_config.output_type & LOG_OUTPUT_ITEM_META) {
+        metadata_rbtree__iter_level(decoder_config.default_log_level, output_metadata, output);
+    }
+    
+    //是否输出日志数据
+    if(decoder_config.output_type & LOG_OUTPUT_ITEM_LOG) {
+        if(decoder_config.default_log_level >= FASTLOG_CRIT && decoder_config.default_log_level < FASTLOGLEVELS_NUM) {
+            level_list__iter(decoder_config.default_log_level, output_logdata, output);
+        } else {
+            logdata_rbtree__iter(output_logdata, output);
+        }
+    }
+
 #if 0 /* 几个遍历的 示例代码 */
+    
     /* 遍历元数据 */
     metadata_rbtree__iter(output_metadata, output);
 

@@ -16,4 +16,4 @@ if [ -e test/build ]; then
 	cd -
 fi
 
-rm -f fdecoder test0 fastlog.log* fastlog.metadata*
+rm -f fdecoder test0 fastlog.log* fastlog.metadata* core.*

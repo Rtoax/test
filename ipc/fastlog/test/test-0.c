@@ -50,6 +50,8 @@ void log_test3(unsigned long total_dequeue)
     FAST_LOG(FASTLOG_DEBUG, "TEST3", ">>># Hello %.*ld %.*ld 3#<<<\n", 7, total_dequeue, 7, total_dequeue+1);
     FAST_LOG(FASTLOG_DEBUG, "TEST3", ">>># Hello %*.*ld 3#<<<\n", 20, 7, total_dequeue+10);
     FAST_LOG(FASTLOG_INFO, "TEST3", ">>># Hello %*.*ld 3#<<<\n", 30, 7, total_dequeue+20);
+
+    log_test2(total_dequeue);
 }
 
 void *task_routine(void*param) 
@@ -79,8 +81,8 @@ void *task_routine(void*param)
         FAST_LOG(FASTLOG_DEBUG, "TEST3", "Hello 3 %c\n", 'R');
 
         total_dequeue += 1;
-        printf("\nTotal = %ld\n", total_dequeue);
-        if(total_dequeue % 2 == 0) {
+        //printf("\nTotal = %ld\n", total_dequeue);
+        if(total_dequeue % 1 == 0) {
             
             gettimeofday(&end, NULL);
 
@@ -120,7 +122,7 @@ int main()
     
     signal(SIGINT, signal_handler);
 
-    fastlog_init(9, 10*1024*1024/* 10MB */);
+    fastlog_init(24, 10*1024*1024/* 10MB */);
 
     
     FAST_LOG(FASTLOG_INFO, "MAIN", "start to run...\n");

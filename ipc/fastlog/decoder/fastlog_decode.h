@@ -16,77 +16,6 @@
 #include <fastlog_cycles.h>
 
 
-/* 解析出的元数据 */
-struct metadata_decode {
-    /**
-     * `log_id`红黑树节点的索引，见下面函数说明:
-     *
-     *  metadata_rbtree__cmp:       对比红黑树节点回调函数，内部对比 log_id
-     *  metadata_rbtree__search:    查找红黑树节点，传入 log_id(强转，所以log_id必须在此结构起始处)
-     */
-    unsigned int log_id;
-    
-    struct fastlog_metadata *metadata;  /* 指向内存映射中的数据 */
-    
-    struct args_type argsType;      /* 由 format 字符串解析 */
-    
-    rb_node(struct metadata_decode) rb_link_node;   /* 红黑树节点 */
-
-    /**
-     *  log_id 链表头
-     *
-     *  id_list: 所有 log_id 相同的链表头
-     *           链表节点为`struct logdata_decode`中的`list_id`
-     *
-     *  id_cnt:  log_id 的数量统计
-     */
-    struct list id_list;
-    unsigned long id_cnt;
-
-    /**
-     *  以下字符串拆分了 `metadata->string_buf`
-     *
-     *  如`metadata->string_buf`在内存中 为 TEST\0test.c\0main\0Hello, %s\0task1\0
-     *  解析为：
-     *  
-     *  user_string     = "TEST"
-     *  src_filename    = "test.c"
-     *  src_function    = "main"
-     *  print_format    = "Hello, %s"
-     *  thread_name     = "task1"
-     *
-     *  而字符串长度由`metadata->xxxx_len`决定
-     */
-    char* user_string; 
-    char* src_filename; 
-    char* src_function; 
-    char* print_format;
-    char* thread_name;
-};
-
-
-/* 解析出的日志数据 */
-struct logdata_decode {
-    
-    fastlog_logdata_t *logdata;         //malloc(), 而不是文件映射中的内存, 因为可能将映射的文件 munmap
-    
-    struct metadata_decode *metadata;   //所对应的源数据
-    
-    rb_node(struct logdata_decode) rb_link_node_rdtsc;   //按时间顺序排序的红黑树
-    struct list list_level;
-
-    /**
-     *  log_id 链表节点
-     *
-     *  链表头为 `struct metadata_decode`结构中的`id_list`
-     */
-    struct list list_id;
-    
-//    struct list list_file;  //相同文件名日志的链表
-//    struct list list_func;  //相同函数名的链表
-//    struct list list_line;  //相同行号 日志 的链表
-};
-
 //(默认为ALL)
 typedef enum {
     LOG__RANGE_TIME     = 0x0001,       //时间(戳)(filter 时 不支持)
@@ -146,6 +75,109 @@ typedef enum {
     LOG_OUTPUT_ITEM_META_MASK = LOG_OUTPUT_ITEM_HDR|LOG_OUTPUT_ITEM_META|LOG_OUTPUT_ITEM_FOOT,
 }LOG_OUTPUT_TYPE;
 
+
+
+/* 解析出的元数据 */
+struct metadata_decode {
+    /**
+     * `log_id`红黑树节点的索引，见下面函数说明:
+     *
+     *  metadata_rbtree__cmp:       对比红黑树节点回调函数，内部对比 log_id
+     *  metadata_rbtree__search:    查找红黑树节点，传入 log_id(强转，所以log_id必须在此结构起始处)
+     */
+    unsigned int log_id;
+    
+    struct fastlog_metadata *metadata;  /* 指向内存映射中的数据 */
+    
+    struct args_type argsType;      /* 由 format 字符串解析 */
+    
+    rb_node(struct metadata_decode) rb_link_node;   /* 红黑树节点 */
+
+    /**
+     *  log_id 链表头
+     *
+     *  id_list: 所有 log_id 相同的链表头
+     *           链表节点为`struct logdata_decode`中的`list_id`
+     *
+     *  id_cnt:  log_id 的数量统计
+     */
+    struct list id_list;
+    unsigned long id_cnt;
+
+    /**
+     *  以下字符串拆分了 `metadata->string_buf`
+     *
+     *  如`metadata->string_buf`在内存中 为 TEST\0test.c\0main\0Hello, %s\0task1\0
+     *  解析为：
+     *  
+     *  user_string     = "TEST"
+     *  src_filename    = "test.c"
+     *  src_function    = "main"
+     *  print_format    = "Hello, %s"
+     *  thread_name     = "task1"
+     *
+     *  而字符串长度由`metadata->xxxx_len`决定
+     */
+    char* user_string; 
+    char* src_filename; 
+    char* src_function; 
+    char* print_format;
+    char* thread_name;
+};
+
+/**
+ *  用于查找 的红黑树节点
+ *  
+ */
+struct log_search {
+
+    char *string;
+
+    bool use_strstr;
+
+    LOG__RANGE_FILTER_ENUM string_type;
+
+    
+    unsigned long log_cnt;
+
+    /**
+     *  保存属于或匹配字符串`string`的日志聊表头节点
+     *  对应链表节点在`struct logdata_decode`的`list_search`字段
+     */
+    struct list log_list_head;
+    
+    rb_node(struct log_search) rb_link;
+};
+
+
+/* 解析出的日志数据 */
+struct logdata_decode {
+    
+    fastlog_logdata_t *logdata;         //malloc(), 而不是文件映射中的内存, 因为可能将映射的文件 munmap
+    
+    struct metadata_decode *metadata;   //所对应的源数据
+    
+    rb_node(struct logdata_decode) rb_link_node_rdtsc;   //按时间顺序排序的红黑树
+
+    /**
+     *  日志级别链表
+     */
+    struct list list_level;
+
+    /**
+     *  log_id 链表节点
+     *
+     *  链表头为 `struct metadata_decode`结构中的`id_list`
+     */
+    struct list list_id;
+
+    /**
+     *  搜索 日志链表
+     *  具体请查看`LOG__RANGE_FILTER_ENUM`枚举类型
+     *  对应的链表头在`struct log_search`结构体的`log_list_head`字段
+     */
+    struct list list_search[__LOG__RANGE_FILTER_NUM];
+};
 
 struct output_struct;
 struct output_filter;
@@ -299,6 +331,13 @@ struct fastlog_decoder_config {
 #define DEFAULT_OUTPUT_FILE "fastlog.txt"
     bool output_filename_isset;
     char* output_filename;
+
+    /* Filter 信息 */
+    char *match_name;
+    char *match_func;
+    char *match_thread;
+    char *match_content;
+    
 };
 
 // fastlog decoder 配置参数，在 getopt 之后只读
@@ -370,6 +409,15 @@ void logdata_rbtree__remove(struct logdata_decode *new_node);
 struct logdata_decode * logdata_rbtree__search(int log_id, uint64_t log_rdtsc);
 void logdata_rbtree__iter(void (*cb)(struct logdata_decode *meta, void *arg), void *arg);
 
+/* 日志搜索红黑树操作 */
+void log_search_rbtree__init();
+void log_search_rbtree__destroy(LOG__RANGE_FILTER_ENUM type, void (*cb)(struct log_search *node, void *arg), void *arg);
+void log_search_rbtree__insert(LOG__RANGE_FILTER_ENUM type, struct log_search *new_node);
+void log_search_rbtree__remove(LOG__RANGE_FILTER_ENUM type, struct log_search *new_node);
+struct log_search *log_search_rbtree__search(LOG__RANGE_FILTER_ENUM type, char *string);
+struct log_search *log_search_rbtree__search_or_create(LOG__RANGE_FILTER_ENUM type, char *string);
+void log_search_rbtree__iter(LOG__RANGE_FILTER_ENUM type, void (*cb)(struct log_search *meta, void *arg), void *arg);
+
 
 
 /**
@@ -412,6 +460,12 @@ void id_lists__init(int log_id);
 void id_list__insert(int log_id, struct logdata_decode *logdata);
 void id_list__remove(int log_id, struct logdata_decode *logdata);
 int id_list__iter(int log_id, void (*cb)(struct logdata_decode *logdata, void *arg), void *arg);
+
+
+void log_search_list__insert(struct log_search *node, struct logdata_decode *logdata);
+void log_search_list__remove(struct log_search *node, struct logdata_decode *logdata);
+void log_search_list__iter(struct log_search *node, void (*cb)(struct logdata_decode *logdata, void *arg), void *arg);
+void log_search_list__iter2(LOG__RANGE_FILTER_ENUM type, char *string, void (*cb)(struct logdata_decode *logdata, void *arg), void *arg);
 
 
 #endif /*<__fastlog_DECODE_h>*/

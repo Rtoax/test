@@ -245,3 +245,70 @@ int id_list__iter(int log_id, void (*cb)(struct logdata_decode *logdata, void *a
     return id_list__iter_raw(metadata, cb, arg);
 }
 
+
+
+
+
+/**
+ *  查询 红黑树 中的链表
+ *
+ */
+void log_search_list__insert(struct log_search *node, struct logdata_decode *logdata)
+{
+    list_insert(&node->log_list_head, &logdata->list_search[node->string_type]);
+    node->log_cnt ++;
+}
+
+void log_search_list__remove(struct log_search *node, struct logdata_decode *logdata)
+{
+    list_remove(&logdata->list_search[node->string_type]);
+    node->log_cnt --;
+}
+
+void log_search_list__iter(struct log_search *node, void (*cb)(struct logdata_decode *logdata, void *arg), void *arg)
+{
+    assert(cb && "NULL callback error.");
+    
+    struct logdata_decode *logdata;
+    list_for_each_entry(logdata, &node->log_list_head, list_search[node->string_type]) {
+        cb(logdata, arg);
+    }
+}
+
+struct iter_arg {
+    void (*cb)(struct logdata_decode *, void *);
+    void *arg;
+};
+
+static void iter_log_search(struct log_search *search, void *arg)
+{
+    struct iter_arg *__arg = (struct iter_arg *)arg;
+
+    struct logdata_decode *logdata;
+    list_for_each_entry(logdata, &search->log_list_head, list_search[search->string_type]) {
+        __arg->cb(logdata, __arg->arg);
+    }
+}
+
+void log_search_list__iter2(LOG__RANGE_FILTER_ENUM type, char *string, void (*cb)(struct logdata_decode *logdata, void *arg), void *arg)
+{
+    assert(cb && "NULL callback error.");
+    
+    struct log_search *search = NULL;
+
+    if(string) {
+        
+        search = log_search_rbtree__search(type, string);
+
+        log_search_list__iter(search, cb, arg);
+    
+    } else {
+        struct iter_arg __arg;
+        __arg.cb = cb;
+        __arg.arg = arg;
+        log_search_rbtree__iter(type, iter_log_search, (void*)&__arg);
+    }
+    
+
+}
+

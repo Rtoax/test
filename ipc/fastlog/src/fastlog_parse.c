@@ -98,11 +98,36 @@ static int mmap_fastlog_logfile(struct fastlog_file_mmap *mmap_file, char *filen
     }
 //    printf("mmap_file->mmap_size = %d\n", mmap_file->mmap_size);
 
-    mmap_file->mmapaddr = mmap(NULL, size, mmap_prot, mmap_flags, mmap_file->fd,0);
+    mmap_file->mmapaddr = mmap(NULL, size, mmap_prot, mmap_flags, mmap_file->fd, 0);
     if(mmap_file->mmapaddr == MAP_FAILED) {
         assert(0 && "mmap failed.");
     }
 
+    /**
+     *  当不是读方映射的文件，需要清零，原因在于，当用户指定了允许输出的最大文件大小
+     *  和最大日志文件个数后，如果超出使用限制，将覆盖前面已经生成的文件，以防止磁盘
+     *  写满。
+     *  若不清零，写者可能不会写到文件大小的结尾处，造成解析过程出错，如下图：
+     *
+     *  第一次写者打开
+     *  ----------------------------------------------------
+     *
+     *  第一次写者写满
+     *  ##################################################-- (放不下一条日志时，空闲)
+     *
+     *  第二次写者打开(不清零)
+     *  ##################################################--
+     *  写入新的数据
+     *  ***********************************************###-- (放不下一条日志时，空闲)
+     *  此时读者打开
+     *  ***********************************************###-- (当解析完`*`后，`#`为错误信息)
+     *
+     *  2021年6月23日 荣涛
+     */
+    if(O_RDONLY != open_flags) {
+        memset(mmap_file->mmapaddr, 0, size);
+    }
+    
     mmap_file->status = FILE_MMAP_MMAPED;
 
     return 0;

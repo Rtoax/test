@@ -609,10 +609,18 @@ static void logdata_rbtree__rbtree_node_destroy(struct logdata_decode *logdata, 
     free(logdata);
 }
 
+static void log_search_rbtree__rbtree_node_destroy(struct log_search *search, void *arg)
+{
+//    printf("destroy search %d\n", search->string_type);
+    free(search);
+}
+
 static void release_and_exit()
 {
     metadata_rbtree__destroy(metadata_rbtree__rbtree_node_destroy, NULL);
     logdata_rbtree__destroy(logdata_rbtree__rbtree_node_destroy, NULL);
+
+    log_search_rbtree__destroyall(log_search_rbtree__rbtree_node_destroy, NULL);
     
     release_metadata_file();
     release_logdata_file();

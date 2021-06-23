@@ -251,6 +251,16 @@ void log_search_rbtree__destroy(LOG__RANGE_FILTER_ENUM type, void (*cb)(struct l
     log_search_rbtree_destroy(&log_search_rbtrees[type], cb, arg);
 }
 
+void log_search_rbtree__destroyall(void (*cb)(struct log_search *node, void *arg), void *arg)
+{
+    assert(cb && "NULL callback error.");
+    int i;
+    for(i=0; i<__LOG__RANGE_FILTER_NUM; i++) {
+        log_search_rbtree__destroy(i, cb, arg);
+    }
+}
+
+
 void log_search_rbtree__insert(LOG__RANGE_FILTER_ENUM type, struct log_search *new_node)
 {
     log_search_rbtree_insert(&log_search_rbtrees[type], new_node);

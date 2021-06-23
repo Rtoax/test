@@ -412,6 +412,7 @@ void logdata_rbtree__iter(void (*cb)(struct logdata_decode *meta, void *arg), vo
 /* 日志搜索红黑树操作 */
 void log_search_rbtree__init();
 void log_search_rbtree__destroy(LOG__RANGE_FILTER_ENUM type, void (*cb)(struct log_search *node, void *arg), void *arg);
+void log_search_rbtree__destroyall(void (*cb)(struct log_search *node, void *arg), void *arg);
 void log_search_rbtree__insert(LOG__RANGE_FILTER_ENUM type, struct log_search *new_node);
 void log_search_rbtree__remove(LOG__RANGE_FILTER_ENUM type, struct log_search *new_node);
 struct log_search *log_search_rbtree__search(LOG__RANGE_FILTER_ENUM type, char *string);

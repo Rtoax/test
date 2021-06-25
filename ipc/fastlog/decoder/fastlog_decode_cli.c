@@ -659,7 +659,7 @@ static int invoke_command(int argc, char **argv, long repeat)
         int argv_idx = 0;
         
         if(argc <= 2) {
-            printf("\t Must has one [func|name|prefix|thread value] pair. Like `search func main`\n");
+            printf("\t Must has one [func|name|content|thread value] pair. Like `search func main`\n");
             return 0;
             
         } else if(argc >= 3) {

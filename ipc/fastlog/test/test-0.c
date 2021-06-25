@@ -19,86 +19,6 @@
 #include "common.h"
 
 
-void log_test1()
-{
-    FAST_LOG(FASTLOG_WARNING, "TEST1", "[%s] CPU %d(%d)\n", "hello", __fastlog_sched_getcpu(), __fastlog_getcpu());
-    FAST_LOG(FASTLOG_ERR, "TEST1", "%f %f %f\n", 3.14, 3.14, 3.14);
-    FAST_LOG(FASTLOG_CRIT, "TEST1", "%2.3f %2.3f %2.3lf\n", 3.14, 3.14, 3.14);
-    FAST_LOG(FASTLOG_INFO, "TEST1", "%d %d %ld %d %d %d %s\n", 1, 2, 3L, 1, 2, 3, "Hello");
-    FAST_LOG(FASTLOG_WARNING, "TEST1", ">>># %d %ld %ld %s %f #<<<\n", 1, 2L, 3L, "Hello", 1024.0);
-}
-void log_test2(unsigned long total_dequeue)
-{
-    FAST_LOG(FASTLOG_CRIT, "TEST2", ">>># I have an integer %ld #<<<\n", total_dequeue);
-    FAST_LOG(FASTLOG_ERR, "TEST2", ">>># I have an integer %ld #<<<\n", total_dequeue+10);
-    FAST_LOG(FASTLOG_INFO, "TEST2", ">>># I have an integer %ld #<<<\n", total_dequeue+11);
-}
-void log_test21(unsigned long total_dequeue)
-{
-    FAST_LOG(FASTLOG_CRIT, "TEST21", ">>># I have an integer %ld #<<<\n", total_dequeue);
-    FAST_LOG(FASTLOG_ERR, "TEST21", ">>># I have an integer %ld #<<<\n", total_dequeue+10);
-    FAST_LOG(FASTLOG_INFO, "TEST21", ">>># I have an integer %ld #<<<\n", total_dequeue+11);
-}
-void log_test3(unsigned long total_dequeue)
-{
-    FAST_LOG(FASTLOG_INFO, "TEST3", ">>># Hello %s 1#<<<\n", "World");
-    FAST_LOG(FASTLOG_INFO, "TEST3", ">>># Hello %s 2#<<<\n", "World");
-    FAST_LOG(FASTLOG_ERR, "TEST3", ">>># Hello %s 3#<<<\n", "World");
-    FAST_LOG(FASTLOG_ERR, "TEST3", ">>># Hello %*s 3#<<<\n", 10, "World");
-    FAST_LOG(FASTLOG_WARNING, "TEST3", ">>># Hello %.*s 3#<<<\n", 4, "World");
-    FAST_LOG(FASTLOG_WARNING, "TEST3", ">>># Hello %*.*s 3#<<<\n", 20, 4, "World");
-    FAST_LOG(FASTLOG_DEBUG, "TEST3", ">>># Hello %.*ld %.*ld 3#<<<\n", 7, total_dequeue, 7, total_dequeue+1);
-    FAST_LOG(FASTLOG_DEBUG, "TEST3", ">>># Hello %*.*ld 3#<<<\n", 20, 7, total_dequeue+10);
-    FAST_LOG(FASTLOG_INFO, "TEST3", ">>># Hello %*.*ld 3#<<<\n", 30, 7, total_dequeue+20);
-
-    log_test2(total_dequeue);
-}
-
-void *task_routine(void*param) 
-{
-    struct task_arg * arg = (struct task_arg *)param;
-    
-    set_thread_cpu_affinity(arg->cpu);    
-    
-    struct timeval start, end;
-    gettimeofday(&start, NULL);
-    
-    unsigned long total_dequeue = 0;
-
-    while(1) {
-        log_test1();
-        log_test2(total_dequeue);
-        log_test21(total_dequeue);
-        log_test3(total_dequeue);
-        
-        FAST_LOG(FASTLOG_CRIT, "TEST1", "Hello 1 %ld\n", total_dequeue);
-        FAST_LOG(FASTLOG_ERR, "TEST2", "Hello 2 %ld\n", total_dequeue+10);
-        FAST_LOG(FASTLOG_WARNING, "TEST3", "Hello 3 %ld\n", total_dequeue+20);
-        FAST_LOG(FASTLOG_INFO, "TEST2", "Hello World 2 %ld\n", total_dequeue+30);
-        FAST_LOG(FASTLOG_DEBUG, "TEST3", "Hello 3 %ld\n", total_dequeue+40);
-
-        
-        FAST_LOG(FASTLOG_DEBUG, "TEST3", "Hello 3 %c\n", 'R');
-
-        total_dequeue += 1;
-        //printf("\nTotal = %ld\n", total_dequeue);
-        if(total_dequeue % 1 == 0) {
-            
-            gettimeofday(&end, NULL);
-
-            unsigned long usec = (end.tv_sec - start.tv_sec)*1000000 + (end.tv_usec - start.tv_usec);
-            double nmsg_per_sec = (double)((total_dequeue)*1.0 / usec) * 1000000;
-            printf("\nTotal = %ld, %ld/sec\n", total_dequeue, (unsigned long )nmsg_per_sec);
-            
-            sleep(1);
-            total_dequeue = 0;
-
-            gettimeofday(&start, NULL);
-        }
-//        usleep(10000);
-    }
-    pthread_exit(arg);
-}
 
 void signal_handler(int signum)
 {
@@ -111,39 +31,39 @@ void signal_handler(int signum)
     exit(1);
 }
 
-int main()
+int main(int argc, char *argv[])
 {
-    int ncpu = sysconf (_SC_NPROCESSORS_ONLN);
-    int itask;
-
-    pthread_t threads[64];
-    int nthread = 3;
-    char thread_name[32] = {0};
-    
     signal(SIGINT, signal_handler);
 
     fastlog_init(FASTLOG_ERR, 24, 10*1024*1024/* 10MB */);
 
     fastlog_setlevel(FASTLOG_DEBUG);
     
+    
     FAST_LOG(FASTLOG_INFO, "MAIN", "start to run...\n");
 
-    for(itask=0; itask<nthread; itask++) {
+    if(argc == 2) {
         
-        struct task_arg *arg = malloc(sizeof(struct task_arg));
-        arg->cpu = itask%ncpu;
+        if(strcmp(argv[1], "modules") == 0) {
+            
+            printf("####### Modules #######\n");
+            modules_init();
+            
+        } else if(strcmp(argv[1], "benchmark") == 0) {
         
-        pthread_create(&threads[itask], NULL, task_routine, arg);
-        sprintf(thread_name, "rtoax:%d", itask);
-        pthread_setname_np(threads[itask], thread_name);
-        memset(thread_name, 0, sizeof(thread_name));
+            printf("####### Benchmark #######\n");
+            test_benchmark();
+            
+        } else {
+            goto error_exit;
+        }
+    } else {
+        goto error_exit;
     }
-    
-    for(itask=0; itask<nthread; itask++) {
-        struct task_arg *arg = NULL;
-        pthread_join(threads[itask], (void**)&arg);
-        free(arg);
-    }
+
+error_exit:
+    printf("%s [modules|benchmark].\n", argv[0]);
+
     fastlog_exit();
 	return 0;
 }

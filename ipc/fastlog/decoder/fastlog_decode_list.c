@@ -278,6 +278,7 @@ void log_search_list__iter(struct log_search *node, void (*cb)(struct logdata_de
 struct iter_arg {
     void (*cb)(struct logdata_decode *, void *);
     void *arg;
+    char *string;
 };
 
 static void iter_log_search(struct log_search *search, void *arg)
@@ -289,7 +290,22 @@ static void iter_log_search(struct log_search *search, void *arg)
         __arg->cb(logdata, __arg->arg);
     }
 }
+static void iter_log_search2(struct log_search *search, void *arg)
+{
+    struct iter_arg *__arg = (struct iter_arg *)arg;
 
+    struct logdata_decode *logdata;
+    list_for_each_entry(logdata, &search->log_list_head, list_search[search->string_type]) {
+        if(strstr(search->string, __arg->string)) {
+            __arg->cb(logdata, __arg->arg);
+        }
+    }
+}
+
+
+/**
+ * 使用 字符串 查找
+ */
 void log_search_list__iter2(LOG__RANGE_FILTER_ENUM type, char *string, void (*cb)(struct logdata_decode *logdata, void *arg), void *arg)
 {
     assert(cb && "NULL callback error.");
@@ -303,12 +319,37 @@ void log_search_list__iter2(LOG__RANGE_FILTER_ENUM type, char *string, void (*cb
         log_search_list__iter(search, cb, arg);
     
     } else {
+        
         struct iter_arg __arg;
         __arg.cb = cb;
         __arg.arg = arg;
         log_search_rbtree__iter(type, iter_log_search, (void*)&__arg);
     }
     
+
+}
+
+/**
+ * 使用 子字符串 查找
+ */
+void log_search_list__iter3(LOG__RANGE_FILTER_ENUM type, char *string, void (*cb)(struct logdata_decode *logdata, void *arg), void *arg)
+{
+    assert(cb && string && "NULL callback|string error.");
+    
+    void (*iter_log_fn)(struct log_search *search, void *arg);
+
+    if(string) {
+        iter_log_fn = iter_log_search2;
+    } else {
+        iter_log_fn = iter_log_search;
+    }
+    
+    struct iter_arg __arg;
+    __arg.cb = cb;
+    __arg.arg = arg;
+    __arg.string = string;
+    
+    log_search_rbtree__iter(type, iter_log_fn, (void*)&__arg);
 
 }
 

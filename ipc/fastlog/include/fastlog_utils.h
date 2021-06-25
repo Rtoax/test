@@ -5,14 +5,7 @@
 #error "You can't include <fastlog_utils.h> directly, #include <fastlog.h> instead."
 #endif
 
-#ifdef FASTLOG_HAVE_LIBXML2
 
-#include <libxml/parser.h>
-#include <libxml/tree.h>
-#include <libxml/xmlmemory.h>
-#include <libxml/xpath.h>
-
-#endif /*<FASTLOG_HAVE_LIBXML2>*/
 
 
 #endif /*<__fAStLOG_UTILS_H>*/

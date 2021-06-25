@@ -18,4 +18,6 @@ int main()
 
     
     printf("\tResult:%s\r\n", json_object_to_json_string(obj));
+
+	json_object_to_file("json.out", obj);
 }

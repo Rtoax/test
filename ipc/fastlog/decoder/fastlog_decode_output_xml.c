@@ -106,7 +106,8 @@ static int xml_header(struct output_struct *o, struct fastlog_file_header *heade
 static int xml_meta_item(struct output_struct *o, struct metadata_decode *meta)
 {
     //assert( 0&& "就是玩");
-    
+#ifdef FASTLOG_HAVE_LIBXML2
+
     char* user_string    = meta->user_string; 
     char* src_filename   = meta->src_filename; 
     char* src_function   = meta->src_function; 
@@ -154,6 +155,8 @@ static int xml_meta_item(struct output_struct *o, struct metadata_decode *meta)
 
     o->output_meta_cnt ++;
     
+#endif  //FASTLOG_HAVE_LIBXML2
+
     return 0;
 }
 
@@ -164,6 +167,11 @@ static int xml_log_item(struct output_struct *o, struct logdata_decode *logdata,
         assert(0 && "Not XML type.");
         return -1;
     }
+
+    
+#ifdef FASTLOG_HAVE_LIBXML2
+
+    
     const char *(*my_strlevel)(enum FASTLOG_LEVEL level);
 
     /* 文件输出还是不要颜色了 */
@@ -174,7 +182,6 @@ static int xml_log_item(struct output_struct *o, struct logdata_decode *logdata,
         my_strlevel = strlevel_color;
     }
     
-#ifdef FASTLOG_HAVE_LIBXML2
 
     xmlNodePtr log_item = xmlNewNode(NULL, BAD_CAST "log");  
     xmlAddChild(o->file_handler.xml.body, log_item);
@@ -245,6 +252,8 @@ static int xml_footer(struct output_struct *o)
         return -1;
     }
     
+#ifdef FASTLOG_HAVE_LIBXML2
+    
     const char *(*my_strlevel)(enum FASTLOG_LEVEL level);
     
     if(o->filename) {
@@ -253,8 +262,6 @@ static int xml_footer(struct output_struct *o)
     /* 终端输出有颜色骚气一点 */
         my_strlevel = strlevel_color;
     }
-    
-#ifdef FASTLOG_HAVE_LIBXML2
 
     xmlNodePtr statistics = xmlNewNode(NULL, BAD_CAST "stats");  
     xmlAddChild(o->file_handler.xml.footer, statistics);
@@ -348,7 +355,7 @@ struct output_struct output_xml = {
     .file = LOG_OUTPUT_FILE_XML|LOG_OUTPUT_ITEM_MASK,
     .filename = NULL,
     .file_handler = {
-        .fp = NULL,
+        .xml = {NULL},
     },
     
     .output_meta_cnt = 0,

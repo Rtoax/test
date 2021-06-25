@@ -231,6 +231,11 @@ rb_proto(static, log_search_rbtree_, log_search_rbtree_t, struct log_search);
 
 static int log_search_rbtree__cmp(const struct log_search *a_node, const struct log_search *a_other)
 {
+    if(a_node->use_strstr) {
+        if(strstr(a_other->string, a_node->string)) {
+            return 0;
+        }
+    }
 
     return strcmp(a_node->string, a_other->string);
 }
@@ -273,7 +278,17 @@ void log_search_rbtree__remove(LOG__RANGE_FILTER_ENUM type, struct log_search *n
 
 struct log_search * log_search_rbtree__search(LOG__RANGE_FILTER_ENUM type, char *string)
 {
-    struct log_search logdata = {.string = string};
+    struct log_search logdata = {.string = string, .use_strstr = false,};
+    
+    return log_search_rbtree_search(&log_search_rbtrees[type], (const struct log_search*)&logdata);
+}
+
+/**
+ * 使用 strstr() 进行子字符串查找
+ */
+struct log_search * log_search_rbtree__search2(LOG__RANGE_FILTER_ENUM type, char *string)
+{
+    struct log_search logdata = {.string = string, .use_strstr = true,};
     
     return log_search_rbtree_search(&log_search_rbtrees[type], (const struct log_search*)&logdata);
 }
@@ -285,6 +300,7 @@ struct log_search *log_search_rbtree__search_or_create(LOG__RANGE_FILTER_ENUM ty
         struct log_search *newnode = (struct log_search *)malloc(sizeof(struct log_search));
         assert(newnode && "Malloc failed");
 
+        newnode->use_strstr = false;
         newnode->string = string;
         newnode->string_type = type;
         newnode->log_cnt = 0;

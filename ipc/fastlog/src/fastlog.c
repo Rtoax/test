@@ -8,6 +8,7 @@
 #include <sys/mman.h>
 
 #include <fastlog.h>
+#include <fastlog_list.h>
 #include <fastlog_cycles.h>
 #include <fastlog_staging_buffer.h>
 
@@ -61,6 +62,28 @@ static uint64_t program_cycles_per_sec = 0;
 static uint64_t program_start_rdtsc = 0;
 static time_t   program_unix_time_sec = 0;      //time(2)
 static struct utsname program_unix_uname = {{0}};   //uname(2)
+
+#if 0
+/**
+ *  告警级别的链表(TLS  变量)
+ */
+static struct list __fastlog_level_list;
+
+typedef struct {
+    bool in_use;
+    struct list _list;  //`__fastlog_level_list`链表中的节点
+    enum FASTLOG_LEVEL level;
+}fastlog_level_enable_t;
+
+
+/**
+ *  当前日志的告警级别
+ */
+__thread fastlog_level_enable_t __curr_level;
+
+#else
+enum FASTLOG_LEVEL __curr_level = FASTLOG_DEBUG;
+#endif
 
 
 static void mmap_new_fastlog_file(struct fastlog_file_mmap *mmap_file, 
@@ -255,12 +278,26 @@ static void mmap_new_fastlog_file(struct fastlog_file_mmap *mmap_file,
 }
 
 
+void fastlog_setlevel(enum FASTLOG_LEVEL level)
+{
+    __curr_level = level;
+}
+enum FASTLOG_LEVEL fastlog_getlevel()
+{
+    return __curr_level;
+}
+
+
 //__attribute__((constructor(105))) 
-void fastlog_init(size_t nr_logfile, size_t logfile_size)
+void fastlog_init(enum FASTLOG_LEVEL level, size_t nr_logfile, size_t logfile_size)
 {
     int _unused ret = -1;
     //printf("FastLog initial.\n");
 
+    //list_init(&__fastlog_level_list);
+
+    fastlog_setlevel(level);
+    
     /* 日志大小 */
     if(nr_logfile)
         max_nr_logfile = nr_logfile;

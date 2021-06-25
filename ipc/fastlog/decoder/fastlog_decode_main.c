@@ -758,7 +758,7 @@ load_logdata:
     } else if(decoder_config.output_type & LOG_OUTPUT_FILE_XML) {
         output = &output_xml;
     } else if(decoder_config.output_type & LOG_OUTPUT_FILE_JSON) {
-        output = &output_txt;
+        output = &output_json;
     } else {
         printf("just support txt, xml, json.\n");
         goto release;
@@ -783,6 +783,8 @@ load_logdata:
     
     log_search_list__iter2(LOG__RANGE_FUNC_ENUM, "main", output_logdata, output);
     log_search_list__iter2(LOG__RANGE_FUNC_ENUM, NULL, output_logdata, output);
+
+    log_search_list__iter3(LOG__RANGE_FUNC_ENUM, "test3", output_logdata, output);
 
     exit(0);
 

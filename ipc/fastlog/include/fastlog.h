@@ -48,8 +48,17 @@ const char *strlevel_color(enum FASTLOG_LEVEL level);
  *  log_file_size   单个日志文件大小(bytes)
  *
  */
-void fastlog_init(size_t nr_logfile, size_t log_file_size);
+void fastlog_init(enum FASTLOG_LEVEL level, size_t nr_logfile, size_t log_file_size);
 void fastlog_exit();
+
+/**
+ *  日志级别的激活与去激活
+ *  输出级别大于等于这个级别的日志(不是枚举值，而知 critical->error->warning->notice->debug 这个级别)
+ *
+ *  注意不要使用 `FASTLOGLEVEL_ALL` 作为 入参，这将关闭所有日志
+ */
+void fastlog_setlevel(enum FASTLOG_LEVEL level);
+enum FASTLOG_LEVEL fastlog_getlevel();
 
 
 #define FAST_LOG(level, name, format, ...) __FAST_LOG(level, name, format, ##__VA_ARGS__)

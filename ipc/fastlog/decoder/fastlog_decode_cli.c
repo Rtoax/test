@@ -408,7 +408,7 @@ static void cmd_show_level(enum FASTLOG_LEVEL log_level, LOG_OUTPUT_TYPE file_ty
     } else if(file_type & LOG_OUTPUT_FILE_XML) {
         output = &output_xml;
     } else if(file_type & LOG_OUTPUT_FILE_JSON) {
-        output = &output_txt;
+        output = &output_json;
     } else {
         printf("\t just support txt, xml, json.\n");
         return;

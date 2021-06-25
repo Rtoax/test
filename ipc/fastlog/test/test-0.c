@@ -122,8 +122,9 @@ int main()
     
     signal(SIGINT, signal_handler);
 
-    fastlog_init(24, 10*1024*1024/* 10MB */);
+    fastlog_init(FASTLOG_ERR, 24, 10*1024*1024/* 10MB */);
 
+    fastlog_setlevel(FASTLOG_DEBUG);
     
     FAST_LOG(FASTLOG_INFO, "MAIN", "start to run...\n");
 

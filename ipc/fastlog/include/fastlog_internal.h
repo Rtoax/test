@@ -273,6 +273,7 @@ struct arg_hdr {
 typedef struct arg_hdr fastlog_logdata_t;
 
 #define __FAST_LOG(level, name, format, ...) do {                                                   \
+    if(fastlog_getlevel() < level) break; /* level enable the LOG */                                \
     /* initial LOG ID */                                                                            \
     static int __thread log_id = 0;                                                                 \
     static struct args_type __thread args = ARGS_TYPE_INITIALIZER;                                  \
@@ -290,6 +291,8 @@ typedef struct arg_hdr fastlog_logdata_t;
     if (false) { __fastlog_check_format(format, ##__VA_ARGS__); }                                   \
     __fastlog_print_buffer(log_id, &args, ##__VA_ARGS__);                                           \
 }while(0)
+
+
 
 
 

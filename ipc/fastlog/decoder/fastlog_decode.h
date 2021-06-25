@@ -15,6 +15,21 @@
 #include <fastlog_utils.h>
 #include <fastlog_cycles.h>
 
+#ifdef FASTLOG_HAVE_LIBXML2
+
+#include <libxml/parser.h>
+#include <libxml/tree.h>
+#include <libxml/xmlmemory.h>
+#include <libxml/xpath.h>
+
+#endif /*<FASTLOG_HAVE_LIBXML2>*/
+
+#ifdef FASTLOG_HAVE_JSON
+
+#include <json/json.h>
+
+#endif
+
 
 //(默认为ALL)
 typedef enum {
@@ -133,6 +148,13 @@ struct log_search {
 
     char *string;
 
+    /**
+     *  在红黑树的 compare 函数中使用
+     *  主要用于 指定是否 使用 子字符串查找(strstr())
+     *  在红黑树中的节点，此数值均为 false(并且不会被使用)
+     *  在搜索阶段(`log_search_rbtree__search()`)的局部变量
+     *    将搜索的该数值设置为 true 进行子字符串查钊
+     */
     bool use_strstr;
 
     LOG__RANGE_FILTER_ENUM string_type;
@@ -251,7 +273,7 @@ struct output_filter {
  *  ops     对应的操作
  */
 struct output_struct {
-    bool enable;
+    const bool enable;
     
     LOG_OUTPUT_TYPE file;
     char *filename;
@@ -267,7 +289,15 @@ struct output_struct {
             xmlNodePtr footer;
         }xml;
 #endif
-        //xml 和 json 句柄
+#ifdef FASTLOG_HAVE_JSON
+        struct {
+            json_object *header;
+            json_object *metadata;
+            json_object *logdata;
+            json_object *footer;
+        }json;
+#endif
+    //xml 和 json 句柄
     }file_handler;
 
     /* 输出时进行统计 */
@@ -289,10 +319,9 @@ struct output_struct {
     struct output_filter *filter[__LOG__RANGE_FILTER_NUM];
 };
 
-extern struct output_operations output_operations_txt;
-extern struct output_operations output_operations_xml;
 extern struct output_struct output_txt;
 extern struct output_struct output_xml;
+extern struct output_struct output_json;
 
 extern struct output_filter filter_name;
 extern struct output_filter filter_func;
@@ -416,6 +445,7 @@ void log_search_rbtree__destroyall(void (*cb)(struct log_search *node, void *arg
 void log_search_rbtree__insert(LOG__RANGE_FILTER_ENUM type, struct log_search *new_node);
 void log_search_rbtree__remove(LOG__RANGE_FILTER_ENUM type, struct log_search *new_node);
 struct log_search *log_search_rbtree__search(LOG__RANGE_FILTER_ENUM type, char *string);
+struct log_search * log_search_rbtree__search2(LOG__RANGE_FILTER_ENUM type, char *string);  
 struct log_search *log_search_rbtree__search_or_create(LOG__RANGE_FILTER_ENUM type, char *string);
 void log_search_rbtree__iter(LOG__RANGE_FILTER_ENUM type, void (*cb)(struct log_search *meta, void *arg), void *arg);
 
@@ -467,6 +497,7 @@ void log_search_list__insert(struct log_search *node, struct logdata_decode *log
 void log_search_list__remove(struct log_search *node, struct logdata_decode *logdata);
 void log_search_list__iter(struct log_search *node, void (*cb)(struct logdata_decode *logdata, void *arg), void *arg);
 void log_search_list__iter2(LOG__RANGE_FILTER_ENUM type, char *string, void (*cb)(struct logdata_decode *logdata, void *arg), void *arg);
+void log_search_list__iter3(LOG__RANGE_FILTER_ENUM type, char *string, void (*cb)(struct logdata_decode *logdata, void *arg), void *arg);
 
 
 #endif /*<__fastlog_DECODE_h>*/

@@ -24,11 +24,12 @@ include_directories(
 
 
 find_library(XML2 xml2 /usr/lib64)
+find_library(JSON json-c /usr/lib64)
 find_library(FASTLOG fastlog ../build/)
 
-link_libraries(${XML2} ${FASTLOG})
+link_libraries(${XML2} ${JSON} ${FASTLOG})
 
-add_definitions( -MD -Wall  -g -ggdb -DFASTLOG_HAVE_LIBXML2)
+add_definitions( -MD -Wall  -g -ggdb -DFASTLOG_HAVE_LIBXML2 -DFASTLOG_HAVE_JSON)
 
 #generate application hello 
 ADD_EXECUTABLE(fdecoder ${SRC_LIST} ${DIR_SRCS})

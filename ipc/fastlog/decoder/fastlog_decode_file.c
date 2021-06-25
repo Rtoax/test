@@ -12,6 +12,11 @@ static struct fastlog_file_header *logdata_header = NULL;
 
 int output_open(struct output_struct *output, char *filename)
 {
+    if(!output->enable) {
+        fprintf(stderr, "file type not support.\n");
+        return -1;
+    }
+
     if(filename) {
         output->filename = strdup(filename);
     }
@@ -21,12 +26,21 @@ int output_open(struct output_struct *output, char *filename)
 
 int output_header(struct output_struct *output, struct fastlog_file_header *header)
 {
+    if(!output->enable) {
+        fprintf(stderr, "file type not support.\n");
+        return -1;
+    }
     return output->ops->header(output, header);
 }
 
 int output_setfilter(struct output_struct *output, struct output_filter *filter, struct output_filter_arg arg)
 {
     assert(output && filter && "NULL error.");
+
+    if(!output->enable) {
+        fprintf(stderr, "file type not support.\n");
+        return -1;
+    }
 
     if(output->filter_num > __LOG__RANGE_FILTER_NUM) {
         assert(0 && "filter number out of range.");
@@ -41,6 +55,10 @@ int output_setfilter(struct output_struct *output, struct output_filter *filter,
 
 bool output_callfilter(struct output_struct *output, struct logdata_decode *logdata)
 {
+    if(!output->enable) {
+        fprintf(stderr, "file type not support.\n");
+        return -1;
+    }
     int i;
     struct output_filter *filter = NULL;
     struct output_filter_arg *filter_arg = NULL;
@@ -70,6 +88,10 @@ bool output_callfilter(struct output_struct *output, struct logdata_decode *logd
 
 int output_updatefilter_arg(struct output_struct *output, char *log_buffer)
 {
+    if(!output->enable) {
+        fprintf(stderr, "file type not support.\n");
+        return -1;
+    }
     int i;
     for(i=0; i<output->filter_num; i++) {
         output->filter_arg[i].log_buffer = log_buffer;
@@ -79,6 +101,10 @@ int output_updatefilter_arg(struct output_struct *output, char *log_buffer)
 
 int output_clearfilter(struct output_struct *output)
 {
+    if(!output->enable) {
+        fprintf(stderr, "file type not support.\n");
+        return -1;
+    }
     int i;
     for(i=0; i<output->filter_num; i++) {
         output->filter[i] = NULL;
@@ -94,12 +120,21 @@ void output_metadata(struct metadata_decode *meta, void *arg)
     
     struct output_struct *output = (struct output_struct *)arg;
     
+    if(!output->enable) {
+        fprintf(stderr, "file type not support.\n");
+        return;
+    }
+    
     output->ops->meta_item(output, meta);
 }
 
 void output_logdata(struct logdata_decode *logdata, void *arg)
 {
     struct output_struct *output = (struct output_struct *)arg;
+
+    if(!output->enable) {
+        return ;
+    }
 
     // 从 "Hello, %s, %d" + World\02021 
     // 转化为
@@ -111,15 +146,27 @@ void output_logdata(struct logdata_decode *logdata, void *arg)
 //在`reprintf`中被调用
 int output_log_item(struct output_struct *output, struct logdata_decode *logdata, char *log)
 {
+    if(!output->enable) {
+        fprintf(stderr, "file type not support.\n");
+        return -1;
+    }
     return output->ops->log_item(output, logdata, log);
 }
 
 int output_footer(struct output_struct *output)
 {
+    if(!output->enable) {
+        fprintf(stderr, "file type not support.\n");
+        return -1;
+    }
     return output->ops->footer(output);
 }
 int output_close(struct output_struct *output)
 {
+    if(!output->enable) {
+        fprintf(stderr, "file type not support.\n");
+        return -1;
+    }
     int _unused ret = output->ops->close(output);
 
     if(output->filename) {

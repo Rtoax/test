@@ -438,6 +438,8 @@ static int _unused parse_header(struct fastlog_file_header *header)
 
 
     /* Record */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
     {
     char buffer[256] = {0};
     struct tm _tm;
@@ -445,6 +447,7 @@ static int _unused parse_header(struct fastlog_file_header *header)
     strftime(buffer, 256, "Recoreded in:  %Y-%d-%m/%T", &_tm);
     printf("%s\n",buffer);
     }
+#pragma GCC diagnostic pop
 
     /*  */
     return 0;

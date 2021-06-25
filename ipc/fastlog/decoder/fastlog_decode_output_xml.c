@@ -78,6 +78,9 @@ static int xml_header(struct output_struct *o, struct fastlog_file_header *heade
 
     xmlNodePtr timestamp = xmlNewNode(NULL, BAD_CAST "timestamp");  
     xmlAddChild(o->file_handler.xml.header, timestamp);
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"    
     {
         char buffer[256] = {0};
         struct tm _tm;
@@ -85,6 +88,8 @@ static int xml_header(struct output_struct *o, struct fastlog_file_header *heade
         strftime(buffer, 256, "%Y-%d-%m/%T", &_tm);
         xmlNewProp(timestamp, BAD_CAST"record",BAD_CAST buffer);
     }
+#pragma GCC diagnostic pop
+
     {
         char buffer[256] = {0};
         struct tm _tm;

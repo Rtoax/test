@@ -291,6 +291,7 @@ struct output_struct {
 #endif
 #ifdef FASTLOG_HAVE_JSON
         struct {
+            json_object *root;  //如果使用文件输出，才会使用该字段
             json_object *header;
             json_object *metadata;
             json_object *logdata;

@@ -10,6 +10,7 @@ FastLog 开发日志
 
 * 2021年6月25日
 	* decoder: json 输出 的支持(1): 框架 2021年6月25日11:48:30
+	* decoder: json 输出 的支持(2): 完成 2021年6月25日15:47:43
 	* decoder: 搜索的子字符串查找`log_search_list__iter3()`
 	* 日志的级别激活与去激活,见`fastlog_level()`和`__curr_level`
 	* decoder: 将`2021年6月23日`编码应用于命令行和CLI

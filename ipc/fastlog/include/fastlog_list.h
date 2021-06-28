@@ -1,6 +1,11 @@
 #ifndef __fAStLOG_LIST_H
 #define __fAStLOG_LIST_H 1
 
+#ifndef __fAStLOG_H
+#error "You can't include <fastlog_list.h> directly, #include <fastlog.h> instead."
+#endif
+
+
 /* SPDX-License-Identifier: GPL-2.0 */
 struct list {
 	struct list *next, *prev;

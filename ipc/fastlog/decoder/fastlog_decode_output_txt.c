@@ -42,8 +42,10 @@ static int txt_header(struct output_struct *o, struct fastlog_file_header *heade
             header->unix_uname.nodename, 
             /*no domainname*/ "no domainname");
 
+#if defined (__GNUC__) && (__GNUC__ >= 7)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Waddress-of-packed-member"
+#endif
     /* Record */
     {
         char buffer[256] = {0};
@@ -52,7 +54,9 @@ static int txt_header(struct output_struct *o, struct fastlog_file_header *heade
         strftime(buffer, 256, "This log recoreded in:  %Y-%d-%m/%T", &_tm);
         fprintf(o->file_handler.fp, "%s\n",buffer);
     }
+#if defined (__GNUC__) && (__GNUC__ >= 7)
 #pragma GCC diagnostic pop
+#endif
     {
         char buffer[256] = {0};
         struct tm _tm;

@@ -8,6 +8,17 @@ FastLog 开发日志
 
 # 编码历史
 
+* 2021年6月28日
+	* 实现通知机制(eventfd+epoll/select/poll),见宏`_FASTLOG_USE_EVENTFD`代码分支；
+		通过测试，显示使用通知机制，将大幅降低吞吐量。
+		这里是不是可以使用限制CPU方案；
+	* 调整代码目录结构，为了消除 epoll_wait EINTR
+	* 后台线程的轮询机制占用 CPU 非常严重，引入通知机制(eventfd+epoll/select/poll)思想。
+		但对吞吐量会有一定影响。 TODO
+	* decoder: `parse_logdata`中日志映射越界检测。
+	* decoder: 添加`stats`命令行
+	* 基准测试，见`test_benchmark()`
+	* "-Waddress-of-packed-member" GCC 版本编译告警
 * 2021年6月25日
 	* decoder: json 输出 的支持(1): 框架 2021年6月25日11:48:30
 	* decoder: json 输出 的支持(2): 完成 2021年6月25日15:47:43

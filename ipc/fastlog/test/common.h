@@ -16,6 +16,7 @@ const static char __attribute__((unused)) *modules_name[] = {
     MODULE_3_NAME,
 };
 
+
 struct task_arg {
     int cpu;
     int module;

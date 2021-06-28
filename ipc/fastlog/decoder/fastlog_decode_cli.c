@@ -54,6 +54,7 @@ enum {
     CMD_SHOW_META,
     CMD_SHOW_LS,
     CMD_SHOW_SEARCH,
+    CMD_SHOW_STATS,
     CMD_LOAD_LOG,
     CMD_QUIT_QUIT,
     CMD_QUIT_EXIT,
@@ -101,6 +102,12 @@ struct command_help command_helps[] = {
         .name = "search",
         .params = "func|name|content|thread value all|crit|err|warn|info|debug txt|xml|json [FILENAME]",
         .summary = "search information",
+        .group = GRP_SHOW,
+    },
+    [CMD_SHOW_STATS] = { 
+        .name = "stats",
+        .params = "",
+        .summary = "show statistic information",
         .group = GRP_SHOW,
     },
     [CMD_LOAD_LOG] = { 
@@ -174,6 +181,10 @@ static void show_help()
                         command_helps[CMD_SHOW_SEARCH].name, 
                         command_helps[CMD_SHOW_SEARCH].params, 
                         command_helps[CMD_SHOW_SEARCH].summary);
+    printf("\t %10s %s: %s\n", 
+                        command_helps[CMD_SHOW_STATS].name, 
+                        command_helps[CMD_SHOW_STATS].params, 
+                        command_helps[CMD_SHOW_STATS].summary);
     printf("\n");
 }
 
@@ -752,7 +763,32 @@ static int invoke_command(int argc, char **argv, long repeat)
         }
 
     
-    } else {
+    } 
+    //stats
+    else if(strncasecmp(argv[0], "stats", 5) == 0) {
+
+        fprintf(stdout, "        %-19s %-19s %-19s %-19s %-19s \n", 
+                                         strlevel_color(FASTLOG_CRIT), 
+                                         strlevel_color(FASTLOG_ERR),
+                                         strlevel_color(FASTLOG_WARNING),
+                                         strlevel_color(FASTLOG_INFO),
+                                         strlevel_color(FASTLOG_DEBUG));
+
+
+                                                                         
+        fprintf(stdout, "Number  %-8ld %-8ld %-8ld %-8ld %-8ld \n", 
+                                         level_count(FASTLOG_CRIT),
+                                         level_count(FASTLOG_ERR),
+                                         level_count(FASTLOG_WARNING),
+                                         level_count(FASTLOG_INFO),
+                                         level_count(FASTLOG_DEBUG));
+        fprintf(stdout, "\n");
+
+        fprintf(stdout, "Total  metas  %ld\n", meta_count());
+        fprintf(stdout, "Total  logs   %ld\n", log_count());
+        
+    }
+    else {
         printf("\t input `list` to check all command.\n");
     }
     return 0;

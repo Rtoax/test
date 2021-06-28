@@ -89,3 +89,98 @@ const char *strlevel_color(enum FASTLOG_LEVEL level)
     return FASTLOG_LEVEL_NAME_COLORFUL[level];
 }
 
+
+
+
+
+inline int  
+fastlog_atomic64_cmpset(volatile uint64_t *dst, uint64_t exp, uint64_t src)
+{
+	uint8_t res;
+
+	asm volatile(
+			"lock ; "
+			"cmpxchgq %[src], %[dst];"
+			"sete %[res];"
+			: [res] "=a" (res),     /* output */
+			  [dst] "=m" (*dst)
+			: [src] "r" (src),      /* input */
+			  "a" (exp),
+			  "m" (*dst)
+			: "memory");            /* no-clobber list */
+
+	return res;
+}
+
+inline void 
+fastlog_atomic64_init(fastlog_atomic64_t *v)
+{
+	fastlog_atomic64_cmpset((volatile uint64_t *)&v->cnt, v->cnt, 0);
+}
+
+inline int64_t 
+fastlog_atomic64_read(fastlog_atomic64_t *v)
+{
+    return v->cnt;
+}
+
+inline void 
+fastlog_atomic64_add(fastlog_atomic64_t *v, int64_t inc) 
+{
+	asm volatile(
+			"lock ; "
+			"addq %[inc], %[cnt]"
+			: [cnt] "=m" (v->cnt)   /* output */
+			: [inc] "ir" (inc),     /* input */
+			  "m" (v->cnt)
+			);
+}
+
+inline void 
+fastlog_atomic64_inc(fastlog_atomic64_t *v)
+{
+	asm volatile(
+			"lock ; "
+			"incq %[cnt]"
+			: [cnt] "=m" (v->cnt)   /* output */
+			: "m" (v->cnt)          /* input */
+			);
+}
+
+inline void
+fastlog_atomic64_dec(fastlog_atomic64_t *v)
+{
+	asm volatile(
+			"lock ; "
+			"decq %[cnt]"
+			: [cnt] "=m" (v->cnt)   /* output */
+			: "m" (v->cnt)          /* input */
+			);
+}
+
+
+
+/* 获取 当前 CPU */
+inline int 
+__fastlog_sched_getcpu() 
+{ 
+    return sched_getcpu(); 
+}
+
+/* 同上 */
+inline unsigned 
+__fastlog_getcpu()
+{
+    unsigned cpu, node;
+    int _unused ret = syscall(__NR_getcpu, &cpu, &node);
+    return cpu;
+}
+
+inline  uint64_t 
+__fastlog_rdtsc()
+{
+    uint32_t lo, hi;
+    __asm__ __volatile__("rdtsc" : "=a" (lo), "=d" (hi));
+    return (((uint64_t)hi << 32) | lo);
+}
+

@@ -5,12 +5,35 @@
  */
 #define _GNU_SOURCE
 #include <pthread.h>
+#include <signal.h>
 #include <sys/mman.h>
+
+#include <sys/eventfd.h> //eventfd
+#include <sys/epoll.h>
 
 #include <fastlog.h>
 #include <fastlog_list.h>
 #include <fastlog_cycles.h>
 #include <fastlog_staging_buffer.h>
+
+
+
+#ifndef _FASTLOG_USE_EVENTFD
+#error "Must define _FASTLOG_USE_EVENTFD 0 or 1."
+/**
+ * 此宏定义标识了一个代码分支，该分支决定用户线程和后台线程的交互方式
+ *  
+ *  _FASTLOG_USE_EVENTFD=0(false) 使用轮询的方式
+ *  _FASTLOG_USE_EVENTFD=1(true) 使用通知(`eventfd()`)+轮询的方式
+ *
+ *  见`bg_event_epoll_fd`,`stagingBuffer_event_fd`,...
+ *
+ *  荣涛 2021年6月28日
+ */
+#define _FASTLOG_USE_EVENTFD 0
+#endif
+
+
 
 /**
  *  日志索引 
@@ -32,8 +55,16 @@ static size_t log_file_size = FATSLOG_LOG_FILE_SIZE_DEFAULT;
  *  后台线程和用户线程之间的缓冲区定义
  */
 __thread struct StagingBuffer *stagingBuffer = NULL; 
+
 struct StagingBuffer *threadBuffers[1024] = {NULL}; //最大支持的线程数，最多有多少个`stagingBuffer`
 fastlog_atomic64_t  stagingBufferId;
+
+#if _FASTLOG_USE_EVENTFD
+static int bg_event_epoll_fd = -1;
+static int bg_new_thread_event_fd = -1;
+struct StagingBuffer *evt_fd_to_buffer[FD_SETSIZE] = {NULL};
+__thread int stagingBuffer_event_fd = -1;
+#endif
 
 /* 后台处理线程 */
 static pthread_t fastlog_background_thread = 0;
@@ -63,27 +94,7 @@ static uint64_t program_start_rdtsc = 0;
 static time_t   program_unix_time_sec = 0;      //time(2)
 static struct utsname program_unix_uname = {{0}};   //uname(2)
 
-#if 0
-/**
- *  告警级别的链表(TLS  变量)
- */
-static struct list __fastlog_level_list;
-
-typedef struct {
-    bool in_use;
-    struct list _list;  //`__fastlog_level_list`链表中的节点
-    enum FASTLOG_LEVEL level;
-}fastlog_level_enable_t;
-
-
-/**
- *  当前日志的告警级别
- */
-__thread fastlog_level_enable_t __curr_level;
-
-#else
 enum FASTLOG_LEVEL __curr_level = FASTLOG_DEBUG;
-#endif
 
 
 static void mmap_new_fastlog_file(struct fastlog_file_mmap *mmap_file, 
@@ -170,19 +181,82 @@ static inline void bg_handle_one_log(struct arg_hdr *log_args, size_t size)
 static void * bg_task_routine(void *arg)
 {
     size_t size, remain, __size;
-    int i;
+    int _unused i;
     struct arg_hdr *arghdr = NULL;
+    struct StagingBuffer *curr_buffer = NULL;
+
+
+#if _FASTLOG_USE_EVENTFD
+    int _unused nfds = 0;
+    int _unused curr_event_fd = -1;
+    struct epoll_event _unused events[32] = { };
+    eventfd_t _evt_value;
+#endif
 
     /**
      *  后台线程主任务
      */
     while(1) {
 
-        /* 遍历和所有线程之间的 staging buffer */
-        for(i=0; i<fastlog_atomic64_read(&stagingBufferId); i++) {
+#if _FASTLOG_USE_EVENTFD
+        /**
+         *  当使用 通知+轮询 方式(epoll+eventfd)
+         */
+        nfds = epoll_wait(bg_event_epoll_fd, events, 32, -1);
+        
+        if(nfds <= 0) {
+            fprintf(stderr, "epoll_wait return -> %d, error(%d): %s\n", nfds, errno, strerror(errno));
+            assert(0);
+        }
+        
+        for(;nfds--;)
+            
+#else//_FASTLOG_USE_EVENTFD
 
+        /**
+         *  当使用 轮询 方式
+         *  遍历和所有线程之间的 staging buffer
+         */
+        for(i=0; i<fastlog_atomic64_read(&stagingBufferId); i++)
+#endif//_FASTLOG_USE_EVENTFD
+        {
+
+#if _FASTLOG_USE_EVENTFD
+            /**
+             *  
+             */
+            curr_event_fd = events[nfds].data.fd;
+            if(unlikely(bg_new_thread_event_fd == curr_event_fd)) {
+                eventfd_read(bg_new_thread_event_fd, &_evt_value);
+                continue;
+            }
+            curr_buffer = evt_fd_to_buffer[curr_event_fd];
+            eventfd_read(curr_event_fd, &_evt_value);
+            //printf("eventfd read = %ld\n", _evt_value);
+            //下面为我测试的输出：
+            //eventfd read = 13
+            //eventfd read = 11
+            //eventfd read = 13
+            //eventfd read = 68
+            //eventfd read = 13
+            //eventfd read = 11
+            //eventfd read = 9
+            //eventfd read = 9
+            //eventfd read = 61
+            //eventfd read = 9
+            
+#else//_FASTLOG_USE_EVENTFD
+
+            curr_buffer = threadBuffers[i];
+
+#endif//_FASTLOG_USE_EVENTFD
+
+#if _FASTLOG_USE_EVENTFD
+peek_buffer_again:
+#endif//_FASTLOG_USE_EVENTFD
+            
             /* 从 staging buffer 中获取一块内存 */
-            arghdr = (struct arg_hdr*)peek_buffer(threadBuffers[i], &size);
+            arghdr = (struct arg_hdr*)peek_buffer(curr_buffer, &size);
             
             if(!arghdr || size == 0) {
                 continue;
@@ -196,9 +270,11 @@ static void * bg_task_routine(void *arg)
                 __size = arghdr->log_args_size + sizeof(struct arg_hdr);
 
                 bg_handle_one_log(arghdr, __size);
-
+#if _FASTLOG_USE_EVENTFD
+                _evt_value --;
+#endif//_FASTLOG_USE_EVENTFD
                 /* 确认消费 */
-                consume_done(threadBuffers[i], __size);
+                consume_done(curr_buffer, __size);
             
                 char *p = (char *)arghdr;
 
@@ -206,6 +282,16 @@ static void * bg_task_routine(void *arg)
                 remain -= __size;
                 arghdr = (struct arg_hdr*)p;
             }
+#if _FASTLOG_USE_EVENTFD
+            /**
+             *  当实际读取的 日志 数量小于 eventfd 中通知的数量，需要再次解析。
+             *  如果出错，这里的`_evt_value`恒大于0
+             */
+            if(_evt_value>0) {
+                goto peek_buffer_again;
+            }
+#endif//_FASTLOG_USE_EVENTFD
+
         }
     }
 
@@ -213,7 +299,8 @@ static void * bg_task_routine(void *arg)
 }
 
 /**
- *  
+ *  获取未使用的 log_id
+ *  单纯的原子操作分为两步，依旧不安全，所以使用自旋锁。
  */
 static inline int __get_unused_logid()
 {
@@ -230,10 +317,9 @@ static inline int __get_unused_logid()
     return log_id;
 }
 
-//__attribute__((destructor(105)))
 void fastlog_exit()
 {
-    printf("FastLog exit.\n");
+    //printf("FastLog exit.\n");
     unmmap_fastlog_logfile(&metadata_mmap);
     unmmap_fastlog_logfile(&logdata_mmap);
 }
@@ -285,6 +371,59 @@ void fastlog_setlevel(enum FASTLOG_LEVEL level)
 enum FASTLOG_LEVEL fastlog_getlevel()
 {
     return __curr_level;
+}
+
+#if _FASTLOG_USE_EVENTFD
+static int __bg_new_event_add_to_epoll()
+{
+    int ret = -1;
+    
+    struct epoll_event event;
+    
+    int evt_fd = eventfd(0, EFD_CLOEXEC);
+    assert(evt_fd != -1 && "eventfd(EFD_CLOEXEC) failed.");
+    
+    event.data.fd = evt_fd;
+    event.events = EPOLLIN; //必须采用水平触发
+    ret = epoll_ctl(bg_event_epoll_fd, EPOLL_CTL_ADD, event.data.fd, &event);
+    assert(ret == 0 && "epoll_ctl(EPOLL_CTL_ADD) failed.\n");
+    //printf("add %d to epoll fd %d\n", evt_fd, bg_event_epoll_fd);
+
+    return evt_fd;
+}
+#endif
+
+
+static void __bg_init_event_epoll()
+{
+#if _FASTLOG_USE_EVENTFD
+
+    bg_event_epoll_fd = epoll_create(1);
+    assert(bg_event_epoll_fd && "Epoll create error");
+
+    bg_new_thread_event_fd = __bg_new_event_add_to_epoll();
+    //printf("bg_new_thread_event_fd = %d\n", bg_new_thread_event_fd);
+    
+#endif    
+}
+
+int __bg_add_buffer_event_to_epoll()
+{
+#if _FASTLOG_USE_EVENTFD
+
+    if(stagingBuffer_event_fd != -1) {
+        //printf("Already create eventfd = %d\n", stagingBuffer_event_fd);
+        return -1;
+    }
+    stagingBuffer_event_fd = __bg_new_event_add_to_epoll();
+    //printf("stagingBuffer_event_fd = %d\n", stagingBuffer_event_fd);
+    
+    evt_fd_to_buffer[stagingBuffer_event_fd] = stagingBuffer;
+
+    eventfd_write(bg_new_thread_event_fd, 1);
+#endif    
+
+    return 0;
 }
 
 
@@ -347,14 +486,20 @@ void fastlog_init(enum FASTLOG_LEVEL level, size_t nr_logfile, size_t logfile_si
     fastlog_atomic64_inc(&maxlogId);    //logID 初始值 1
 
     /**
+     *  创建 epoll FD
+     */
+    __bg_init_event_epoll();
+
+
+    /**
      *  启动后台线程，用于和用户线程之间进行数据交互，写文件映射内存。
      */
     if(0 != pthread_create(&fastlog_background_thread, NULL, bg_task_routine, NULL)) {
         fprintf(stderr, "create fastlog background thread failed.\n");
         assert(0);
     }
-}
 
+}
 
 int parse_fastlog_logdata(fastlog_logdata_t *logdata, int *log_id, int *args_size, uint64_t *rdtsc, char **argsbuf)
 {

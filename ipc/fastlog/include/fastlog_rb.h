@@ -1,6 +1,11 @@
 #ifndef __fAStLOG_RB_H
 #define __fAStLOG_RB_H 1
 
+#ifndef __fAStLOG_H
+#error "You can't include <fastlog_rb.h> directly, #include <fastlog.h> instead."
+#endif
+
+
 /*-
  *******************************************************************************
  *

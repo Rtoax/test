@@ -3,10 +3,28 @@
 #include <regex.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <malloc.h>
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+
+#include <fastlog_utils.h>
+
+
+extern __thread struct StagingBuffer *stagingBuffer;
+
+extern struct StagingBuffer *threadBuffers[1024];
+extern fastlog_atomic64_t  stagingBufferId;
+
+
+/**
+ *  通知 FastLog 后台线程，日志发生，取决于宏`_FASTLOG_USE_EVENTFD`
+ */
+#if _FASTLOG_USE_EVENTFD
+extern __thread int stagingBuffer_event_fd;
+#endif
+
 
 
 /* 从 "%d %s %f %llf" 到 `struct fastlog_print_args`的转化 */
@@ -54,6 +72,185 @@ int __fastlog_parse_format(const char *fmt, struct args_type *args)
     return args->nargs;
 }
 
+
+
+
+/* 通过 */
+inline int 
+__fastlog_print_buffer(int log_id, struct args_type *args, ...)
+{
+    int iarg;
+    va_list va, va2;
+    va_start(va, args);
+    va_start(va2, args);
+    
+    struct arg_hdr *arghdr = NULL;
+    char *args_data = NULL;
+    unsigned int args_data_bytes = args->pre_size;
+
+    //如果有字符串，需要求取字符串长度
+    if(unlikely(args->has_string == 1)) {
+//        printf("args->has_string = %d, pre_size = %d\n", args->has_string, args->pre_size);
+        
+        for(iarg=0; iarg<args->nargs; iarg++) {
+            switch(args->argtype[iarg]) {
+
+#define _CASE(fat_type, type)                       \
+        case fat_type: {                            \
+            type _unused _val = va_arg(va, type);           \
+            break;                                  \
+        }
+#define _CASE_STRING(fat_type, type)                \
+        case fat_type: {                            \
+            type _unused _val = va_arg(va, type);           \
+            /*printf("STR:%s\n", _val); */          \
+            if(FAT_STRING == fat_type) {            \
+                args_data_bytes += strlen(_val)+1;  \
+            }                                       \
+            break;                                  \
+        }
+            _CASE(FAT_INT8, int);
+            _CASE(FAT_INT16, int);
+            _CASE(FAT_INT32, int32_t);
+            _CASE(FAT_INT64, int64_t);
+            
+            _CASE(FAT_UINT8, unsigned int);
+            _CASE(FAT_UINT16, unsigned int);
+            _CASE(FAT_UINT32, uint32_t);
+            _CASE(FAT_UINT64, uint64_t);
+//            
+            _CASE(FAT_INT, int);
+            _CASE(FAT_SHORT, int);
+            _CASE(FAT_SHORT_INT, int);
+
+            _CASE(FAT_LONG, long);
+            _CASE(FAT_LONG_INT, long int);
+            _CASE(FAT_LONG_LONG, long long);
+            _CASE(FAT_LONG_LONG_INT, long long int);
+
+            _CASE(FAT_CHAR, int);
+            _CASE(FAT_UCHAR, unsigned int);
+            
+            _CASE_STRING(FAT_STRING, char *);
+
+            _CASE(FAT_POINTER, void*);
+            
+            _CASE(FAT_FLOAT, double);
+            _CASE(FAT_DOUBLE, double);
+            _CASE(FAT_LONG_DOUBLE, long double);
+            
+            default:
+                printf("\t%d unknown(%d).\n", iarg, args->argtype[iarg]);
+                assert(0 && "Not support type." && __FILE__ && __LINE__);
+                break;
+#undef _CASE
+#undef _CASE_STRING
+            }
+        }
+    }
+    
+
+try_reserve_again:
+    /**
+     *  stagingBuffer 在`ensureStagingBufferAllocated`确保不为空
+     */
+    arghdr = (struct arg_hdr *)reserveProducerSpace(stagingBuffer, args_data_bytes + sizeof(struct arg_hdr));
+
+    if(!arghdr) {
+        goto try_reserve_again;
+    }
+    args_data = arghdr->log_args_buff;
+    
+    arghdr->log_id = log_id;
+
+    for(iarg=0; iarg<args->nargs; iarg++) {
+
+//        printf("%d->%d(%s)\n", iarg, args->argtype[iarg], FASTLOG_FAT_TYPE2SIZENAME[args->argtype[iarg]].name);
+//        sleep(1);
+        switch(args->argtype[iarg]) {
+
+#define _CASE(fat_type, type)                       \
+        case fat_type: {                            \
+            type _val = (type)va_arg(va2, type);    \
+            memcpy(args_data, &_val, sizeof(type)); \
+            args_data += sizeof(type);              \
+            break;                                  \
+        }
+#define _CASE_STRING(fat_type, type)                \
+        case fat_type: {                            \
+            type _val = (type)va_arg(va2, type);    \
+            int len = strlen(_val)+1;               \
+            memcpy(args_data, _val, len);           \
+            args_data += len;                       \
+            break;                                  \
+        }
+#define _CASE_POINTER(fat_type, type)                   \
+        case fat_type: {                                \
+            type _val = (type)va_arg(va2, type);        \
+            unsigned long __v = (unsigned long)_val;    \
+            memcpy(args_data, &__v, sizeof(type));      \
+            args_data += sizeof(type);                  \
+            break;                                      \
+        }
+
+        _CASE(FAT_INT8, int);
+        _CASE(FAT_INT16, int);
+        _CASE(FAT_INT32, int32_t);
+        _CASE(FAT_INT64, int64_t);
+        
+        _CASE(FAT_UINT8, unsigned int);
+        _CASE(FAT_UINT16, unsigned int);
+        _CASE(FAT_UINT32, uint32_t);
+        _CASE(FAT_UINT64, uint64_t);
+        
+        _CASE(FAT_INT, int);
+        _CASE(FAT_SHORT, int);
+        _CASE(FAT_SHORT_INT, int);
+
+        _CASE(FAT_LONG, long);
+        _CASE(FAT_LONG_INT, long int);
+        _CASE(FAT_LONG_LONG, long long);
+        _CASE(FAT_LONG_LONG_INT, long long int);
+
+        _CASE(FAT_CHAR, int);
+        _CASE(FAT_UCHAR, unsigned int);
+        
+        _CASE_STRING(FAT_STRING, char *);
+
+        _CASE_POINTER(FAT_POINTER, void*);
+        
+        _CASE(FAT_FLOAT, double);
+        _CASE(FAT_DOUBLE, double);
+        _CASE(FAT_LONG_DOUBLE, long double);
+        
+        default:
+            printf("\t%d unknown(%d).\n", iarg, args->argtype[iarg]);
+            assert(0 && "Not support type." && __FILE__ && __LINE__);
+            break;
+#undef _CASE
+#undef _CASE_STRING
+#undef _CASE_POINTER
+        }
+    
+    }
+
+    va_end(va);
+    va_end(va2);
+
+    arghdr->log_args_size = args_data_bytes;
+    arghdr->log_rdtsc = __fastlog_rdtsc();
+
+    //确认消费
+    finishReservation(stagingBuffer, args_data_bytes + sizeof(struct arg_hdr));
+
+#if _FASTLOG_USE_EVENTFD
+    //fprintf(stderr, "eventfd_write stagingBuffer_event_fd = %d\n", stagingBuffer_event_fd);
+    eventfd_write(stagingBuffer_event_fd, 1);
+#endif
+
+//    printf("args_data_bytes = %d\n", args_data_bytes);
+    return args_data_bytes;
+}
 
 
 

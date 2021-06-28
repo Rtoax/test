@@ -65,9 +65,11 @@ static int json_header(struct output_struct *o, struct fastlog_file_header *head
     json_object_object_add(uts, "version",json_object_new_string( header->unix_uname.version));
     json_object_object_add(uts, "machine",json_object_new_string( header->unix_uname.machine));
     json_object_object_add(uts, "nodename",json_object_new_string( header->unix_uname.nodename));
-    
+
+#if defined (__GNUC__) && (__GNUC__ >= 7)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Waddress-of-packed-member"
+#endif
     {
         char buffer[256] = {0};
         struct tm _tm;
@@ -76,7 +78,9 @@ static int json_header(struct output_struct *o, struct fastlog_file_header *head
         
         json_object_object_add(log_header, "record",json_object_new_string( buffer));
     }
+#if defined (__GNUC__) && (__GNUC__ >= 7)
 #pragma GCC diagnostic pop
+#endif
     {
         char buffer[256] = {0};
         struct tm _tm;

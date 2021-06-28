@@ -35,25 +35,35 @@ int main(int argc, char *argv[])
 {
     signal(SIGINT, signal_handler);
 
-    fastlog_init(FASTLOG_ERR, 24, 10*1024*1024/* 10MB */);
+    fastlog_init(FASTLOG_ERR, 1, 10*1024*1024/* 10MB */);
 
     fastlog_setlevel(FASTLOG_DEBUG);
     
     
     FAST_LOG(FASTLOG_INFO, "MAIN", "start to run...\n");
 
+#if 0
+    printf("####### Benchmark #######\n");
+    test_benchmark();
+    sleep(5);
+    printf("####### Benchmark #######\n");
+    test_benchmark();
+#elif 1
     if(argc == 2) {
         
         if(strcmp(argv[1], "modules") == 0) {
             
             printf("####### Modules #######\n");
             modules_init();
+
+            goto normal_exit;
             
         } else if(strcmp(argv[1], "benchmark") == 0) {
         
             printf("####### Benchmark #######\n");
             test_benchmark();
-            
+
+            goto normal_exit;
         } else {
             goto error_exit;
         }
@@ -63,7 +73,9 @@ int main(int argc, char *argv[])
 
 error_exit:
     printf("%s [modules|benchmark].\n", argv[0]);
-
+    
+normal_exit:
+#endif
     fastlog_exit();
 	return 0;
 }

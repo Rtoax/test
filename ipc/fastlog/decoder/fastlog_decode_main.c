@@ -438,8 +438,10 @@ static int _unused parse_header(struct fastlog_file_header *header)
 
 
     /* Record */
+#if defined (__GNUC__) && (__GNUC__ >= 7)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Waddress-of-packed-member"
+#endif
     {
     char buffer[256] = {0};
     struct tm _tm;
@@ -447,7 +449,9 @@ static int _unused parse_header(struct fastlog_file_header *header)
     strftime(buffer, 256, "Recoreded in:  %Y-%d-%m/%T", &_tm);
     printf("%s\n",buffer);
     }
+#if defined (__GNUC__) && (__GNUC__ >= 7)
 #pragma GCC diagnostic pop
+#endif
 
     /*  */
     return 0;
@@ -546,7 +550,7 @@ parse_next:
         //printf("LOGID %d's metadata is exist.\n", log_id);
         if(unlikely(!metadata)) {
             printf("LOGID %d's metadata is not exist.\n", log_id);
-            printf("args_size = %d\n", args_size);
+            printf("args_size = %d(logdata_size = %ld)\n", args_size, logdata_size);
             assert(metadata && "You gotta a wrong log_id");
             //goto parse_next;
         }
@@ -575,6 +579,9 @@ parse_next:
         /* 插入到日志数据红黑树中 */
         logdata_rbtree__insert(log_decode);
 
+        /**
+         *  查询相关的插入操作
+         */
         struct log_search _unused *search_func = NULL;
 
         search_func = log_search_rbtree__search_or_create(LOG__RANGE_FUNC_ENUM, log_decode->metadata->src_function);
@@ -587,11 +594,17 @@ parse_next:
         logdata = (fastlog_logdata_t *)(((char*)logdata) + ret );
         logdata_size -= ret;
 
-//        usleep(100000);
+        /**
+         *  剩余的数据量，不足以容纳日志信息，直接返回。 2021年6月28日
+         */
+        if(logdata_size < sizeof(struct arg_hdr)) {
+            goto finish_parse;
+        }
 
         goto parse_next;
     }
-    
+
+finish_parse:
     return ret;
 }
 
@@ -698,6 +711,10 @@ int main(int argc, char *argv[])
         goto error;
     }
 
+    /* 解析 元数据 */
+    struct fastlog_metadata *metadata = (struct fastlog_metadata *)meta_hdr()->data;
+    parse_metadata(metadata);
+
 load_logdata:
 
     if(load_logdata_count == 0) {
@@ -720,10 +737,6 @@ load_logdata:
         goto release;
     }
 
-    
-    /* 解析 元数据 */
-    struct fastlog_metadata *metadata = (struct fastlog_metadata *)meta_hdr()->data;
-    parse_metadata(metadata);
 
     /**
      *  以下几行代码操作
@@ -823,8 +836,6 @@ load_logdata:
         };
         output_setfilter(output, &filter_thread, arg4);
     }
-
-
     
     //是否输出元数据
     if(decoder_config.output_type & LOG_OUTPUT_ITEM_META) {
@@ -856,6 +867,17 @@ load_logdata:
     if(ret) {
         printf("logid %d not exit.\n", 3);
     }
+
+    /* 以 log_id 遍历的 ID */
+    void log_callback(struct logdata_decode *logdata, void *arg) {
+        printf("log_id = %d\n", logdata->logdata->log_id);
+
+    }
+    void id_callback(int log_id, void *arg) {
+        id_list__iter(log_id, log_callback, NULL);
+    }
+    log_ids__iter(id_callback, NULL);
+    
 #endif
     
     output_footer(output);
@@ -865,16 +887,6 @@ load_logdata:
 
 
 quiet_boot:
-
-//    void log_callback(struct logdata_decode *logdata, void *arg) {
-//        printf("log_id = %d\n", logdata->logdata->log_id);
-//
-//    }
-//    void id_callback(int log_id, void *arg) {
-//        id_list__iter(log_id, log_callback, NULL);
-//    }
-//
-//    log_ids__iter(id_callback, NULL);
 
     /**
      *  命令行默认是开启的

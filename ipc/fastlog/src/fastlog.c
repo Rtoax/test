@@ -193,6 +193,12 @@ static void * bg_task_routine(void *arg)
     eventfd_t _evt_value;
 #endif
 
+    /* 后台线程的优先级稍低 */
+    nice(10);
+
+    /* 限制 CPU 利用率 */
+    //TODO
+
     /**
      *  后台线程主任务
      */
@@ -320,6 +326,8 @@ static inline int __get_unused_logid()
 void fastlog_exit()
 {
     //printf("FastLog exit.\n");
+    //pthread_kill(fastlog_background_thread, SIGINT);
+    
     unmmap_fastlog_logfile(&metadata_mmap);
     unmmap_fastlog_logfile(&logdata_mmap);
 }
@@ -489,7 +497,6 @@ void fastlog_init(enum FASTLOG_LEVEL level, size_t nr_logfile, size_t logfile_si
      *  创建 epoll FD
      */
     __bg_init_event_epoll();
-
 
     /**
      *  启动后台线程，用于和用户线程之间进行数据交互，写文件映射内存。

@@ -110,7 +110,7 @@ static void mmap_new_fastlog_file(struct fastlog_file_mmap *mmap_file,
 
 
 /* 后台程序处理一条log的 arg 处理函数 */
-static inline void bg_handle_one_log(struct arg_hdr *log_args, size_t size)
+static fl_inline void bg_handle_one_log(struct arg_hdr *log_args, size_t size)
 {
     if(unlikely(log_args->log_id < 0)) {
         printf("LOGID %d < 0\n", log_args->log_id);
@@ -193,11 +193,30 @@ static void * bg_task_routine(void *arg)
     eventfd_t _evt_value;
 #endif
 
-    /* 后台线程的优先级稍低 */
+    /**
+     *  后台线程的优先级稍低
+     */
     nice(10);
 
-    /* 限制 CPU 利用率 */
-    //TODO
+    /**
+     *  限制 CPU 利用率
+     *
+     *  有以下几个方案
+     *  -------------------------------------------------------------------
+     *  (1)使用 cgroup 将会影响该进程其他线程的CPU使用
+     *      ```bash
+     *      # 创建 cgroup
+     *      cgcreate -g cpu:fastlog
+     *      # 限制 CPU 利用率 为 30%(需要登录 root 用户, sudo 也不行)
+     *      echo 30000 >  /sys/fs/cgroup/cpu/fastlog/cpu.cfs_quota_us
+     *      # 将后台线程添加至 CPU 控制组
+     *      cgclassify -g cpu:fastlog [pid]
+     *      ```
+     *    发现使用 cgroup 会影响到其他线程，即整个进程的CPU被限制为 30%
+     *
+     *  -------------------------------------------------------------------
+     *  (2)使用 setrlimit 
+     */
 
     /**
      *  后台线程主任务
@@ -507,6 +526,7 @@ void fastlog_init(enum FASTLOG_LEVEL level, size_t nr_logfile, size_t logfile_si
         fprintf(stderr, "create fastlog background thread failed.\n");
         assert(0);
     }
+    pthread_setname_np(fastlog_background_thread, "FLbgd");
 
 }
 

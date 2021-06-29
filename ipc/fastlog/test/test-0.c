@@ -58,6 +58,8 @@ int main(int argc, char *argv[])
             printf("####### Modules #######\n");
             modules_init();
 
+            modules_loop();
+
             goto normal_exit;
             
         } else if(strcmp(argv[1], "benchmark") == 0) {

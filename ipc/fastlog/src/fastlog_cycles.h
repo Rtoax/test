@@ -32,3 +32,4 @@ __fastlog_sleep(uint64_t us);
 
 
 #endif /*<__fAStLOG_CYCLES_H>*/
+

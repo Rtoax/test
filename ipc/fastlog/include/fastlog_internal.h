@@ -291,18 +291,12 @@ typedef struct arg_hdr {
 
 
 
-
-
-
-
-
-
 /* 编译阶段检测 printf 格式 */
 static void __attribute__((format (printf, 1, 2))) _unused
 __fastlog_check_format(const char *fmt, ...)
 {
 }
-inline int 
+fl_inline int 
 __fastlog_print_buffer(int log_id, struct args_type *args, ...);
 
 
@@ -314,11 +308,5 @@ int mmap_fastlog_logfile_write(struct fastlog_file_mmap *mmap_file, char *filena
 void msync_fastlog_logfile_write(struct fastlog_file_mmap *mmap_file);
 int mmap_fastlog_logfile_read(struct fastlog_file_mmap *mmap_file, char *filename);
 int unmmap_fastlog_logfile(struct fastlog_file_mmap *mmap_file);
-
-
-
-
-
-
 
 #endif /*<__fAStLOG_INTERNAL_H>*/

@@ -11,6 +11,11 @@
 #include <ctype.h>
 #include <string.h>
 
+#include "common.h"
+
+
+pthread_t module_threads[MODULE_NUM] = {0};
+
 int set_thread_cpu_affinity(int i)
 {
     cpu_set_t mask;

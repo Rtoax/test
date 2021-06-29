@@ -7,6 +7,7 @@ enum {
 #define      MODULE_2_NAME  "module2"  
     MODULE_3,
 #define      MODULE_3_NAME  "module3"  
+    MODULE_NUM,
 };
 #define MODULE(e) e##_NAME
 
@@ -25,9 +26,13 @@ struct task_arg {
 #define gettid() syscall(__NR_gettid)
 
 
+extern pthread_t module_threads[MODULE_NUM];
+
+
 int set_thread_cpu_affinity(int i);
 
 
 void test_benchmark(int nthreads);
 void modules_init();
+void modules_loop();
 

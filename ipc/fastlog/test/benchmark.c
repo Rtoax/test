@@ -205,7 +205,9 @@ static void *task_routine(void*param)
             total_dequeue = 0;
             idx_benchmark++;
             
-            if(idx_benchmark >= N_Benchmark) break;
+            if(idx_benchmark >= N_Benchmark) {
+                idx_benchmark = 0;  //重新再来一遍
+            }
             
             test_func = benchmarks[idx_benchmark].test_func;
 

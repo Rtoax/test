@@ -1,7 +1,6 @@
 /**
  *  FastLog 低时延/高吞吐 LOG日志系统
  *
- *
  *  Author: Rong Tao
  *  data: 2021年6月2日 - 
  */
@@ -31,14 +30,21 @@ enum FASTLOG_LEVEL
  *  name    用户字符串(模块名，prefix等)
  *  format  printf(fmt, ...)'s fmt
  *  ...     printf(fmt, ...)'s ...
+ *
+ *  这其实是一个宏定义
  */
 void FAST_LOG(int level, char *name, char *format, ...);
 
 
+/**
+ *  FastLog API
+ *
+ *  level   日志级别(enum FASTLOG_LEVEL)
+ *  
+ *  在终端下使用`strlevel_color`可以显示带有颜色的日志级别
+ */
 const char *strlevel(enum FASTLOG_LEVEL level);
 const char *strlevel_color(enum FASTLOG_LEVEL level);
-
-
 
 
 /**

@@ -70,3 +70,4 @@ list_remove(struct list *link)
 	     pos = list_next(pos, member))
 
 #endif /*<__fAStLOG_LIST_H>*/
+

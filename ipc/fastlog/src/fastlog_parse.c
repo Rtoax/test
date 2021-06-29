@@ -76,7 +76,7 @@ int __fastlog_parse_format(const char *fmt, struct args_type *args)
 
 
 /* 通过 */
-inline int 
+fl_inline int 
 __fastlog_print_buffer(int log_id, struct args_type *args, ...)
 {
     int iarg;

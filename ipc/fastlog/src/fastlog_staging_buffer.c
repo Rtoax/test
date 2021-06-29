@@ -10,7 +10,7 @@ extern fastlog_atomic64_t  stagingBufferId;
 int __bg_add_buffer_event_to_epoll();
 
 
-inline void
+fl_inline void
 ensureStagingBufferAllocated()
 {
     /**
@@ -29,7 +29,7 @@ ensureStagingBufferAllocated()
 }
 
 
-inline struct StagingBuffer *
+fl_inline struct StagingBuffer *
 create_buff(uint32_t bufferId)
 {
     size_t i;
@@ -81,7 +81,7 @@ create_buff(uint32_t bufferId)
 *      A pointer into storage[] that can be written to by the producer for
 *      at least nbytes.
 */
-inline char *
+fl_inline char *
 reserveSpaceInternal(struct StagingBuffer *buff, size_t nbytes, bool blocking) {
     const char *endOfBuffer = buff->storage + STAGING_BUFFER_SIZE;
 
@@ -143,7 +143,7 @@ reserveSpaceInternal(struct StagingBuffer *buff, size_t nbytes, bool blocking) {
  * \return
  *      Pointer to at least nbytes of contiguous space
  */
-inline char *
+fl_inline char *
 reserveProducerSpace(struct StagingBuffer *buff, size_t nbytes) 
 {
     ++buff->numAllocations;
@@ -156,7 +156,7 @@ reserveProducerSpace(struct StagingBuffer *buff, size_t nbytes)
     return reserveSpaceInternal(buff, nbytes, true);
 }
 
-inline void
+fl_inline void
 finishReservation(struct StagingBuffer *buff, size_t nbytes) 
 {
     assert(nbytes < buff->minFreeSpace);
@@ -181,7 +181,7 @@ finishReservation(struct StagingBuffer *buff, size_t nbytes)
 * \return
 *      Pointer to the consumable space
 */
-inline char *
+fl_inline char *
 peek_buffer(struct StagingBuffer *buff, uint64_t *bytesAvailable)
 {
     // Save a consistent copy of producerPos
@@ -210,7 +210,7 @@ peek_buffer(struct StagingBuffer *buff, uint64_t *bytesAvailable)
  * \param nbytes
  *      Number of bytes to return back to the producer
  */
-inline void
+fl_inline void
 consume_done(struct StagingBuffer *buff, uint64_t nbytes)
 {
     asm volatile("lfence":::"memory"); // Make sure consumer reads finish before bump

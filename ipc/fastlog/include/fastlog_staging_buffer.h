@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 
+#include <fastlog_utils.h>
 
 struct StagingBuffer;
 
@@ -72,22 +73,22 @@ struct StagingBuffer {
 };
 
 
-inline void
+fl_inline void
 ensureStagingBufferAllocated();
 
 
-inline struct StagingBuffer *
+fl_inline struct StagingBuffer *
 create_buff();
 
-inline char *
+fl_inline char *
 reserveProducerSpace(struct StagingBuffer *buff, size_t nbytes);
-inline void
+fl_inline void
 finishReservation(struct StagingBuffer *buff, size_t nbytes);
 
-inline char *
+fl_inline char *
 peek_buffer(struct StagingBuffer *buff, uint64_t *bytesAvailable);
 
-inline void
+fl_inline void
 consume_done(struct StagingBuffer *buff, uint64_t nbytes);
 
 

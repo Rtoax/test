@@ -18,7 +18,8 @@ include_directories(
     ./bitmask
     ./hiredis
     ./linenoise
-    ../include
+    ../include 
+    ../src
     /usr/include/libxml2
 )
 

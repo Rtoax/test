@@ -33,6 +33,8 @@ void signal_handler(int signum)
 
 int main(int argc, char *argv[])
 {
+    int nthread = 1;
+    
     signal(SIGINT, signal_handler);
 
     fastlog_init(FASTLOG_ERR, 1, 10*1024*1024/* 10MB */);
@@ -49,7 +51,7 @@ int main(int argc, char *argv[])
     printf("####### Benchmark #######\n");
     test_benchmark();
 #elif 1
-    if(argc == 2) {
+    if(argc >= 2) {
         
         if(strcmp(argv[1], "modules") == 0) {
             
@@ -60,8 +62,16 @@ int main(int argc, char *argv[])
             
         } else if(strcmp(argv[1], "benchmark") == 0) {
         
+
+            if(argc >= 3) {
+                nthread = atoi(argv[2]);
+                if(nthread <= 0) {
+                    goto error_exit;
+                }
+            }
+            
             printf("####### Benchmark #######\n");
-            test_benchmark();
+            test_benchmark(nthread);
 
             goto normal_exit;
         } else {
@@ -72,7 +82,7 @@ int main(int argc, char *argv[])
     }
 
 error_exit:
-    printf("%s [modules|benchmark].\n", argv[0]);
+    printf("%s [modules|benchmark] [nthread>0].\n", argv[0]);
     
 normal_exit:
 #endif

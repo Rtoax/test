@@ -57,6 +57,11 @@ int demo_cpu_time_limit()
 	/* Obtain the current limits. */
 	getrlimit (RLIMIT_CPU, &rl);
 	/* Set a CPU limit of 1 second. */
+
+
+    printf("rlimit.rlim_cur = %d\n", rl.rlim_cur);
+    printf("rlimit.rlim_max = %d\n", rl.rlim_max);
+    
 	rl.rlim_cur = 1;
 	setrlimit (RLIMIT_CPU, &rl);
 	/* Do busy work. */
@@ -81,6 +86,9 @@ int main()
 
     printf("rlim_cur = %d\n", rlimit2.rlim_cur);
     printf("rlim_max = %d\n", rlimit2.rlim_max);
+
     
+	while (1); //超出 CPU 时限(吐核)
+	
 	return 0;
 }

@@ -94,6 +94,7 @@
 * `latex`: 写作
 * `leetcode`: 力扣算法[rtoax](https://leetcode-cn.com/u/rtoax/)
 * `libaio`: 异步IO库
+* `libcgroup`: cgroup UserSpace API Library
 * `libco`: 腾讯开源的携程库
 * `libconfig`: 配置文件加载读取输出
 * `libconfigini`:  配置文件加载读取输出

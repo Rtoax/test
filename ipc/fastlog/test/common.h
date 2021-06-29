@@ -28,6 +28,6 @@ struct task_arg {
 int set_thread_cpu_affinity(int i);
 
 
-void test_benchmark();
+void test_benchmark(int nthreads);
 void modules_init();
 

@@ -8,6 +8,9 @@ FastLog 开发日志
 
 # 编码历史
 
+* 2021年6月29日
+	* Benchmark 基准测试/吞吐量测试
+
 * 2021年6月28日
 	* 实现通知机制(eventfd+epoll/select/poll),见宏`_FASTLOG_USE_EVENTFD`代码分支；
 		通过测试，显示使用通知机制，将大幅降低吞吐量。

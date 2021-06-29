@@ -4,3 +4,4 @@ CGroups 资源的限制
 ---------------------------------
 * test/linux/cgroup
 * test/bpf/bpftrace/study/cgroup
+* test/libcgroup

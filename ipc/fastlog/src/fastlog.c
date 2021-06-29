@@ -296,6 +296,8 @@ peek_buffer_again:
             if(_evt_value>0) {
                 goto peek_buffer_again;
             }
+#else
+            //usleep(1);       
 #endif//_FASTLOG_USE_EVENTFD
 
         }

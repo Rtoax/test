@@ -15,27 +15,21 @@
 #include <pthread.h>
 
 #include <fastlog.h>
-#include <module2.h>
+#include <module3.h>
 
 #include "common.h"
 
-void *task_module2(void*param) 
+void module3_init()
 {
-    struct task_arg * arg = (struct task_arg *)param;
+    int ncpu = sysconf (_SC_NPROCESSORS_ONLN);
     
-    set_thread_cpu_affinity(arg->cpu);    
-   
-    unsigned long total_dequeue = 0;
+    struct task_arg *arg3 = malloc(sizeof(struct task_arg));
+    
+    arg3->cpu = 2%ncpu;
+    
+    pthread_create(&module_threads[MODULE_3], NULL, task_module3, arg3);
 
-    while(1) {
+    pthread_setname_np(module_threads[MODULE_3], modules_tasks_name[MODULE_3]);
 
-        total_dequeue += 3;
-    
-        M2_CRIT("module 2 %ld\n", total_dequeue);
-    
-        
-        sleep(1);
-    }
-    pthread_exit(arg);
 }
 

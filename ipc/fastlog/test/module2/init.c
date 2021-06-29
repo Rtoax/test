@@ -19,23 +19,21 @@
 
 #include "common.h"
 
-void *task_module2(void*param) 
+void module2_init()
 {
-    struct task_arg * arg = (struct task_arg *)param;
+    int ncpu = sysconf (_SC_NPROCESSORS_ONLN);
     
-    set_thread_cpu_affinity(arg->cpu);    
-   
-    unsigned long total_dequeue = 0;
+    struct task_arg *arg2 = malloc(sizeof(struct task_arg));
+    
+    arg2->cpu = 1%ncpu;
+    
+    pthread_create(&module_threads[MODULE_2], NULL, task_module2, arg2);
 
-    while(1) {
-
-        total_dequeue += 3;
     
-        M2_CRIT("module 2 %ld\n", total_dequeue);
-    
-        
-        sleep(1);
-    }
-    pthread_exit(arg);
+    pthread_setname_np(module_threads[MODULE_2], modules_tasks_name[MODULE_2]);
 }
+
+
+
+
 

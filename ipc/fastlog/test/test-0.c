@@ -18,7 +18,7 @@
 
 #include "common.h"
 
-
+bool signal_exit = false;
 
 void signal_handler(int signum)
 {
@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
     
     signal(SIGINT, signal_handler);
 
-    fastlog_init(FASTLOG_ERR, 1, 10*1024*1024/* 10MB */);
+    fastlog_init(FASTLOG_ERR, 10, 100*1024*1024/* 10MB */, 3/*CPU3*/);
 
     fastlog_setlevel(FASTLOG_DEBUG);
     
@@ -64,7 +64,8 @@ int main(int argc, char *argv[])
             
         } else if(strcmp(argv[1], "benchmark") == 0) {
         
-
+            char *ofile = NULL;
+            
             if(argc >= 3) {
                 nthread = atoi(argv[2]);
                 if(nthread <= 0) {
@@ -72,8 +73,12 @@ int main(int argc, char *argv[])
                 }
             }
             
+            if(argc >= 4) {
+                ofile = argv[3];
+            }
+            
             printf("####### Benchmark #######\n");
-            test_benchmark(nthread);
+            test_benchmark(nthread, ofile);
 
             goto normal_exit;
         } else {
@@ -84,7 +89,7 @@ int main(int argc, char *argv[])
     }
 
 error_exit:
-    printf("%s [modules|benchmark] [nthread>0].\n", argv[0]);
+    printf("%s [modules|benchmark] [nthread>0] [stats file].\n", argv[0]);
     
 normal_exit:
 #endif

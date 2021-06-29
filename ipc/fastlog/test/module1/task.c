@@ -16,11 +16,55 @@
 
 #include <fastlog.h>
 
+#include <module1.h>
+
 #include "common.h"
 
-static void *task_module1(void*param) 
+#define HANDLE(i)   handle_msg##i
+#define HANDLE_DEF(i)                   \
+static inline void HANDLE(i)()          \
+{                                       \
+    M1_WARN("msg%d.\n", i);             \
+}
+#define CASE_HANDLE(i) \
+    case i: HANDLE(i)(); break;
+
+
+HANDLE_DEF(0);
+HANDLE_DEF(1);
+HANDLE_DEF(2);
+HANDLE_DEF(3);
+HANDLE_DEF(4);
+HANDLE_DEF(5);
+
+
+
+static inline void handle_msgs()
 {
+    static unsigned long msg_cnt = 0;
+    msg_cnt++;
+
+    M1_INFO("Recv %ld msg.\n", msg_cnt);
+
+    switch(msg_cnt%10) {
+        CASE_HANDLE(0); 
+        CASE_HANDLE(1); 
+        CASE_HANDLE(2); 
+        CASE_HANDLE(3); 
+        CASE_HANDLE(4); 
+        CASE_HANDLE(5); 
+        default:
+            M1_ERR("msg %ld.\n", msg_cnt%10);
+            break;
+    }
+    
+}
+
+void *task_module1(void*param) 
+{    
     struct task_arg * arg = (struct task_arg *)param;
+    
+    M1_WARN("Module1 task startup. cpu %d\n", arg->cpu);
     
     set_thread_cpu_affinity(arg->cpu);    
    
@@ -30,32 +74,12 @@ static void *task_module1(void*param)
 
         total_dequeue += 3;
     
-        FAST_LOG(FASTLOG_CRIT, MODULE(MODULE_1), "module 1 %ld\n", total_dequeue);
-    
+        M1_CRIT("module 1 %ld\n", total_dequeue);
         
-        sleep(1);
+        handle_msgs();
+        
+        usleep(30000);
     }
     pthread_exit(arg);
 }
-
-void module1_init()
-{
-    int ncpu = sysconf (_SC_NPROCESSORS_ONLN);
-
-    struct task_arg *arg1 = malloc(sizeof(struct task_arg));
-    
-    arg1->cpu = 0%ncpu;
-    
-    pthread_create(&module_threads[MODULE_1], NULL, task_module1, arg1);
-
-    
-    pthread_setname_np(module_threads[MODULE_1], modules_name[MODULE_1]);
-
-//    struct task_arg *arg = NULL;
-//    pthread_join(threads[MODULE_1], (void**)&arg);
-//    free(arg);
-}
-
-
-
 

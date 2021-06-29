@@ -15,10 +15,11 @@
 #include <pthread.h>
 
 #include <fastlog.h>
+#include <module3.h>
 
 #include "common.h"
 
-static void *task_module3(void*param) 
+void *task_module3(void*param) 
 {
     struct task_arg * arg = (struct task_arg *)param;
     
@@ -30,28 +31,11 @@ static void *task_module3(void*param)
 
         total_dequeue += 3;
     
-        FAST_LOG(FASTLOG_CRIT, MODULE(MODULE_3), "module 1 %ld\n", total_dequeue);
+        M3_CRIT("module 3 %ld\n", total_dequeue);
     
         
         sleep(1);
     }
     pthread_exit(arg);
 }
-
-void module3_init()
-{
-    int ncpu = sysconf (_SC_NPROCESSORS_ONLN);
-    
-    struct task_arg *arg3 = malloc(sizeof(struct task_arg));
-    
-    arg3->cpu = 2%ncpu;
-    
-    pthread_create(&module_threads[MODULE_3], NULL, task_module3, arg3);
-
-    pthread_setname_np(module_threads[MODULE_3], modules_name[MODULE_3]);
-
-}
-
-
-
 

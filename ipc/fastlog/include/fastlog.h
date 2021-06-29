@@ -50,11 +50,12 @@ const char *strlevel_color(enum FASTLOG_LEVEL level);
 /**
  *  FastLog 初始化
  *
+ *  level           日志激活级别, 可用`fastlog_setlevel`设置
  *  nr_logfile      最大日志文件数
  *  log_file_size   单个日志文件大小(bytes)
- *
+ *  cpu             后台线程绑核操作
  */
-void fastlog_init(enum FASTLOG_LEVEL level, size_t nr_logfile, size_t log_file_size);
+void fastlog_init(enum FASTLOG_LEVEL level, size_t nr_logfile, size_t log_file_size, int cpu);
 void fastlog_exit();
 
 /**

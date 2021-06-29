@@ -24,7 +24,6 @@ struct benchmark {
 };
 
 
-
 int benchmark_staticstring(unsigned long total_dequeue)
 {
     FAST_LOG(FASTLOG_CRIT,      "staticstring", "Static String : critical\n");
@@ -154,13 +153,13 @@ int benchmark_complex(unsigned long total_dequeue)
 static struct benchmark benchmarks[] = {
     {"StaticString",    benchmark_staticstring},
     {"SingleInt",       benchmark_singleint},
-    {"TwoInt",          benchmark_twoint},
-    {"ThreeInt",        benchmark_threeint},
-    {"FourInt",         benchmark_fourint},
+//    {"TwoInt",          benchmark_twoint},
+//    {"ThreeInt",        benchmark_threeint},
+//    {"FourInt",         benchmark_fourint},
     {"SingleLong",      benchmark_singlelong},
-    {"TwoLong",         benchmark_twolong},
-    {"SingleDouble",    benchmark_singledouble},
-    {"TwoDouble",       benchmark_twodouble},
+//    {"TwoLong",         benchmark_twolong},
+//    {"SingleDouble",    benchmark_singledouble},
+//    {"TwoDouble",       benchmark_twodouble},
     {"Complex",         benchmark_complex},
 };
 
@@ -172,8 +171,15 @@ unsigned long __thread total_dequeue = 0;
 
 static void *task_routine(void*param) 
 {
+    int i;
     struct task_arg * arg = (struct task_arg *)param;
-    
+
+    if(arg->fp_ofile != stderr) {
+        for(i=0; i<N_Benchmark; i++) {
+            fprintf(arg->fp_ofile, "%-15s  ", benchmarks[i].intro);
+        }
+        fprintf(arg->fp_ofile, "\n");
+    }
     set_thread_cpu_affinity(arg->cpu);    
 
 
@@ -186,7 +192,7 @@ static void *task_routine(void*param)
     while(1) {
         
         total_dequeue += test_func(total_dequeue);
-        if(total_dequeue % 10000000 == 0) {
+        if(total_dequeue % 100000 == 0) {
             
 
             static unsigned int statistics_count = 0;
@@ -196,9 +202,14 @@ static void *task_routine(void*param)
             unsigned long usec = (end.tv_sec - start.tv_sec)*1000000 + (end.tv_usec - start.tv_usec);
             double nmsg_per_sec = (double)((total_dequeue)*1.0 / usec) * 1000000;
             
-            printf("%-5d %-20s %-15ld\n", statistics_count,
+            fprintf(stdout, "\t %-5d \t %-20s \t %-15ld\n", statistics_count,
                             benchmarks[idx_benchmark].intro,
                             (unsigned long )nmsg_per_sec);
+
+            if(arg->fp_ofile != stderr) {
+                fprintf(arg->fp_ofile, "%-15ld  ", (unsigned long )nmsg_per_sec);
+            }
+
 
             statistics_count ++;
             
@@ -207,6 +218,7 @@ static void *task_routine(void*param)
             
             if(idx_benchmark >= N_Benchmark) {
                 idx_benchmark = 0;  //重新再来一遍
+                fprintf(arg->fp_ofile, "\n");
             }
             
             test_func = benchmarks[idx_benchmark].test_func;
@@ -222,7 +234,7 @@ static void *task_routine(void*param)
 
 
 
-void test_benchmark(int nthreads)
+void test_benchmark(int nthreads, char *ofile)
 {
     int ncpu = sysconf (_SC_NPROCESSORS_ONLN);
     int itask;
@@ -230,15 +242,25 @@ void test_benchmark(int nthreads)
     int nthread = nthreads;
     char thread_name[32] = {0};
 
-    printf("Startup %d Threads.\n", nthreads);
-    printf("%-5s %-20s %-15s\n", "NUM", "Benchmark", "(Logs/s)");
 
-    printf("-----------------------------------------\n");
+
+    printf("Startup %d Threads.\n", nthreads);
+
+    fprintf(stdout, "\t %-5s \t %-20s \t %-15s\n", "NUM", "Benchmark", "(Logs/s)");
+    
 
     for(itask=0; itask<nthread; itask++) {
         
         struct task_arg *arg = malloc(sizeof(struct task_arg));
         arg->cpu = itask%ncpu;
+        char ofilename[256] = {0};
+        sprintf(ofilename, "%s.%d", ofile, itask);
+        
+        if(ofile) {
+            arg->fp_ofile = fopen(nthreads==1?ofile:ofilename, "w");
+        } else {
+            arg->fp_ofile = stderr;
+        }
         
         pthread_create(&threads[itask], NULL, task_routine, arg);
         sprintf(thread_name, "rtoax:%d", itask);

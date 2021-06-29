@@ -59,6 +59,8 @@ __thread struct StagingBuffer *stagingBuffer = NULL;
 struct StagingBuffer *threadBuffers[1024] = {NULL}; //最大支持的线程数，最多有多少个`stagingBuffer`
 fastlog_atomic64_t  stagingBufferId;
 
+static int bg_thread_cpu = -1;
+
 #if _FASTLOG_USE_EVENTFD
 static int bg_event_epoll_fd = -1;
 static int bg_new_thread_event_fd = -1;
@@ -176,6 +178,16 @@ static fl_inline void bg_handle_one_log(struct arg_hdr *log_args, size_t size)
     
 }
 
+//static void sig_handler(int signum)
+//{
+//    switch(signum) {
+//    case SIGINT:
+//        printf("BG Catch ctrl-C.\n");
+//        pthread_exit(NULL);
+//        break;
+//    default:break;
+//    }
+//}
 
 /* 后台进程主任务回调函数 */
 static void * bg_task_routine(void *arg)
@@ -192,6 +204,19 @@ static void * bg_task_routine(void *arg)
     struct epoll_event _unused events[32] = { };
     eventfd_t _evt_value;
 #endif
+
+    /**
+     *  有时候为了性能，绑核可能很重要
+     */
+    if(bg_thread_cpu >= 0) {
+        cpu_set_t mask;
+        CPU_ZERO(&mask);
+     
+        CPU_SET(bg_thread_cpu, &mask);
+        if(-1 == pthread_setaffinity_np(pthread_self() ,sizeof(mask),&mask)) {
+            assert(0 && "pthread_setaffinity_np error.\n");
+        }
+    }
 
     /**
      *  后台线程的优先级稍低
@@ -346,11 +371,26 @@ static inline int __get_unused_logid()
 
 void fastlog_exit()
 {
+    static bool ___exit = false;
+
+    if(___exit) {
+//        printf("already exit.\n");
+        return;
+    }
+
     //printf("FastLog exit.\n");
-    //pthread_kill(fastlog_background_thread, SIGINT);
+    if(fastlog_background_thread)
+    pthread_kill(fastlog_background_thread, SIGINT);
+    fastlog_background_thread=0;
+    
+    pthread_spin_lock(&metadata_mmap_lock);
     
     unmmap_fastlog_logfile(&metadata_mmap);
     unmmap_fastlog_logfile(&logdata_mmap);
+    
+    pthread_spin_unlock(&metadata_mmap_lock);
+
+    ___exit = true;
 }
 
 /**
@@ -457,7 +497,7 @@ int __bg_add_buffer_event_to_epoll()
 
 
 //__attribute__((constructor(105))) 
-void fastlog_init(enum FASTLOG_LEVEL level, size_t nr_logfile, size_t logfile_size)
+void fastlog_init(enum FASTLOG_LEVEL level, size_t nr_logfile, size_t logfile_size, int cpu)
 {
     int _unused ret = -1;
     //printf("FastLog initial.\n");
@@ -471,6 +511,8 @@ void fastlog_init(enum FASTLOG_LEVEL level, size_t nr_logfile, size_t logfile_si
         max_nr_logfile = nr_logfile;
     if(logfile_size)
         log_file_size = logfile_size;
+
+    bg_thread_cpu = cpu;
 
     pthread_spin_init(&metadata_mmap_lock, PTHREAD_PROCESS_PRIVATE);
 

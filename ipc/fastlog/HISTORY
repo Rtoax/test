@@ -9,6 +9,9 @@ FastLog 开发日志
 # 编码历史
 
 * 2021年6月29日
+	* decoder: 扩展统计cli=> `stats level|name|func|thread`
+	* 添加后台线程绑核功能(fastlog_init(...)的 cpu 参数, -1不绑核)
+	* test: modules (多模块多线程测试例) 2021年6月29日14:09:11
 	* Benchmark 基准测试/吞吐量测试
 
 * 2021年6月28日

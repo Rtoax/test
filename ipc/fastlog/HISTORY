@@ -8,6 +8,18 @@ FastLog 开发日志
 
 # 编码历史
 
+* 2021年6月30日
+	* decoder: 添加进度条(支持 txt,xml,json 格式), 如下：
+		fastlog.metadata    [##################################################] 100%
+		++ parse meta file done.
+		fastlog.log         [##################################################] 100%
+		++ parse log file done.
+		log9.txt            [##################################################] 100%
+	* 添加文件头字段`struct fastlog_file_header`->`data_num`,记录元数据和日志数据数量
+	* 输出映射文件名(需要自定义,若同文件夹运行多个程序，可以设定不同的文件名)，见`fastlog_init()`
+	* 后台线程模式`enum FASTLOG_MODE`
+	* 字节序需要吗？当然！添加`struct fastlog_file_header->endian`
+
 * 2021年6月29日
 	* decoder: 扩展统计cli=> `stats level|name|func|thread`
 	* 添加后台线程绑核功能(fastlog_init(...)的 cpu 参数, -1不绑核)

@@ -189,6 +189,8 @@ static int txt_log_item(struct output_struct *o, struct logdata_decode *logdata,
     fprintf(o->file_handler.fp, "%s", log);
     
     o->output_log_cnt ++;
+    
+
 
     return 0;
 }
@@ -233,8 +235,8 @@ static int txt_footer(struct output_struct *o)
                                                                     level_count(FASTLOG_DEBUG));
     fprintf(o->file_handler.fp, "\n");
 
-    fprintf(o->file_handler.fp, "Total  metas  %ld\n", meta_count());
-    fprintf(o->file_handler.fp, "Total  logs   %ld\n", log_count());
+    fprintf(o->file_handler.fp, "Total  metas  %ld(%ld)\n", meta_count(), meta_hdr()->data_num);
+    fprintf(o->file_handler.fp, "Total  logs   %ld(%ld)\n", log_count(), decoder_config.total_flog_num);
     fprintf(o->file_handler.fp, "Output metas  %ld\n", o->output_meta_cnt);
     fprintf(o->file_handler.fp, "Output logs   %ld\n", o->output_log_cnt);
 

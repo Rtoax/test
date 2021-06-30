@@ -22,7 +22,7 @@ static int xml_open(struct output_struct *o)
 #ifdef FASTLOG_HAVE_LIBXML2
 
     if(o->filename) {
-
+        progress_reset(&pro_bar, o->filename);
     } else {
 
     }
@@ -285,11 +285,11 @@ static int xml_footer(struct output_struct *o)
     }
     
     memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer, "%ld", o->output_meta_cnt);
+    sprintf(buffer, "%ld(%ld)", o->output_meta_cnt, meta_hdr()->data_num);
     xmlNewProp(statistics, BAD_CAST "OutputMeta", BAD_CAST buffer);
     
     memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer, "%ld", o->output_log_cnt);
+    sprintf(buffer, "%ld/%ld", o->output_log_cnt, decoder_config.total_flog_num);
     xmlNewProp(statistics, BAD_CAST "OutputLog", BAD_CAST buffer);
     
     xmlNodePtr copyright = xmlNewNode(NULL, BAD_CAST "Copyright");  

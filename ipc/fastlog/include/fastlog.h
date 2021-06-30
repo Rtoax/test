@@ -24,6 +24,20 @@ enum FASTLOG_LEVEL
 };
 
 /**
+ *  模式
+ *  支持两种模式，一种为轮询模式，一种为通知模式
+ *  FASTLOG_POLL    后台线程将满载 CPU(通常CPU利用率 100%)
+ *  FASTLOG_NOTIFY  每条日志通过事件通知机制，后台线程等待事件阻塞
+ *
+ *  不能在程序运行过程使后台模式可变，在编译阶段决定(轮询还是通知)
+ */
+//enum FASTLOG_MODE
+//{
+//    FASTLOG_POLL,
+//    FASTLOG_NOTIFY,
+//};
+    
+/**
  *  FastLog API
  *
  *  level   日志级别(enum FASTLOG_LEVEL)
@@ -51,11 +65,15 @@ const char *strlevel_color(enum FASTLOG_LEVEL level);
  *  FastLog 初始化
  *
  *  level           日志激活级别, 可用`fastlog_setlevel`设置
+ *  fmeta           元数据文件，为空时，使用默认文件名`fastlog.metadata`
+ *  flog            日志数据文件，为空时，使用默认文件名`fastlog.log`
  *  nr_logfile      最大日志文件数
  *  log_file_size   单个日志文件大小(bytes)
- *  cpu             后台线程绑核操作
+ *  bg_cpu          后台线程绑核操作
+ *  
+ *  
  */
-void fastlog_init(enum FASTLOG_LEVEL level, size_t nr_logfile, size_t log_file_size, int cpu);
+void fastlog_init(enum FASTLOG_LEVEL level, char *fmeta, char *flog, size_t nr_logfile, size_t log_file_size, int bg_cpu);
 void fastlog_exit();
 
 /**

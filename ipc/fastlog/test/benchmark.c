@@ -182,9 +182,7 @@ static void *task_routine(void*param)
     }
     set_thread_cpu_affinity(arg->cpu);    
 
-
     test_func = benchmarks[idx_benchmark].test_func;
-    
     
     struct timeval start, end;
     gettimeofday(&start, NULL);
@@ -192,9 +190,8 @@ static void *task_routine(void*param)
     while(1) {
         
         total_dequeue += test_func(total_dequeue);
-        if(total_dequeue % 100000 == 0) {
+        if(total_dequeue % 10000 == 0) {
             
-
             static unsigned int statistics_count = 0;
 
             gettimeofday(&end, NULL);
@@ -209,7 +206,6 @@ static void *task_routine(void*param)
             if(arg->fp_ofile != stderr) {
                 fprintf(arg->fp_ofile, "%-15ld  ", (unsigned long )nmsg_per_sec);
             }
-
 
             statistics_count ++;
             
@@ -226,7 +222,6 @@ static void *task_routine(void*param)
             gettimeofday(&start, NULL);
         }
     }
-
     
     fprintf(stderr, "exit-----------\n");
     pthread_exit(arg);

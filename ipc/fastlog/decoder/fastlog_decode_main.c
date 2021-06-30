@@ -12,6 +12,9 @@
 #include <getopt.h>
 
 
+progress_t pro_bar;
+
+
 // fastlog decoder 配置参数，在 getopt 之后只读
 struct fastlog_decoder_config decoder_config = {
     .decoder_version = "fq-decoder-1.0.0",
@@ -48,6 +51,9 @@ struct fastlog_decoder_config decoder_config = {
     .match_func = NULL,
     .match_thread = NULL,
     .match_content = NULL,
+
+    .total_fmeta_num = 0,
+    .total_flog_num = 0,
 };
     
 static void show_help(char *programname)
@@ -85,10 +91,10 @@ static void show_help(char *programname)
     
     printf("\n");
     printf(" [Config] Configuration option\n");
-    printf("  %3s %-15s \t: %s\n",   "-M,", "--metadata [FILENAME]", "metadata file name");
-    printf("  %3s %-15s \t: %s\n",   "-L,", "--logdata [FILENAME(s)]", "metadata file name");
+    printf("  %3s %-15s \t: %s\n",   "-M,", "--metadata [FILENAME]", "metadata file name, default "FATSLOG_METADATA_FILE_DEFAULT);
+    printf("  %3s %-15s \t: %s\n",   "-L,", "--logdata [FILENAME(s)]", "logdata file name, default "FATSLOG_LOG_FILE_DEFAULT);
     printf("  %3s %-15s \t  %s`%c`\n", " ",  "                      ", "FILENAMEs separate by ", LOGDATA_FILE_SEPERATOR);
-    printf("  %3s %-15s \t  %s%c%s\n", " ",  "                      ", "Such as: -l file1.log",LOGDATA_FILE_SEPERATOR,"file2.log");
+    printf("  %3s %-15s \t  %s%c%s\n", " ",  "                      ", "Such as: -L file1.log",LOGDATA_FILE_SEPERATOR,"file2.log");
     printf("  %3s %-15s \t: %s\n",   "-c,", "--cli [OPTION]", "command line on or off. ");
     printf("  %3s %-15s \t  %s\n",   "   ", "              ", "OPTION=[on|off], default [on]");
     printf("  %3s %-15s \t: %s\n",   "-o,", "--output-file [FILENAME]", "output file name.");
@@ -470,6 +476,8 @@ static int parse_metadata(struct fastlog_metadata *metadata)
     char *format;
     char *thread_name;
 
+    unsigned long cnt = 0;
+
     /* 创建保存 元数据和日志数据 的 红黑树 */
     metadata_rbtree__init();
     logdata_rbtree__init();
@@ -497,7 +505,13 @@ parse_next:
     decode_metadata->print_format = format;
     decode_metadata->thread_name = thread_name;
 
+    cnt++;
 
+    //静默模式下显示进度条
+    if(decoder_config.boot_silence) {
+        progress_show(&pro_bar, (cnt*1.0/meta_hdr()->data_num*100.0f)/100.0f);
+    }
+    
 //    printf("log_id  = %d\n", log_id);
 //    printf("thread  = %s\n", thread_name);
 //    printf("level   = %d\n", level);
@@ -535,6 +549,8 @@ int parse_logdata(fastlog_logdata_t *logdata, size_t logdata_size)
     int args_size;
     int _unused i;
     
+    unsigned long cnt = 0;
+    
     uint64_t rdtsc;
     char *args_buff;
     struct logdata_decode *log_decode;
@@ -563,6 +579,27 @@ parse_next:
         assert(log_decode->logdata && "Malloc <fastlog_logdata_t> failed.");
         memset(log_decode->logdata, 0, sizeof(fastlog_logdata_t) + args_size);
         memcpy(log_decode->logdata, logdata, sizeof(fastlog_logdata_t) + args_size);
+
+        cnt++;
+        
+        //静默模式下显示进度条
+        if(decoder_config.boot_silence) {
+            
+                float f = 0.0f;
+                unsigned long i = cnt, total_num = log_hdr()->data_num;
+                int interval = total_num>100?total_num/100:total_num;
+                
+                //当输出到文件时，显示进度条
+                if(i % interval == 0  || i == total_num) {
+                    if(total_num >= 100) {
+                        f = (i*1.0/total_num*100.0f)/100.0f;
+                    } else {
+                        f = i*1.0/total_num;
+                    }
+                    progress_show(&pro_bar, f);
+                }
+//            progress_output(output, cnt, log_hdr()->data_num);
+        }
 
         
         log_decode->metadata = metadata;
@@ -644,6 +681,8 @@ static void release_and_exit()
     cli_exit();
 
     log_ids__destroy();
+
+    progress_destroy(&pro_bar);
     
     exit(0);
 }
@@ -686,8 +725,6 @@ void timestamp_tsc_to_string(uint64_t tsc, char str_buffer[32])
 /* 解析程序 主函数 */
 int main(int argc, char *argv[])
 {
-
-    
     int ret;
     int load_logdata_count = 0;
     char *current_logdata_file = NULL;
@@ -710,11 +747,17 @@ int main(int argc, char *argv[])
     if(ret) {
         goto error;
     }
-
+    
+    /* 初始化进度条-当数据量大的时候，很有用吧 */
+    progress_init(&pro_bar, decoder_config.metadata_file, 50, PROGRESS_CHR_STYLE);
+    
+    decoder_config.total_fmeta_num = meta_hdr()->data_num;
+    
     /* 解析 元数据 */
     struct fastlog_metadata *metadata = (struct fastlog_metadata *)meta_hdr()->data;
     parse_metadata(metadata);
-
+    printf("\n ++ parse meta file done.\n");
+    
 load_logdata:
 
     if(load_logdata_count == 0) {
@@ -729,6 +772,11 @@ load_logdata:
         release_metadata_file(); //释放元数据内存
         goto error;
     }
+    
+    progress_reset(&pro_bar, current_logdata_file);
+
+    /* 日志计数 */
+    decoder_config.total_flog_num += log_hdr()->data_num;
 
     /* 元数据和数据文件需要匹配，对比时间戳 */
     ret = match_metadata_and_logdata();
@@ -752,6 +800,8 @@ load_logdata:
     fastlog_logdata_t *logdata = (fastlog_logdata_t *)log_hdr()->data;
     parse_logdata(logdata, log_mmapfile()->mmap_size - sizeof(struct fastlog_file_header));
     release_logdata_file();
+
+    printf("\n ++ parse log file done.\n");
 
 
 
@@ -785,10 +835,11 @@ load_logdata:
      */
     if(decoder_config.output_filename_isset) {
         output_filename = decoder_config.output_filename;
+        
     } 
 
     /* 如果以 quiet 模式启动，将不直接打印 */
-    if(decoder_config.boot_silence) {
+    if(decoder_config.boot_silence && !decoder_config.output_filename_isset) {
         goto quiet_boot;
     }
     

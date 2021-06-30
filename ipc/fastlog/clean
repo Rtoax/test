@@ -16,4 +16,4 @@ if [ -e test/build ]; then
 	cd -
 fi
 
-rm -f fdecoder test0 fastlog.log* fastlog.metadata* core.* log*.txt log*.xml log*.json
+rm -f fdecoder test0 fastlog.log* fastlog.metadata* core.* log*.txt log*.xml log*.json fastlog*.txt *.out*

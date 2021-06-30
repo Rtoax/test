@@ -187,15 +187,26 @@ struct fastlog_file_header {
 #define FATSLOG_LOG_FILE_DEFAULT            "fastlog.log"
 #define FATSLOG_LOG_FILE_SIZE_DEFAULT       (1024*1024*10) 
 
+#define FASTLOG_LOG_FILE_ENDIAN_MAGIC   0x12345678
+
+    /**
+     *  字节序
+     *  当解析该日志文件的服务器与生成日志文件的服务器 endian 不同，不可解析
+     *  2021年6月30日09:37:41
+     */
+    unsigned int endian;
+
     unsigned int magic;
     uint64_t cycles_per_sec;
     uint64_t start_rdtsc;
     time_t unix_time_sec;       //1970.1.1 00:00:00 至今 秒数(time(2))
     struct utsname unix_uname;  //系统信息(uname(2))
+
+    unsigned long data_num;
     
-    /*
-    时间戳，LOG数，统计信息
-    */
+    /**
+     *  时间戳，LOG数，统计信息
+     */
     char data[];
 }__attribute__((packed));
 

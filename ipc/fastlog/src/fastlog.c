@@ -7,6 +7,7 @@
 #include <pthread.h>
 #include <signal.h>
 #include <sys/mman.h>
+#include <arpa/inet.h>
 
 #include <sys/eventfd.h> //eventfd
 #include <sys/epoll.h>
@@ -99,6 +100,9 @@ static struct utsname program_unix_uname = {{0}};   //uname(2)
 enum FASTLOG_LEVEL __curr_level = FASTLOG_DEBUG;
 
 
+static char metadata_file_default[128] = {FATSLOG_METADATA_FILE_DEFAULT};
+static char logdata_file_default[128] = {FATSLOG_LOG_FILE_DEFAULT};
+
 static void mmap_new_fastlog_file(struct fastlog_file_mmap *mmap_file, 
                                     char *filename, 
                                     char *backupfilename, 
@@ -110,6 +114,12 @@ static void mmap_new_fastlog_file(struct fastlog_file_mmap *mmap_file,
                                     struct utsname *unix_uname,
                                     char **mmap_curr_ptr);
 
+static inline void file_data_number_inc(struct fastlog_file_mmap *mmap_file)
+{
+    struct fastlog_file_header *file_hdr = (struct fastlog_file_header *)(mmap_file->mmapaddr);
+
+    file_hdr->data_num++;
+}
 
 /* 后台程序处理一条log的 arg 处理函数 */
 static fl_inline void bg_handle_one_log(struct arg_hdr *log_args, size_t size)
@@ -149,8 +159,8 @@ static fl_inline void bg_handle_one_log(struct arg_hdr *log_args, size_t size)
         char new_log_filename[256] = {0};
         char new_log_filename_old[256] = {0};
         
-        snprintf(new_log_filename, 256, "%s.%d", FATSLOG_LOG_FILE_DEFAULT, file_id);
-        snprintf(new_log_filename_old, 256, "%s.%d.old", FATSLOG_LOG_FILE_DEFAULT, file_id);
+        snprintf(new_log_filename, 256, "%s.%d", logdata_file_default, file_id);
+        snprintf(new_log_filename_old, 256, "%s.%d.old", logdata_file_default, file_id);
 
         file_id ++;
         if(file_id > max_nr_logfile) {
@@ -175,6 +185,7 @@ static fl_inline void bg_handle_one_log(struct arg_hdr *log_args, size_t size)
      */
     memcpy(logdata_mmap_curr_ptr, log_args, size);
     logdata_mmap_curr_ptr += size;
+    file_data_number_inc(&logdata_mmap);
     
 }
 
@@ -417,15 +428,18 @@ static void mmap_new_fastlog_file(struct fastlog_file_mmap *mmap_file,
     memset(mmap_file->mmapaddr, 0x00, mmap_file->mmap_size);
     *mmap_curr_ptr = mmap_file->mmapaddr;
 
-    struct fastlog_file_header *meta_hdr = 
+    struct fastlog_file_header *file_hdr = 
                 (struct fastlog_file_header *)(*mmap_curr_ptr);
 
-    meta_hdr->magic = magic;
-    meta_hdr->cycles_per_sec = cycles_per_sec;
-    meta_hdr->start_rdtsc = rdtsc;
-    meta_hdr->unix_time_sec = time_from_19700101;
-    memcpy(&meta_hdr->unix_uname, unix_uname, sizeof(struct utsname));
+    file_hdr->endian = htonl(FASTLOG_LOG_FILE_ENDIAN_MAGIC);
+
+    file_hdr->magic = magic;
+    file_hdr->cycles_per_sec = cycles_per_sec;
+    file_hdr->start_rdtsc = rdtsc;
+    file_hdr->unix_time_sec = time_from_19700101;
+    memcpy(&file_hdr->unix_uname, unix_uname, sizeof(struct utsname));
     
+    file_hdr->data_num = 0;
     
     *mmap_curr_ptr += sizeof(struct fastlog_file_header);
     msync(mmap_file->mmapaddr, sizeof(struct fastlog_file_header), MS_ASYNC);
@@ -490,6 +504,7 @@ int __bg_add_buffer_event_to_epoll()
     evt_fd_to_buffer[stagingBuffer_event_fd] = stagingBuffer;
 
     eventfd_write(bg_new_thread_event_fd, 1);
+    
 #endif    
 
     return 0;
@@ -497,12 +512,19 @@ int __bg_add_buffer_event_to_epoll()
 
 
 //__attribute__((constructor(105))) 
-void fastlog_init(enum FASTLOG_LEVEL level, size_t nr_logfile, size_t logfile_size, int cpu)
+void fastlog_init(enum FASTLOG_LEVEL level, char *fmeta, char *flog, size_t nr_logfile, size_t logfile_size, int cpu)
 {
     int _unused ret = -1;
     //printf("FastLog initial.\n");
 
-    //list_init(&__fastlog_level_list);
+    if(fmeta) {
+        memset(metadata_file_default, 0, sizeof(metadata_file_default));
+        snprintf(metadata_file_default, sizeof(metadata_file_default), "%s", fmeta);
+    }
+    if(flog) {
+        memset(logdata_file_default, 0, sizeof(logdata_file_default));
+        snprintf(logdata_file_default, sizeof(logdata_file_default), "%s", flog);
+    }
 
     fastlog_setlevel(level);
     
@@ -526,10 +548,14 @@ void fastlog_init(enum FASTLOG_LEVEL level, size_t nr_logfile, size_t logfile_si
     //printf("Cycles/s        = %ld.\n", program_cycles_per_sec);
     //printf("Start Cycles    = %ld.\n", program_start_rdtsc);
 
+    char __tmp_file[256] = {0};
+    memset(__tmp_file, 0, sizeof(__tmp_file));
+    snprintf(__tmp_file, sizeof(__tmp_file), "%s.old", metadata_file_default);
+
     //元数据文件映射
     mmap_new_fastlog_file(&metadata_mmap, 
-                          FATSLOG_METADATA_FILE_DEFAULT, 
-                          FATSLOG_METADATA_FILE_DEFAULT".old", 
+                          metadata_file_default, 
+                          __tmp_file, 
                           FATSLOG_METADATA_FILE_SIZE_DEFAULT, 
                           FATSLOG_METADATA_HEADER_MAGIC_NUMBER, 
                           program_cycles_per_sec, 
@@ -540,9 +566,11 @@ void fastlog_init(enum FASTLOG_LEVEL level, size_t nr_logfile, size_t logfile_si
 
     
     //日志数据文件映射
+    memset(__tmp_file, 0, sizeof(__tmp_file));
+    snprintf(__tmp_file, sizeof(__tmp_file), "%s.old", logdata_file_default);
     mmap_new_fastlog_file(&logdata_mmap, 
-                          FATSLOG_LOG_FILE_DEFAULT, 
-                          FATSLOG_LOG_FILE_DEFAULT".old", 
+                          logdata_file_default, 
+                          __tmp_file, 
                           log_file_size, 
                           FATSLOG_LOG_HEADER_MAGIC_NUMBER, 
                           program_cycles_per_sec, 
@@ -631,6 +659,8 @@ static void save_fastlog_metadata(int log_id, int level, const char *name, const
     
     pthread_spin_lock(&metadata_mmap_lock);
 
+    file_data_number_inc(&metadata_mmap);
+    
     //    printf("log_id = %d\n", log_id);
     struct fastlog_metadata *metadata = (struct fastlog_metadata *)metadata_mmap_curr_ptr;
 

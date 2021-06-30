@@ -513,10 +513,12 @@ static void cmd_load_log(char *filename)
         goto error;
     }
     
+    progress_reset(&pro_bar, filename);
+    
     fastlog_logdata_t *logdata = (fastlog_logdata_t *)log_hdr()->data;
     parse_logdata(logdata, log_mmapfile()->mmap_size - sizeof(struct fastlog_file_header));
 
-    printf("\t Load fastlog logdata file `%s` success.\n", filename);
+    printf("\n\t Load fastlog logdata file `%s` success.\n", filename);
     
 error:
     release_logdata_file(); //释放元数据内存
@@ -798,8 +800,8 @@ static int invoke_command(int argc, char **argv, long repeat)
                                                  level_count(FASTLOG_DEBUG));
                 fprintf(stdout, "\n");
                 
-                fprintf(stdout, "Total  metas  %ld\n", meta_count());
-                fprintf(stdout, "Total  logs   %ld\n", log_count());
+                fprintf(stdout, "Total  metas  %ld(%ld)\n", meta_count(), meta_hdr()->data_num);
+                fprintf(stdout, "Total  logs   %ld(%ld)\n", log_count(), decoder_config.total_flog_num);
 
             }
             //stat name

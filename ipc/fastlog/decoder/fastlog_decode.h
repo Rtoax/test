@@ -15,6 +15,8 @@
 #include <fastlog_utils.h>
 #include <fastlog_cycles.h>
 
+#include <ui/progress.h>
+
 #ifdef FASTLOG_HAVE_LIBXML2
 
 #include <libxml/parser.h>
@@ -329,6 +331,7 @@ extern struct output_filter filter_func;
 extern struct output_filter filter_thread;
 extern struct output_filter filter_content;
 
+extern progress_t pro_bar;
 
 /**
  *  fastlog decoder 进程 配置参数， 有默认值，同时支持 getopt 命令行配置
@@ -367,6 +370,10 @@ struct fastlog_decoder_config {
     char *match_func;
     char *match_thread;
     char *match_content;
+
+    /* 统计信息 */
+    unsigned long total_fmeta_num;  /* 从元数据文件中获取的元数据个数 */
+    unsigned long total_flog_num;   /* 从日志数据文件中获取的日志数据个数 */
     
 };
 
@@ -384,6 +391,8 @@ int output_setfilter(struct output_struct *output, struct output_filter *filter,
 bool output_callfilter(struct output_struct *output, struct logdata_decode *logdata);
 int output_updatefilter_arg(struct output_struct *output, char *log_buffer);
 int output_clearfilter(struct output_struct *output);
+
+void progress_output(struct output_struct *output, unsigned long i, unsigned long total_num);
 
 void output_metadata(struct metadata_decode *meta, void *arg);
 void output_logdata(struct logdata_decode *logdata, void *arg);

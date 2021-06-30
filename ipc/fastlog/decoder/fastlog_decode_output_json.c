@@ -27,6 +27,8 @@ static int json_open(struct output_struct *o)
     o->file_handler.json.footer = json_object_new_object();
 
     if(o->filename) {
+        progress_reset(&pro_bar, o->filename);
+        
         o->file_handler.json.root = json_object_new_object();
         json_object_object_add(o->file_handler.json.root, "header", o->file_handler.json.header);
         json_object_object_add(o->file_handler.json.root, "metadata", o->file_handler.json.metadata);
@@ -226,7 +228,9 @@ static int json_footer(struct output_struct *o)
     }
 
     json_object_object_add(stats_footer, "OutputMeta", json_object_new_int64(o->output_meta_cnt));
+    json_object_object_add(stats_footer, "OutputMetaEx", json_object_new_int64(meta_hdr()->data_num));
     json_object_object_add(stats_footer, "OutputLog", json_object_new_int64(o->output_log_cnt));
+    json_object_object_add(stats_footer, "OutputLogEx", json_object_new_int64(decoder_config.total_flog_num));
     
     json_object_object_add(stats_footer, "Co.", json_object_new_string("ICT reserve all right."));
     json_object_object_add(stats_footer, "Author", json_object_new_string("RT"));
@@ -255,8 +259,7 @@ static int json_close(struct output_struct *o)
 
     if(o->filename) {
         json_object_to_file_ext(o->filename, o->file_handler.json.root, JSON_C_TO_STRING_PRETTY);
-
-        printf("%s\r\n", json_object_to_json_string_ext(o->file_handler.json.root, JSON_C_TO_STRING_PRETTY));
+        //printf("%s\r\n", json_object_to_json_string_ext(o->file_handler.json.root, JSON_C_TO_STRING_PRETTY));
     }
 
     //释放

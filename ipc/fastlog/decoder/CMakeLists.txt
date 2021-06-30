@@ -10,14 +10,12 @@ aux_source_directory(./ DIR_SRCS)
 aux_source_directory(bitmask DIR_SRCS)
 aux_source_directory(hiredis DIR_SRCS)
 aux_source_directory(linenoise DIR_SRCS)
+aux_source_directory(ui DIR_SRCS)
 
 
 #添加头文件路径
 include_directories( 
 	./
-    ./bitmask
-    ./hiredis
-    ./linenoise
     ../include 
     ../src
     /usr/include/libxml2

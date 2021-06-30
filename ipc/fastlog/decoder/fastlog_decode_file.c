@@ -1,5 +1,6 @@
 #define _GNU_SOURCE
 #include <fastlog_decode.h>
+#include <arpa/inet.h>
 
 /**
  *  映射的文件
@@ -20,6 +21,8 @@ int output_open(struct output_struct *output, char *filename)
     if(filename) {
         output->filename = strdup(filename);
     }
+    
+    progress_reset(&pro_bar, filename);
 
     return output->ops->open(output);
 }
@@ -114,6 +117,24 @@ int output_clearfilter(struct output_struct *output)
     return 0;
 }
 
+void progress_output(struct output_struct *output, unsigned long i, unsigned long total_num)
+{
+    float f = 0.0f;
+    int interval = total_num>100?total_num/100:total_num;
+    
+    //当输出到文件时，显示进度条
+    if(output->filename) {
+        if(i % interval == 0  || i == total_num) {
+            if(total_num >= 100) {
+                f = (i*1.0/total_num*100.0f)/100.0f;
+            } else {
+                f = i*1.0/total_num;
+            }
+            progress_show(&pro_bar, f);
+        }
+    }
+}
+
 void output_metadata(struct metadata_decode *meta, void *arg)
 {
     //printf("metadata_print logID %d\n", meta->log_id);
@@ -126,6 +147,8 @@ void output_metadata(struct metadata_decode *meta, void *arg)
     }
     
     output->ops->meta_item(output, meta);
+
+    progress_output(output, output->output_meta_cnt, decoder_config.total_fmeta_num);
 }
 
 void output_logdata(struct logdata_decode *logdata, void *arg)
@@ -150,7 +173,14 @@ int output_log_item(struct output_struct *output, struct logdata_decode *logdata
         fprintf(stderr, "file type not support.\n");
         return -1;
     }
-    return output->ops->log_item(output, logdata, log);
+
+    int ret = 0;
+    
+    ret = output->ops->log_item(output, logdata, log);
+
+    progress_output(output, output->output_log_cnt, decoder_config.total_flog_num);
+
+    return ret;
 }
 
 int output_footer(struct output_struct *output)
@@ -171,7 +201,9 @@ int output_close(struct output_struct *output)
 
     if(output->filename) {
         free(output->filename);
-        output->filename = NULL;
+        output->filename = NULL;    
+        
+        printf("\n");   //当输出到文件时，显示进度条，这时需要最后输出一个换行
     }
 
     output_clearfilter(output);
@@ -197,6 +229,13 @@ static int load_file(struct fastlog_file_mmap *mapfile, char *file,
         return -1;
     }
     *hdr = (struct fastlog_file_header *)mapfile->mmapaddr;
+
+    /* 大小端，当解析该日志文件的服务器与生成日志文件的服务器 endian 不同，不可解析 */
+    if(ntohl((*hdr)->endian) != FASTLOG_LOG_FILE_ENDIAN_MAGIC) {
+        fprintf(stderr, "Endian wrong.\n");
+        release_file(mapfile);
+        return -1;
+    }
 
     if((*hdr)->magic != magic) {
         fprintf(stderr, "%s is not fastlog metadata file.\n", file);

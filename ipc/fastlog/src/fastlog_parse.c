@@ -33,6 +33,15 @@ int __fastlog_parse_format(const char *fmt, struct args_type *args)
     int iarg;
     int __argtype[_FASTLOG_MAX_NR_ARGS];
     args->nargs = parse_printf_format(fmt, _FASTLOG_MAX_NR_ARGS, __argtype);
+
+    /**
+     *  最大参数数量检测，如超出，直接错误
+     */
+    if(_FASTLOG_MAX_NR_ARGS < args->nargs) {
+        fprintf(stderr, "FastLog Just support %d parameters at most.\n", _FASTLOG_MAX_NR_ARGS);
+        assert(0);
+    }
+    
 //    printf("args->nargs = %d, fmt = %s, %d\n", args->nargs, fmt, __argtype[0]);
     for(iarg=0; iarg<args->nargs; iarg++) {
         
@@ -80,6 +89,8 @@ fl_inline int
 __fastlog_print_buffer(int log_id, struct args_type *args, ...)
 {
     int iarg;
+    int len;
+    
     va_list va, va2;
     va_start(va, args);
     va_start(va2, args);
@@ -97,12 +108,12 @@ __fastlog_print_buffer(int log_id, struct args_type *args, ...)
 
 #define _CASE(fat_type, type)                       \
         case fat_type: {                            \
-            type _unused _val = va_arg(va, type);           \
+            type _unused _val = va_arg(va, type);   \
             break;                                  \
         }
 #define _CASE_STRING(fat_type, type)                \
         case fat_type: {                            \
-            type _unused _val = va_arg(va, type);           \
+            type _unused _val = va_arg(va, type);   \
             /*printf("STR:%s\n", _val); */          \
             if(FAT_STRING == fat_type) {            \
                 args_data_bytes += strlen(_val)+1;  \
@@ -118,7 +129,7 @@ __fastlog_print_buffer(int log_id, struct args_type *args, ...)
             _CASE(FAT_UINT16, unsigned int);
             _CASE(FAT_UINT32, uint32_t);
             _CASE(FAT_UINT64, uint64_t);
-//            
+      
             _CASE(FAT_INT, int);
             _CASE(FAT_SHORT, int);
             _CASE(FAT_SHORT_INT, int);
@@ -179,7 +190,7 @@ try_reserve_again:
 #define _CASE_STRING(fat_type, type)                \
         case fat_type: {                            \
             type _val = (type)va_arg(va2, type);    \
-            int len = strlen(_val)+1;               \
+            len = strlen(_val)+1;                   \
             memcpy(args_data, _val, len);           \
             args_data += len;                       \
             break;                                  \

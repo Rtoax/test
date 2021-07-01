@@ -296,7 +296,7 @@ typedef struct arg_hdr {
         /* 确保缓冲区不为空  */                                                                             \
         ensureStagingBufferAllocated();                                                             \
     }                                                                                               \
-    if (false) { __fastlog_check_format(format, ##__VA_ARGS__); }                                   \
+    if (unlikely(false)) { __fastlog_check_format(format, ##__VA_ARGS__); }                         \
     __fastlog_print_buffer(log_id, &args, ##__VA_ARGS__);                                           \
 }while(0)
 

@@ -8,6 +8,15 @@ FastLog 开发日志
 
 # 编码历史
 
+* 2021年7月1日 (中国共产党建党100周年)
+	* 将 FastLog 和 FastQ 结合，发现会严重影响 FastQ 的时延
+		通知机制 FastLog
+			FastQ: 1000ns - 3000ns
+			FastQ+FastLog: 300000ns
+		轮询机制 FastLog
+			FastQ: 1000ns - 3000ns	(基本无影响)
+			FastQ+FastLog: 30000ns
+
 * 2021年6月30日
 	* decoder: 添加进度条(支持 txt,xml,json 格式), 如下：
 		fastlog.metadata    [##################################################] 100%

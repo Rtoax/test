@@ -26,14 +26,7 @@ function show_help()
 	exit 1
 }
 
-if [ ! -e $DECODER_PATH/$DECODER ]; then
-	DECODER_PATH=./
-fi
 
-if [ ! -e $DECODER_PATH/$DECODER ]; then
-	echo "ERROR: fdecoder not install."
-	exit 1
-fi
 
 function parse_args()
 {
@@ -61,6 +54,14 @@ function parse_args()
     }
 }
 
+if [ ! -e $DECODER_PATH/$DECODER ]; then
+	DECODER_PATH=./
+fi
+
+if [ ! -e $DECODER_PATH/$DECODER ]; then
+	echo "ERROR: fdecoder not install."
+	exit 1
+fi
 
 if [ $# -eq 0 ]; then
 	if [ ! -e $META ]; then

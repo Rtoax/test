@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
     
     signal(SIGINT, signal_handler);
 
-    fastlog_init(FASTLOG_ERR/*, "meta.out", "log.out"*/, NULL, NULL, 3, 5*1024*1024/* 10MB */, 3/*CPU3*/);
+    fastlog_init(FASTLOG_ERR/*, "meta.out", "log.out"*/, NULL, NULL, 6, 10*1024*1024/* 10MB */, 3/*CPU3*/);
 
     fastlog_setlevel(FASTLOG_DEBUG);
     

@@ -24,7 +24,7 @@ find_library(XML2 m /usr/lib64)
 link_libraries(${DL} ${RT} ${MATH})
 
 #定义
-add_definitions(-g3 -MD -Wall -pthread -g -ggdb -O3 -D_FASTLOG_USE_EVENTFD=1)
+add_definitions(-g3 -MD -Wall -pthread -g -ggdb -O3 -D_FASTLOG_USE_EVENTFD=0)
 
 #生成动态库和静态库 
 add_library(acc_lib_shared  SHARED ${DIR_SRCS}) 

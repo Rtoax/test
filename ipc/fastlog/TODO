@@ -1,4 +1,7 @@
 
+2021年7月1日
+	可以使用 static-key 机制(参见linux kernel)，替换一部分代码
+
 2021年6月29日
 	使用 cgroup 解决 CPU 满载情况？
 

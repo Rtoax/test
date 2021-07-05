@@ -293,7 +293,7 @@ typedef struct arg_hdr {
         log_id = __fastlog_get_unused_logid(level, name, __FILE__, __func__, __LINE__, format);     \
         __fastlog_parse_format(format, &args);                                                      \
                                                                                                     \
-        /* 确保缓冲区不为空  */                                                                             \
+        /* 确保缓冲区不为空  */                                                                      \
         ensureStagingBufferAllocated();                                                             \
     }                                                                                               \
     if (unlikely(false)) { __fastlog_check_format(format, ##__VA_ARGS__); }                         \

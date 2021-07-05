@@ -8,6 +8,9 @@ FastLog 开发日志
 
 # 编码历史
 
+* 2021年7月5日
+	* 默认使用 `-D_FASTLOG_USE_EVENTFD=0` 编译选项
+
 * 2021年7月1日 (中国共产党建党100周年)
 	* 将 FastLog 和 FastQ 结合，发现会严重影响 FastQ 的时延
 		通知机制 FastLog

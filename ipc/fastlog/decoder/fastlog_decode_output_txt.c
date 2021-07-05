@@ -51,7 +51,7 @@ static int txt_header(struct output_struct *o, struct fastlog_file_header *heade
         char buffer[256] = {0};
         struct tm _tm;
         localtime_r(&header->unix_time_sec, &_tm);
-        strftime(buffer, 256, "This log recoreded in:  %Y-%d-%m/%T", &_tm);
+        strftime(buffer, 256, "This log recoreded in:  %Y-%m-%d/%T", &_tm);
         fprintf(o->file_handler.fp, "%s\n",buffer);
     }
 #if defined (__GNUC__) && (__GNUC__ >= 7)

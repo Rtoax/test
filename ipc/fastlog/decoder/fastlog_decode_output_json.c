@@ -76,7 +76,7 @@ static int json_header(struct output_struct *o, struct fastlog_file_header *head
         char buffer[256] = {0};
         struct tm _tm;
         localtime_r(&header->unix_time_sec, &_tm);
-        strftime(buffer, 256, "%Y-%d-%m/%T", &_tm);
+        strftime(buffer, 256, "%Y-%m-%d/%T", &_tm);
         
         json_object_object_add(log_header, "record",json_object_new_string( buffer));
     }

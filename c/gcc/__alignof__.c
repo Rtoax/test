@@ -43,4 +43,5 @@ int main()
 {
 	printf("%d\n", __alignof__(double));
 	printf("%d\n", __alignof__(int));
+	printf("%d\n", __alignof__(unsigned long long));
 }

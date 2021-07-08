@@ -1,0 +1,8 @@
+probe syscall.recv
+{
+	printf ("%s(%d) recv (%s)\n", execname(), pid(), argstr)
+}
+probe timer.ms(4000) # after 4 seconds
+{
+	exit ()
+}

@@ -1,0 +1,77 @@
+#!/usr/bin/bpftrace
+
+// 荣涛
+// UNIX socket STREAM 抓包
+// 2021年7月8日
+// 内核版本: 3.10.0-1062.el7.x86_64
+
+#include <linux/aio.h>
+#include <linux/socket.h>
+#include <linux/net.h>
+#include <linux/fs.h>
+#include <linux/mount.h>
+#include <linux/module.h>
+#include <net/sock.h>
+#include <net/af_unix.h>
+
+//#include "undump/msghdr.h"
+
+BEGIN
+{
+	if($1 == 0) {
+		printf("USAGE: undump.bt [PID]\n");
+		exit();
+	}
+	printf("Dump UNIX socket of PID %d. Ctrl-C to end\n", $1);
+	printf("%-8s %-20s  %-5s  %-s\n", "TIME", "PATH", "SIZE", "DATA");
+}
+
+kprobe:unix_stream_recvmsg,
+kprobe:unix_dgram_recvmsg
+/pid == $1/
+{
+	@[probe, ustack, comm] = count();
+
+	$iocb = (struct kiocb *)arg0;
+	$sock = (struct socket *)arg1;
+	$msghdr = (struct msghdr *)arg2;
+	$size = arg3;
+	$flags = arg4;
+	$sk = $sock->sk;
+	$unsk = (struct unix_sock *)$sk;
+	$ops = $sock->ops;
+	
+	/* 显示 TCP 还是 UDP 模式
+	if($sock->type == SOCK_DGRAM) {
+		printf("\033[1;31m Recv SOCK_DGRAM UNIX msg, \033[m");
+	} else if ($sock->type == SOCK_STREAM) {
+		printf("\033[1;31m Recv SOCK_STREAM UNIX msg, \033[m");
+	}
+	*/
+	//printf("UNIX PATH %s\n", str($unsk->path.dentry->d_parent->d_name.name), str($unsk->path.dentry->d_name.name));
+	
+	time("%H:%M:%S ");
+	printf("%-20s  ", str($unsk->path.dentry->d_name.name));
+
+}
+
+//static int unix_stream_read_actor(struct sk_buff *skb, int skip, int chunk, struct unix_stream_read_state *state)
+kprobe:unix_stream_read_actor
+/pid == $1/
+{
+	$skb = (struct sk_buff *)arg0;
+	$data = $skb->data;
+	$len = $skb->len;
+
+	//$_msghdr = (struct MsgHdr *)$skb->data;
+
+	printf("%-5d  ", $skb->len);
+	printf("%s\n", str($data));
+	//printf("(%d->%d) id %d\n", $_msghdr->src, $_msghdr->dst, $_msghdr->id);
+	
+}
+
+END
+{
+	printf("Goodbye!\n");
+}

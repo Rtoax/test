@@ -17,6 +17,7 @@ BEGIN
 	printf("%-8s %-6s %-16s %-2s %-16s %-5s\n", "TIME", "PID", "COMM", "IP", "RADDR", "PPORT");
 }
 
+//int ip4_datagram_connect(struct sock *sk, struct sockaddr *uaddr, int addr_len);
 kprobe:ip4_datagram_connect,
 kprobe:ip6_datagram_connect
 {

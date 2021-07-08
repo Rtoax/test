@@ -31,6 +31,8 @@
 #include <sys/un.h>
 #include <netinet/tcp.h>
 
+#include <msghdr.h>
+
 #define UNIX_DOMAIN "/tmp/rtoaxunixso"
 
 #define MSG_LENGTH          1024

@@ -5,22 +5,24 @@ void main()
     int listen_fd;
     int com_fd; 
     int ret = 0;
-    int i;
+    int i = 0;
     int len;
     struct sockaddr_un clt_addr;
+
+    struct MsgHdr *msghdr = (struct MsgHdr *)buf;
+    char *data = (char*)msghdr->data;
     
     listen_fd = unsocket_server(UNIX_DOMAIN);
     //printf("SSIZE_MAX = %d\n", SSIZE_MAX);
+    
     while(1)
     {
+        i++;
+        
         len = sizeof(clt_addr);
         
         com_fd = accept(listen_fd, (struct sockaddr*)&clt_addr, &len);
-#if 0
-		int nSendBuf=32*1024;//设置为32K
-		setsockopt(com_fd,SOL_SOCKET,SO_RCVBUF,(const char*)&nSendBuf,sizeof(int));
-		setsockopt(com_fd,SOL_SOCKET,SO_OOBINLINE,NULL, sizeof(int));
-#endif
+
 		int val = 1;
 		setsockopt(listen_fd, SOL_TCP, TCP_NODELAY, &val, sizeof(val));
 		setsockopt(com_fd, SOL_TCP, TCP_NODELAY, &val, sizeof(val));
@@ -31,21 +33,24 @@ void main()
             unlink(UNIX_DOMAIN);
             break;
         }
+
+        msghdr->src = 1;
+        msghdr->dst = 2;
         
-        memset(buf, 0, MSG_LENGTH);
+        memset(data, 0, MSG_LENGTH-sizeof(struct MsgHdr));
 
 		while(1)
 		{
-			len = recv(com_fd, buf, MSG_LENGTH, 0);
-			printf("%d: len= %d, recv: %s\n", com_fd, len, buf);
-			memset(buf, 0, MSG_LENGTH);
+			len = recv(com_fd, msghdr, MSG_LENGTH, 0);
+			printf("(%d->%d:%d) len %3d, recv: %s\n", msghdr->src, msghdr->dst, msghdr->id, len, msghdr->data);
+			memset(msghdr, 0, MSG_LENGTH);
 			if(len<=0)
 				break;
 		}
 
-        buf[0] = 'X';
+        data[0] = 'X';
         
-        send(com_fd, buf, strlen(buf), 0);
+        send(com_fd, msghdr, len, 0);
         
         close(com_fd);
     }

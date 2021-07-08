@@ -1,0 +1,12 @@
+tcpwin.bt:45:		$tcps->snd_cwnd, $tcps->snd_ssthresh, $sock->sk_sndbuf,$sock->sk_wmem_queued);
+soprotocol.bt:21:	$protocol = $sock->sk->sk_protocol & 0xff;
+soprotocol.bt:22:	@connect[comm, $protocol, @prot2str[$protocol], $sock->sk->__sk_common.skc_prot->name] = count();
+sormem.bt:24:	@rmem_alloc = hist($sock->sk_backlog.rmem_alloc.counter);
+sormem.bt:25:	@rmem_limit = hist($sock->sk_rcvbuf & 0xffffffff);
+tcpsynbl.bt:27:	@backlog[$sock->sk_max_ack_backlog & 0xffffffff] =
+tcpsynbl.bt:28:	    hist($sock->sk_ack_backlog);
+tcpsynbl.bt:29:	if ($sock->sk_ack_backlog > $sock->sk_max_ack_backlog) {
+socketio.bt:10:	$dport = $sock->sk->__sk_common.skc_dport;
+socketio.bt:12:	@io[comm, pid, "read", $sock->sk->__sk_common.skc_prot->name, $dport] = count();
+socketio.bt:18:	$dport = $sock->sk->__sk_common.skc_dport;
+socketio.bt:20:	@io[comm, pid, "write", $sock->sk->__sk_common.skc_prot->name, $dport] = count();

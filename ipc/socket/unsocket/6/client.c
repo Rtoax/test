@@ -15,7 +15,7 @@ void main()
 		//buf[strlen(buf)] = '\r';
 		//buf[strlen(buf)] = '\n';
 		int i;
-		for(i=0;i<5;i++)
+		for(i=0;i<1;i++)
 		{
 			ret = send(connect_fd, buf, strlen(buf), 0); 
 			//ret = write(connect_fd, buf, MSG_LENGTH);//知道接收长度

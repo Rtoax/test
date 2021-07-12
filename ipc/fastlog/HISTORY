@@ -8,6 +8,9 @@ FastLog 开发日志
 
 # 编码历史
 
+* 2021年7月12日
+	* 将 bitmask 移至 src, 并保留 decoder 中的源文件
+
 * 2021年7月5日
 	* 日期生成 bug 解决
 	* 默认使用 `-D_FASTLOG_USE_EVENTFD=0` 编译选项
